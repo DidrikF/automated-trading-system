@@ -15,7 +15,7 @@ class Dataset():
         if path is not None:
             self.path = path
             try: 
-                self.data = pd.read_csv(path)
+                self.data = pd.read_csv(path, low_memory=False)
             except Exception as e:
                 raise e
         elif df is not None:
@@ -27,7 +27,7 @@ class Dataset():
         if indicator_descriptions_path is not None:
             self.indicator_descriptions_path = indicator_descriptions_path
             try:
-                self.indicator_descriptions = pd.read_csv(indicator_descriptions_path)
+                self.indicator_descriptions = pd.read_csv(indicator_descriptions_path, low_memory=False)
             except Exception as e:
                 raise e
 
@@ -289,6 +289,15 @@ def merge_datasets(df1: pd.DataFrame, df2: pd.DataFrame, merge_on: dict, select_
             df1.at[df1_row, col_to_add] = df2_value_to_add 
 
     return df1
+
+
+def merge_datasets_simple(df1: pd.DataFrame, df2: pd.DataFrame, on, suffixes) -> pd.DataFrame:
+    """
+    A wrapper around Pandas merge method but default to outer join and adds the indicator column to 
+    make it clear which rows were not in the intersection. This also validates that rows are matched one to one.
+    """
+    return pd.merge(df1, df2, on=on, how="outer", indicator=True, suffixes=suffixes, validate="one_to_one")
+
 
 def join_datasets(datasets: list) -> pd.DataFrame:
     """

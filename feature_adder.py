@@ -6,6 +6,7 @@ from packages.helpers.helpers import print_exception_info
 from packages.dataset_builder.feature_builders import book_to_market, book_value, cash_holdings
 from packages.helpers.custom_exceptions import FeatureError
 
+
 if __name__ == "__main__":
 
     try:
@@ -15,26 +16,15 @@ if __name__ == "__main__":
         sys.exit()
 
     try:
-        dataset = Dataset("./datasets/sharadar/fundamentals_demo.csv", None, "./datasets/sharadar/indicators_demo.csv")
+        dataset = Dataset("...")
     except Exception as e:
         print_exception_info(e)
         sys.exit()
 
 
-    dataset.sort(by=['ticker', 'calendardate'])
-
-    """
-    datasets = dataset.split(into=5)
-    
-    for i, dataset in enumerate(datasets):
-        file_name = './test_' + str(i) + '.csv'
-        dataset.data.to_csv(file_name)
-    """
-
     basic_columns_config = {
         'book_value': book_value,
     }
-
 
     """
     Can count on the presence of the columns specified in basic_columns_config.
