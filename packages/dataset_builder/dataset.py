@@ -138,7 +138,7 @@ class Dataset():
         return datasets
     
 
-    def split(self, into: int) -> list:
+    def split_on_ticker(self, into: int) -> list:
         """
         Split the dataset into n chunks. Chunks does not split such that two different chunks contain records from the same company.
         Note: The dataset must be sorted.
@@ -174,6 +174,45 @@ class Dataset():
 
         return datasets
 
+
+    def split_on_industry(self) -> list:
+        """
+        Split the dataset into chunks so that companies from the same industry end up in the same chunks.
+        """
+        datasets = list()
+        industries = self.data.industry.unique()
+        for i, industry in enumerate(industries):
+            chunk_df = self.data[self.data["industry"] == industry]
+            chunk_dataset = self.from_df(chunk_df)
+            datasets.append(chunk_dataset)
+            # path = "./dataset/industry_tickers/" + industry + ".csv"
+            # chunk_dataset.to_csv(path)
+        return datasets
+
+    """
+    def split_on_industry_advanced(self, max_size: int) -> list:
+        # Split the dataset into chunks so companies from an industry does not end up in different chunks and the 
+        # max size of a chunk is given by max_size, as long as this does not break with the first requirement.
+        
+        data_length = len(self.data)
+        industries = self.data.industry.unique()
+        data = self.data
+        chunk = pd.DataFrame()
+        length_of_chunk = len(chunk)
+
+        for i, industry in enumerate(industries):
+            data_for_industry = data.loc[data["industry"] == industry]
+            if length_of_chunk == 0:
+                chunk.append(data_for_industry)
+                length_of_chunk += len(data_for_industry)
+                continue
+
+            projected_length_of_chunk = 
+
+            if length_of_chunk < max_size:
+                # Attempt to add another industry to the dataset
+                chunk.append(data_for_industry)
+    """
 
     def parse_dates(self, cols: list):
         for col in cols:

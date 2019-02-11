@@ -86,3 +86,9 @@ if __name__ == "__main__":
 
 
 # Print columns with full names and descriptions 
+
+"""
+tesla['returns'] = ( tesla['close'] / tesla['close'].shift(1) ) - 1
+
+tesla['returns'] = tesla['close'].pct_change(1) # One stands for the number of periods (index or date?)
+"""

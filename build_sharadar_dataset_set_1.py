@@ -81,3 +81,45 @@ if __name__ == "__main__":
     # Can I make daily metrics where they are missing
 
     # I need to cross reference ticker availability with the SF1 database also!!!
+
+
+    # There are approximatly 1900 companies in prices that are not present in SF1_ART
+    # There are 5 companies in SF1_ART that are not in Prices
+
+    # There are 11725 companies in SHARADAR_DAILY
+    # There are 11716 common tickers between daily and SF1_ART
+
+
+    # I want to have data for 14133 companies (the common tickers for SF1_ART and prices, which I must have, from this information, daily can be reconstructed!)
+    # I have data in SF1_ART, Prices and Daily for 11715 companies
+
+    """
+    Step by step:
+    1. Purge SEP of tickers I cannot use (V)
+    2. Purge SF1_ART of tickers I cannot use (have not done, dont really need to)
+    3. Merge SF1_ART with Prices ()
+        1. append sep to columns with duplicate names
+        2. copy the row with the most resent past filing date (sf1.datekey as close in the past as possible to sep.date)
+    3. 
+
+    q1. Do I complete they daily dataset or do I reconstruct when I merge it with the other data?
+    1. I think it is better if I complete the daily dataset
+        1. Start with adding ticker, date, marketcap and ev 
+
+    """
+
+
+    """
+    I dont know the answer to all the below staps, so I need to write code that can easily be manipulated to add a feature at any step.
+
+    Step by step revised:
+    1. Extend the SEP dataset with information usefull for sampling (most recent 10-K filing, Industry classification, MarketCap)
+    2. Calculate the various price and volume based features (must be done before sampling the price data away)
+        1. I will end up with maybe 5-10 GB of data at that point
+    3. Use different sampling techniques to get monthly observations
+    4. Add inn SF1 and DAILY data
+    5. Compute features based 
+    6. Sample data (from prices)
+
+
+    """
