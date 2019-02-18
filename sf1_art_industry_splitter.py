@@ -18,9 +18,11 @@ if __name__ == "__main__":
 
         ticker_path = "./datasets/industry_tickers/"
 
-        onlyfiles = [f for f in listdir(ticker_path) if isfile(join(ticker_path, f))]
+        filenames = [f for f in listdir(ticker_path) if isfile(join(ticker_path, f))]
+        filenames.remove("None.csv")
+        filenames.remove("Infrastructure Operations.csv")
 
-        for filename in onlyfiles:
+        for filename in filenames:
             path = ticker_path + filename
             tickers = pd.read_csv(path, low_memory=False)["ticker"]
             sf1_art_chunk = sf1_art_df.loc[sf1_art_df["ticker"].isin(tickers)]
@@ -30,6 +32,7 @@ if __name__ == "__main__":
             save_path = "./datasets/industry_sf1_art/" + filename
 
             sf1_art_dataset.to_csv(save_path)
+            print("Done with file: {}".format(filename))
 
 
     except Exception as e:

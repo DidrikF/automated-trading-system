@@ -14,7 +14,7 @@ if __name__ == "__main__":
         
         # I need to split tickers into industries as well!
         
-        tickers = pd.read_csv("./datasets/tickers/all_usable.csv", low_memory=False, nrows=10000)
+        tickers = pd.read_csv("./datasets/tickers/all_usable.csv", low_memory=False)
         metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", low_memory=False)
 
 
@@ -22,11 +22,11 @@ if __name__ == "__main__":
         print_exception_info(e)
         sys.exit()
     
+    metadata = metadata[["ticker", "industry"]]
 
-    
     # Add industry to each ticker
-    ticker_industry_df = pd.merge(tickers, metadata[["ticker", "industry"]], how='left', on=["ticker"])
-
+    ticker_industry_df = tickers.merge(metadata, on=["ticker"], how="left")
+    ticker_industry_df = ticker_industry_df.drop_duplicates(subset="ticker")
 
     ticker_industry = Dataset.from_df(ticker_industry_df)
     
