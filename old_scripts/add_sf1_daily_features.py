@@ -84,7 +84,7 @@ if __name__ == "__main__":
                 result.at[index, "ps_daily"] = marketcap_daily / row["revenueusd"] # MarketCap / RevenueUsd
 
 
-        """ NOT USED DECAUSE DAILY DATA IS CALCULATED FROM SCRATCH USING SF1_ART DATA
+        """ NOT USED BECAUSE DAILY DATA IS CALCULATED FROM SCRATCH USING SF1_ART DATA
         I don't use daily data...
         result = pd.merge(result, daily, on=["ticker", "date"], how="left", suffixes=("_result", "_daily"), indicator=True)
         logger.debug("# Result and DAILY merge results for file: {}: \n{}".format(filename, result._merge.value_counts()))
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         
         # Drop indexes, this needs to be more sophisticated (when to drop and when to keep?)
         # result = result.dropna(axis=0)
-
+ 
         # Sort values by ticker, then date. Not sure if I need to, but...
         # result = result.sort_values(by=["ticker", "date"]) 
 
