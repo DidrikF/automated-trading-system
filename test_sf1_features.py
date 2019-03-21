@@ -1,7 +1,9 @@
-from sf1_features import add_sf1_features
 import pandas as pd
 import pytest
+
 from packages.dataset_builder.dataset import Dataset
+from sf1_features import add_sf1_features
+from packages.helpers.helpers import 
 
 """
 Each step is performed for each industry separately
@@ -16,7 +18,6 @@ Step-by-Step Dataset Construction:
 6. Select the features you want and combine into one ML ready dataset
 """
 
-testing_index_filename_tuple = (0, "filepath")
 sf1_art_featured = None
 
 
@@ -24,7 +25,9 @@ sf1_art_featured = None
 def setup():
     global sf1_art_featured
     # Will be executed before the first test in the module
-    sf1_art_featured = add_sf1_features(testing_index_filename_tuple, True)
+    sf1_art = pd.read_csv("./datasets/testing/sf1_art.csv", parse_dates=["datekey"], index_col="datekey")
+    sf1_arq = pd.read_csv("./datasets/testing/sf1_arq.csv", parse_dates=["datekey"], index_col="datekey")
+    metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", parse_dates=["firstpricedate"], index_col="datekey")
     yield
     
     # Will be executed after the last test in the module
@@ -32,15 +35,22 @@ def setup():
 
 
 
+@pytest.skip
 def test_add_sf_features_asset_growth():
     global sf1_art_featured
-    
-    date_1998_12_23 = pd.to_datetime("1998-12-23") # AAPL Assets: 4289000000, 1y earlier: 4233000000
-    date_2013_05_09 = pd.to_datetime("2013-05-09")  # NTK Assets: 1983000000, 1y earlier: 1942600000
 
-    assert sf1_art_featured.loc[(sf1_art_featured["ticker"] == "AAPL") & (sf1_art_featured["datekey"] == date_1998_12_23)].iloc[-1]["agr"] == pytest.approx((4289000000/4233000000) - 1)
-    assert sf1_art_featured.loc[(sf1_art_featured["ticker"] == "NTK") & (sf1_art_featured["datekey"] == date_2013_05_09)].iloc[-1]["agr"] == pytest.approx((1983000000/1942600000) - 1)
+    sf1_art_featured = pandas_mp_engine(callback=add_sf1_features, atoms=sf1_art, \
+        data={"sf1_arq": sf1_arq, 'metadata': metadata}, molecule_key='sf1_art', split_strategy= 'ticker', \
+            num_processes=1, molecules_per_process=1)
+    sf1_art_aapl = sf1_art_featured.loc[sf1_art_featured.ticker=="AAPL"]
+    sf1_art_ntk = sf1_art_featured.loc[sf1_art_featured.ticker=="NTK"]
 
+    # IMPLEMENT NEW WAY OF SELECTING FILINGS, TEST IT, REWRITE CODE, CONTINUE WRITING TESTS HERE.
+
+    # AAPL Assets: 4289000000, 1y earlier: 4233000000
+    assert sf1_art_featured.loc["1998-12-23"]["agr"] == pytest.approx((4289000000/4233000000) - 1)
+    # NTK Assets: 1983000000, 1y earlier: 1942600000
+    assert sf1_art_ntk.loc["2013-05-09"]["agr"] == pytest.approx((1983000000/1942600000) - 1)
 
 
 def test_add_sf_features_book_to_market():

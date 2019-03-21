@@ -115,6 +115,7 @@ class Dataset():
     def split_simple(self, into: int) -> list:
         """
         Split the dataset into n parts.
+        OBS: update to use np.linspace()
         """
         data_length = len(self.data)
         split_on_index = list()

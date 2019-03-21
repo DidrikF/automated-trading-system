@@ -4,6 +4,7 @@ import sys
 from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 import numpy as np
+from packages.multiprocessing.engine import pandas_mp_engine
 
 """
 Each step is performed for each industry separately
@@ -18,25 +19,9 @@ Step-by-Step Dataset Construction:
 6. Select the features you want and combine into one ML ready dataset
 """
 
-def add_industry_sf1_features(index_filename, testing):
+# Rewrite for multiprocessing engine
 
-    if testing == True:
-        try:
-            sf1_art = pd.read_csv("./datasets/testing/industry_sf1_art.csv", low_memory=False)
-            # sf1_arq = pd.read_csv("./datasets/testing/sf1_arq.csv", low_memory=False)
-            metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", low_memory=False)
-        except Exception as e:
-            print_exception_info(e)
-            sys.exit()
-    else:
-        # Need to adapt to take filename and use with multiprocesseing
-        pass
-    
-
-    sf1_art["datekey"] = pd.to_datetime(sf1_art["datekey"])
-    sf1_art["calendardate"] = pd.to_datetime(sf1_art["calendardate"])
-    # sf1_arq["datekey"] = pd.to_datetime(sf1_arq["datekey"])
-    metadata["firstpricedate"] = pd.to_datetime(metadata["firstpricedate"])
+def add_industry_sf1_features(sf1_art, metadata):
 
     industry_means = pd.DataFrame()
 
@@ -187,13 +172,7 @@ def add_industry_sf1_features(index_filename, testing):
             ps = i1_positive_netinc + i2_positive_roa + i3_ncfo_exceeds_netinc + i4_lower_long_term_debt_to_assets + i5_higher_current_ratio + i6_no_new_shares + i7_higher_gross_margin + i8_higher_asset_turnover_ratio
             sf1_art.at[index, "ps"] = ps
 
-    # Save
-    # OBS need to update the filepath
-    sf1_art.to_csv("./datasets/testing/industry_sf1_art_featured.csv", index=False)
-    
-    if testing == True:
-        return sf1_art
-
+    return sf1_art
 
 def get_row_with_closest_date(df, date, margin):
     """
@@ -284,3 +263,29 @@ def get_herf(sf1_art, sf1_art_for_date, calendardate_cur, calendardate_1y_ago):
     
     return (sum_sqrd_percent_of_revenue_cur + sum_sqrd_percent_of_revenue_1y_ago) / 2
 
+
+if __name__ == "__main__":
+    
+    # import mp engine, read metadata and sf1 and set datekey as index
+    sf1_art = pd.read_csv("./datasets/testing/sf1_art.csv", index_col="datekey", parse_dates=["datekey", "calendardate"])
+    metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", index_col="ticker", parse_dates=["firstpricedate"])
+
+    # call mp engine and split on ticker
+
+    # Drop unused columns
+
+    # update all code to use the index
+
+    # update code where reindexing, filling and shifting is a better and simpler solution
+
+    # write function to detect missing data (and maybe fix it, may be simpler and less brittle code if I do so)
+
+
+    sf1_art["datekey"] = pd.to_datetime(sf1_art["datekey"])
+    sf1_art["calendardate"] = pd.to_datetime(sf1_art["calendardate"])
+    
+    metadata["firstpricedate"] = pd.to_datetime(metadata["firstpricedate"])
+
+    sep = pandas_mp_engine(callback=add_equally_weighted_weekly_market_returns, atoms=sep, data=None, \
+        molecule_key='sep', split_strategy= 'date', \
+            num_processes=4, molecules_per_process=1)
