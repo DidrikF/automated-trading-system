@@ -22,11 +22,17 @@ Step-by-Step Dataset Construction:
 # Rewrite for multiprocessing engine
 
 def add_industry_sf1_features(sf1_art, metadata):
+    """
+    Requires sf1_features.py to be executed first, and that its output is given to this function.
+    """
+
 
     industry_means = pd.DataFrame()
 
     for index, art_row_cur in sf1_art.iterrows():
         date_cur = art_row_cur["datekey"]
+
+        # Use the same logic here as in sf1_features.py...
 
         date_1y_ago = date_cur - relativedelta(years=+1)
         date_2y_ago = date_cur - relativedelta(years=+2)

@@ -3,7 +3,7 @@ import pytest
 from dateutil.relativedelta import *
 from .helpers import get_acceptable_dates, select_row_closes_to_date, get_row_with_closest_date
 from . helpers import get_most_up_to_date_10k_filing, get_most_up_to_date_10q_filing,\
-    get_calendardate_x_quarters_ago, get_calendardate_index
+    get_calendardate_x_quarters_ago, get_calendardate_index, forward_fill_gaps
 
 sf1_art = None
 sf1_arq = None
@@ -82,6 +82,14 @@ def test_get_calendardate_index():
 
     print(index) # Prints as expected, need to add some assertions...
     assert False
+
+
+def test_forward_fill_gaps():
+    sf1 = pd.read_csv("../../datasets/testing/ffill_sf1_art.csv")
+    # First three quarters of 2000 is missing (should be filled completely)
+    # All four quarters of 2007 is missing (should not fill completely)
+
+
 #____________________________________END____________________________________
 
 

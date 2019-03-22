@@ -28,6 +28,53 @@ def add_sf1_features(sf1_art, sf1_arq, metadata):
     Of these 4300 stocks, 1800 of them are missing more the 1 year worth of consecutive quarters.
     Quarterly reports are only available for approximately 12000 stocks, 
     """
+    """
+    Over 1800 stocks have a gap of more than one year of data. I consider it not appropriate 
+    to forward fill this much. 
+    I think the best (and simplest) solution is to amend the data as much as possible by forward filling up to
+    3 missing quarters of SF1_ART. This ensures that when calculating features based on one year of data
+    two of the same reports are not used.
+
+    When it comes to filling in SF1_ARQ it comes with the disadvantage that seasonality properties are 
+    distorted. 
+
+    I think I will accept up to three quarters being forward filled. 
+
+    What about gaps greater 3 quarters? It does not make sense to fabricate data into the future after the company
+    was delisted. Also it does not make sense to calculate features for rows that where forward filled 
+
+    Solutions to the problems outlined above:
+    1. As long as the most recent (current) 10q included in a calculation is not forward filled, it is ok.
+    2. Rows that are calculated using foreward filled data is marked according to how many fabricated rows 
+       where used
+    3. Keep track of the original calendardate index so that when feature calculation is done, the
+       dataset can get downsampled again. This will ensure that:
+        - all "observations used in trading" is based on a "just released" statement.
+        - after being delisted, forward filled statements are not used.
+    
+    Strategy:
+    1. Take in unaltered sf1_art and sf1_arq for a ticker.
+    2. If no data in sf1_arq -> return pd.DataFrame()
+      - Or just skip calculating any features using quarterly data (I like this more, give more flexibility 
+        when putting together ML ready datasets later)
+    3. Capture current index (calendardates) of sf1_art and sf1_arq (needed to downsample later)
+    4. Forward fill up to three consecutive missing rows (in terms of calendardate)
+    5. Drop the still unfilled rows
+    6. Extract most recent and 1 year old sf1_art rows (representing the report periods one year appart, but use most recent update (highest datekey))
+    7. If the one year old sf1_art row is not available, almost none of the features can be calculated.
+       - SKIP CALCULATIONS (AND DROP ROW?)
+    7. Extract most recent 8 (9???) rows from sf1_arq (representing the 8 preceding report periods, but use the most recent update (highest datekey))
+    8. If a quarter is missing, it is not a deal breaker. Do checks on the level of each individual feature and
+       calculate as much as possible.
+    8. Capture metadata on the rows (reports) used which later can be used to select features or drop some timeframes.
+        1. datekey of each sf1_art and arq row
+        2. which rows where filled and not original
+        3. How many missing timeframes/row/??? where used in the construction of the features for the row.
+
+    9. Downsample to the original index (dropping the forward filled rows)
+    10. Return result.
+    """
+
 
     # SF1_ART PREPARATION_____________________________________________________________
     # Reindex
@@ -55,10 +102,7 @@ def add_sf1_features(sf1_art, sf1_arq, metadata):
     # If a row is missing, use reindex and foreward fill
 
 
-    """
-    At this point lacking stocks have been dropped the remaining rows and have complete SF1_ART and SF1_ARQ data
-    for all calendardates...
-    """
+
 
     # MAKE SURE THE ABOVE IS ROBUST THROUGH TESTING
 
@@ -79,7 +123,7 @@ def add_sf1_features(sf1_art, sf1_arq, metadata):
 
         #What to do when a 10K is missing?
         art_row_1y_ago = get_most_up_to_date_10k_filing(sf1_art, datekey_cur, 1)
-        art_row_2y_ago = get_most_up_to_date_10k_filing(sf1_art, datekey_cur, 2)
+        art_row_2y_ago = get_most_up_to_date_10k_filing(sf1_art, datekey_cur, 2) # Only used for capex growth...
 
         # What to do when a 10Q i missing?
         arq_row_cur = get_most_up_to_date_10q_filing(sf1_arq, datekey_cur, 0)
@@ -90,8 +134,10 @@ def add_sf1_features(sf1_art, sf1_arq, metadata):
         arq_row_5q_ago = get_most_up_to_date_10q_filing(sf1_arq, datekey_cur, 5)
         arq_row_6q_ago = get_most_up_to_date_10q_filing(sf1_arq, datekey_cur, 6)
         arq_row_7q_ago = get_most_up_to_date_10q_filing(sf1_arq, datekey_cur, 7)
-        arq_row_8q_ago = get_most_up_to_date_10q_filing(sf1_arq, datekey_cur, 8)
-
+        # this is the ninth quarter, is it needed? want to set the limit at 2 years of unbroken 
+        # history of data available...
+        arq_row_8q_ago = get_most_up_to_date_10q_filing(sf1_arq, datekey_cur, 8) 
+        
         arq_rows = [arq_row_cur, arq_row_1q_ago, arq_row_2q_ago, arq_row_3q_ago, arq_row_4q_ago, arq_row_5q_ago, arq_row_6q_ago, arq_row_7q_ago, arq_row_8q_ago]
 
 
@@ -318,6 +364,10 @@ def add_sf1_features(sf1_art, sf1_arq, metadata):
             if art_row_1y_ago["revenueusd"] != 0:
                 sf1_art.at[datekey_cur, "sgr"] = art_row_cur["revenueusd"] / art_row_1y_ago["revenueusd"]
 
+            
+            # Growth in capital expenditure (grcapx), Formula: (SF1[capex]t-1 / SF1[capex]t-2) - 1
+            if art_row_1y_ago["capex"] != 0:
+                sf1_art.at[datekey_cur, "grcapx"] = (art_row_cur["capex"] / art_row_1y_ago["capex"]) - 1
 
             # ΔLT/LAGAT (chtl_lagat), Formula: (SF1[liabilities]t-1 - SF1[liabilities]t-2) / SF1[assets]t-2
             if art_row_1y_ago["assets"] != 0:
@@ -397,10 +447,6 @@ def add_sf1_features(sf1_art, sf1_arq, metadata):
                 sf1_art.at[datekey_cur, "chdebtc_sale"] = (art_row_cur["debtc"] - art_row_1y_ago["debtc"]) / art_row_cur["revenueusd"]
 
 
-        if not art_row_2y_ago.empty:
-            # Growth in capital expenditure (grcapx), Formula: (SF1[capex]t-1 / SF1[capex]t-3) - 1
-            if art_row_2y_ago["capex"] != 0:
-                sf1_art.at[datekey_cur, "grcapx"] = (art_row_cur["capex"] / art_row_2y_ago["capex"]) - 1
         
         # _______________________YEARLY FILING BASED FEATURES END_________________________
 
@@ -489,6 +535,8 @@ def add_sf1_features(sf1_art, sf1_arq, metadata):
         # Earnings volatility (roavol)	Francis, LaFond, Olsson & Schipper 	2004, TAR 	
         # "Standard deviaiton for 16 quarters of income before extraordinary items (ibq) divided by average total assets (atq)."	
         # Formula: std(SF1[netinc]q) / avg(SF1[assets]q) for 8 - 16 quarters
+        
+        # OBS: Maybe be a litt less strict...
         if (not arq_row_cur.empty) and (not arq_row_1q_ago.empty) and (not arq_row_2q_ago.empty) \
             and (not arq_row_3q_ago.empty) and (not arq_row_4q_ago.empty) and (not arq_row_5q_ago.empty) \
             and (not arq_row_6q_ago.empty) and (not arq_row_7q_ago.empty) and (not arq_row_8q_ago.empty):

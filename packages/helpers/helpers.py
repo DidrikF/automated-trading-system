@@ -86,8 +86,6 @@ def get_most_up_to_date_10q_filing(df, date, quarters):
     return candidates.iloc[-1]
 
 
-
-
 def get_calendardate_index(start: pd.datetime, end: pd.datetime):
     calendardate_index = []
     m_d_list = [[3,31],[6,30],[9, 30],[12, 31]]
@@ -103,6 +101,19 @@ def get_calendardate_index(start: pd.datetime, end: pd.datetime):
 
     return calendardate_index
 
+
+def forward_fill_gaps(sf1, quarters):
+    sf1 = sf1.fillna(value="IAMNAN")
+    sf1 = sf1["calendardate"] = sf1.index
+
+    calendardate_index = get_calendardate_index(sf1.iloc[0]["calendardate"], sf1.iloc[-1]["calendardate"])
+    sf1_reindexed = sf1.reindex(calendardate_index)
+    sf1_filled = sf1.fillna(method="ffill")
+
+    sf1_filled.drop(columns=["calendardate"])
+    sf1_filled = sf1.replace(to_replace="IAMNAN", value=np.nan)
+
+    return sf1_filled
 
 #____________________________END_______________________________________
 
