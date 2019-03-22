@@ -1,37 +1,91 @@
 import pandas as pd
 import pytest
 from dateutil.relativedelta import *
-from .helpers import get_row_with_closest_date, get_acceptable_dates, select_row_closes_to_date
-from . helpers import get_most_up_to_date_10k_filing, get_most_up_to_date_10q_filing, get_report_period_x_quarters_ago
+from .helpers import get_acceptable_dates, select_row_closes_to_date, get_row_with_closest_date
+from . helpers import get_most_up_to_date_10k_filing, get_most_up_to_date_10q_filing,\
+    get_calendardate_x_quarters_ago, get_calendardate_index
 
 sf1_art = None
 sf1_arq = None
 
 @pytest.fixture(scope='module', autouse=True)
 def setup():
-    global sf1_art_featured
+    global sf1_art, sf1_arq
     # Will be executed before the first test in the module
     sf1_art = pd.read_csv("../../datasets/testing/sf1_art.csv", parse_dates=["datekey", \
         "calendardate", "reportperiod"], index_col="datekey")
-    sf1_arq = pd.read_csv("../../datasets/testing/sf1_arq.csv", parse_dates=["datekey"], index_col="datekey")
+    sf1_art = sf1_art.sort_values(by="datekey", ascending=True)
+    
+    sf1_art["datekey"] = sf1_art.index # For testing purposes, not needed elsewere
+
+    sf1_arq = pd.read_csv("../../datasets/testing/sf1_arq.csv", parse_dates=["datekey", \
+        "calendardate", "reportperiod"], index_col="datekey")
+    sf1_arq = sf1_arq.sort_values(by="datekey", ascending=True)
+
+    sf1_arq["datekey"] = sf1_arq.index # For testing purposes
+    
     yield
     # Will be executed after the last test in the module
 
-def test_get_report_period_x_quarters_ago():
+def test_get_calendardate_x_quarters_ago():
     cur_reportperiod = pd.to_datetime("2003-03-31")
-    # CONTINUE HERE...
+    
+    assert get_calendardate_x_quarters_ago(cur_reportperiod, 5) == pd.to_datetime("2001-12-31")
+    assert get_calendardate_x_quarters_ago(cur_reportperiod, 4) == pd.to_datetime("2002-03-31")
+    assert get_calendardate_x_quarters_ago(cur_reportperiod, 7) == pd.to_datetime("2001-06-30")
+    assert get_calendardate_x_quarters_ago(cur_reportperiod, 12) == pd.to_datetime("2000-03-31")
+    
 
 def test_get_most_up_to_date_10k_filing():
     global sf1_art
-    cur_date = pd.to_datetime("2012-05-10")
+    date_2012_05_10 = pd.to_datetime("2012-05-10") # report period: 2012-03-31
+    date_2012_08_09 = pd.to_datetime("2012-08-09") # report period: 2012-06-30 
+    # (10K one year earlier has a correction released 2011-11-14)
 
-    filing_1y_ago = get_most_up_to_date_10k_filing(sf1_art, cur_date, 1)
+    sf1_art_ntk = sf1_art.loc[sf1_art.ticker=="NTK"]
+    sf1_art_aapl = sf1_art.loc[sf1_art.ticker=="AAPL"]
+
+    assert get_most_up_to_date_10k_filing(sf1_art_ntk, date_2012_05_10, 1)["datekey"] == \
+        pd.to_datetime("2011-05-12")
+
+    filing_correction = get_most_up_to_date_10k_filing(sf1_art_ntk, date_2012_08_09, 1)
+    assert filing_correction["datekey"] == pd.to_datetime("2011-11-14")
+    assert filing_correction["calendardate"] == pd.to_datetime("2011-06-30")
+
 
 
 def test_get_most_up_to_date_10q_filing():
     global sf1_arq
+    date_2012_05_10 = pd.to_datetime("2012-05-10") # report period: 2012-03-31
+    date_2012_08_09 = pd.to_datetime("2012-08-09") # report period: 2012-06-30 
+    # (10K one year earlier has a correction released 2011-11-14)
+
+    sf1_arq_ntk = sf1_arq.loc[sf1_arq.ticker=="NTK"]
+    sf1_arq_aapl = sf1_arq.loc[sf1_arq.ticker=="AAPL"]
+
+    assert get_most_up_to_date_10q_filing(sf1_arq_ntk, date_2012_05_10, 4)["datekey"] == \
+        pd.to_datetime("2011-05-12")
+
+    filing_correction = get_most_up_to_date_10q_filing(sf1_arq_ntk, date_2012_08_09, 4)
+    assert filing_correction["datekey"] == pd.to_datetime("2011-11-14")
+    assert filing_correction["calendardate"] == pd.to_datetime("2011-06-30")
+
+    assert get_most_up_to_date_10q_filing(sf1_arq_ntk, date_2012_05_10, 0)["datekey"] == \
+        date_2012_05_10
 
 
+def test_get_calendardate_index():
+    start = pd.to_datetime("2012-06-30")
+    end = pd.to_datetime("2018-12-31")
+
+    index = get_calendardate_index(start, end)
+
+    print(index) # Prints as expected, need to add some assertions...
+    assert False
+#____________________________________END____________________________________
+
+
+@pytest.mark.skip(reason="Not used atm")
 def test_get_row_with_closest_date():
     global sf1_art
     global sf1_arq
@@ -67,7 +121,7 @@ def test_get_row_with_closest_date():
 
 
 
-
+@pytest.mark.skip(reason="Not used atm")
 def test_get_acceptable_dates():
     # 2012-12-31
     # 2012-12-31 + 6 days = 2013-01-06
@@ -79,7 +133,7 @@ def test_get_acceptable_dates():
     assert acceptable_dates[0] == pd.to_datetime("2012-12-25")
     assert acceptable_dates[-1] == pd.to_datetime("2013-01-06")
 
-
+@pytest.mark.skip(reason="Not used atm")
 def test_select_row_closes_to_date():
     pass
 

@@ -104,8 +104,15 @@ def pandas_mp_engine(callback, atoms, data, molecule_key, split_strategy, num_pr
     # Use Dataset class to split the data.
     # arts = lin_parts(len(atoms), num_processes*molecules_per_process) # subject to change
     
-
     jobs = get_jobs(atoms, data, callback, molecule_key, split_strategy, num_processes, molecules_per_process, **kwargs)    
+
+    print("Number of jobs: ", len(jobs))
+
+    """
+    Creating jobs is a time-consuming task.
+    It would be nice if one could chain together data transformations
+    Maybe not use time on this...
+    """
 
 
     if num_processes == 1:

@@ -25,46 +25,88 @@ def get_x_past_months_of_data(df, date, months):
     date_in_past = date - relativedelta(months=months)
     return df.loc[(df.index <= date) & (df.index >= date_in_past)]
 
+def get_calendardate_x_quarters_ago(date: pd.datetime, quarters: int):
+    m_d_list = [[3,31],[6,30],[9, 30],[12, 31]]
+    valid = False
+    for m_d in m_d_list:
+        if (m_d[0] == date.month) and (m_d[1] == date.day):
+            valid = True
+
+    if valid == False:
+        raise ValueError("date must be a valid report period")
+
+    quarter_list = []
+    for year in range(1995, 2020):
+        for month_day in m_d_list:
+            quarter_list.append(datetime(year=year, month=month_day[0], day=month_day[1]))
+
+    cur_index = quarter_list.index(date)
+
+    return quarter_list[cur_index-quarters]
 
 
 
 def get_most_up_to_date_10k_filing(df, date, years):
     """
-    NOTE: This function requires df to have a DateTimeIndex and only contain data for one ticker.
-    Returns the 10-K filing $years number of years earliar than date.
-    At $date, what is the most updated 10-k filing looking back, for the report period $years years ago.
+    NOTE: This function requires df to have a DateTimeIndex, only contain data for one ticker and is sorted on datekey.
+    Returns the the most recent 10-K filing with calendardate (normalized report period) $years number of years 
+    earliar than date.
     """
+    # What if 10K report is not available for the report period?
     cur_row = df.loc[date]
-    reportperiod = cur_row["reportperiod"]
+    calendardate = cur_row["calendardate"]
 
-    return None
+    desired_calendardate = get_calendardate_x_quarters_ago(calendardate, 4*years)
+    candidates = df.loc[df.calendardate==desired_calendardate]
+    candidates = candidates.loc[candidates.index <= date] # Ensure that no future information gets used
 
-def get_report_period_x_quarters_ago(date: pd.datetime, quarters: int):
-    m_d_list = [[3,31],[6,30],[9, 30],[12, 31]]
-    if [date.month, date.day] in m_d_list:
-        raise ValueError("date must be a valid report period")
+    if len(candidates) == 0:
+        raise KeyError("No 10K filing for report period {}".format(desired_calendardate))
 
-    years = math.floor(quarters / 4)
-    quarters = quarters % 4
+    return candidates.iloc[-1]
 
-    cur_index = m_d_list.index([date.month, date.day])
-
-    Y = date.year - years
-    m_d = m_d_list[cur_index - quarters]
-
-    return datetime(year=Y, month=m_d[0], day=[m_d[1]])
-    
 
 def get_most_up_to_date_10q_filing(df, date, quarters):
     """
-    NOTE: This function requires df to have a DateTimeIndex and only contain data for one ticker.
-    Returns the most updated 10-K/10-Q filing for the report period $quarters number 
-    of quarters earlier than date.
+    NOTE: This function requires df to have a DateTimeIndex, only contain data for one ticker and is sorted on datekey.
+    Returns the most recnet 10-Q filing with calendardate (normalized report period) $quarters number 
+    of quarters earlier than $date.
     """
+    cur_row = df.loc[date]
+    calendardate = cur_row["calendardate"]
+
+    desired_calendardate = get_calendardate_x_quarters_ago(calendardate, quarters)
+    candidates = df.loc[df.calendardate==desired_calendardate]
+    candidates = candidates.loc[candidates.index <= date] # Ensure that no future information gets used
 
     # What if 10Q report is not available for the report period?
+    if len(candidates) == 0:
+        raise KeyError("No 10K filing for ticker {} and report period {}".format(df.iloc[0]["ticker"], desired_calendardate))
 
-    """
+    return candidates.iloc[-1]
+
+
+
+
+def get_calendardate_index(start: pd.datetime, end: pd.datetime):
+    calendardate_index = []
+    m_d_list = [[3,31],[6,30],[9, 30],[12, 31]]
+    month_of_first_filing = start.month
+    for i, year in enumerate(range(start.year, end.year + 1)):
+        if i == 0:
+            index_of_first_filing_in_m_d_list = [3,6,9,12].index(month_of_first_filing)
+            for month_day in m_d_list[index_of_first_filing_in_m_d_list:]:
+                calendardate_index.append(datetime(year=year, month=month_day[0], day=month_day[1]))
+            continue
+        for month_day in m_d_list:
+            calendardate_index.append(datetime(year=year, month=month_day[0], day=month_day[1]))
+
+    return calendardate_index
+
+
+#____________________________END_______________________________________
+
+def get_row_with_closest_date(df, date, margin):
     acceptable_dates = get_acceptable_dates(date, margin)
     candidates = df.loc[df.index.isin(acceptable_dates)]
     if len(candidates.index) == 0:
@@ -72,7 +114,6 @@ def get_most_up_to_date_10q_filing(df, date, quarters):
     
     best_row = select_row_closes_to_date(candidates, date)
     return best_row
-    """
 
 
 def get_acceptable_dates(date, margin):

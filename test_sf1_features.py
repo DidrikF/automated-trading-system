@@ -3,7 +3,7 @@ import pytest
 
 from packages.dataset_builder.dataset import Dataset
 from sf1_features import add_sf1_features
-from packages.helpers.helpers import 
+from packages.multiprocessing.engine import pandas_mp_engine
 
 """
 Each step is performed for each industry separately
@@ -19,7 +19,9 @@ Step-by-Step Dataset Construction:
 """
 
 sf1_art_featured = None
-
+sf1_art = None
+sf1_arq = None
+metadata = None
 
 @pytest.fixture(scope='module', autouse=True)
 def setup():
@@ -27,7 +29,7 @@ def setup():
     # Will be executed before the first test in the module
     sf1_art = pd.read_csv("./datasets/testing/sf1_art.csv", parse_dates=["datekey"], index_col="datekey")
     sf1_arq = pd.read_csv("./datasets/testing/sf1_arq.csv", parse_dates=["datekey"], index_col="datekey")
-    metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", parse_dates=["firstpricedate"], index_col="datekey")
+    metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", parse_dates=["firstpricedate"])
     yield
     
     # Will be executed after the last test in the module
@@ -37,7 +39,7 @@ def setup():
 
 @pytest.skip
 def test_add_sf_features_asset_growth():
-    global sf1_art_featured
+    global sf1_art_featured, sf1_art, sf1_arq, metadata
 
     sf1_art_featured = pandas_mp_engine(callback=add_sf1_features, atoms=sf1_art, \
         data={"sf1_arq": sf1_arq, 'metadata': metadata}, molecule_key='sf1_art', split_strategy= 'ticker', \
