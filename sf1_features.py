@@ -75,7 +75,6 @@ def add_sf1_features(sf1_art, sf1_arq, metadata):
     10. Return result.
     """
 
-
     # SF1_ART PREPARATION_____________________________________________________________
     # Reindex
     calendardate_index = get_calendardate_index(sf1_art.iloc[0]["calendardate"], sf1_art.iloc[-1]["calendardate"])
@@ -156,6 +155,113 @@ def add_sf1_features(sf1_art, sf1_arq, metadata):
         If they are to be amended, i guess forward filling is the simplest strategy.
 
         """
+
+         # _____________________QUARTER FILING BASED FEATURES START_______________________
+
+        # I might want to implement approximations for those companies that do not have quarterly statements
+        if (not arq_row_cur.empty) and (not arq_row_1q_ago.empty):
+            # CALCULATE QUARTER TO QUARTER FEATURES
+            
+            # Return on assets (roaq), Formula: SF1[netinc]q-1 / SF1[assets]q-2
+            if arq_row_1q_ago["assets"] != 0:
+                sf1_art.at[datekey_cur, "assets"] = arq_row_cur["netinc"] / arq_row_1q_ago["assets"]
+
+        if (not arq_row_cur.empty) and (not arq_row_4q_ago.empty):
+            # CALCULATE FEATURES BASED ON THE SAME QUARTER FOR THAT LAST TWO YEARS
+            
+            # Change in tax expense (chtx), Formula: (SF1[taxexp]q-1 / SF1[taxexp]q-5) - 1
+            if arq_row_4q_ago["taxexp"] != 0:
+                sf1_art.at[datekey_cur, "chtx"] = (arq_row_cur["taxexp"] / arq_row_4q_ago["taxexp"]) - 1
+
+            # Revenue surprise (rsup), Formula: ( SF1[revenueusd]q-1 - SF1[revenueusd]q-5 ) / SF1[marketcap]q-1
+            if arq_row_1q_ago["marketcap"] != 0:
+                sf1_art.at[datekey_cur, "rsup"] = (arq_row_1q_ago["revenueusd"] - arq_row_4q_ago["revenueusd"]) / arq_row_1q_ago["marketcap"]
+
+            # Earnings Surprise (sue), Formula: (SF1[netinc]q-1 - SF1[netinc]q-5) / SF1[marketcap]q-1
+            if arq_row_1q_ago["marketcap"] != 0:
+                sf1_art.at[datekey_cur, "sue"] = (arq_row_1q_ago["netinc"] - arq_row_4q_ago["netinc"]) / arq_row_1q_ago["marketcap"]
+            
+            
+
+        # MORE ADVANCED MULTI-QUARTER CALCULATIONS
+
+        # Corporate investment (cinvest), 
+        # "Change over one quarter in net PP&E (ppentq) divided by sales (saleq) - average of this variable for prior 3 quarters; if saleq = 0, then scale by 0.01."
+        # Formula: 
+        # (SF1[ppnenet]q-1 - SF1[ppnenet]q-2) / SF1[revenueusd]q-1 - avg((SF1[ppnenet]q-i - SF1[ppnenet]q-i-1) / SF1[revenueusd]q-i, i=[2,3,4]) NB: if sales is zero scale change in ppenet by 0.01
+        if (not arq_row_cur.empty) and (not arq_row_1q_ago.empty) and (not arq_row_2q_ago.empty) and (not arq_row_3q_ago.empty) and (not arq_row_4q_ago.empty):
+            # Most recent quarter's chppne/sales
+            if arq_row_cur["revenueusd"] != 0:
+                chppne_sales_cur = (arq_row_cur["ppnenet"] - arq_row_1q_ago["ppnenet"]) / arq_row_cur["revenueusd"]
+            else:
+                chppne_sales_cur = (arq_row_cur["ppnenet"] - arq_row_1q_ago["ppnenet"]) * 0.01
+            # Previous three quarters of chppne/sales
+            if arq_row_1q_ago["revenueusd"] != 0:
+                chppne_sales_q_1 = (arq_row_1q_ago["ppnenet"] - arq_row_2q_ago["ppnenet"]) / arq_row_1q_ago["revenueusd"]
+            else:
+                chppne_sales_q_1 = (arq_row_1q_ago["ppnenet"] - arq_row_2q_ago["ppnenet"]) * 0.01
+
+            if arq_row_2q_ago["revenueusd"] != 0:
+                chppne_sales_q_2 = (arq_row_2q_ago["ppnenet"] - arq_row_3q_ago["ppnenet"]) / arq_row_2q_ago["revenueusd"]
+            else:
+                chppne_sales_q_2 = (arq_row_2q_ago["ppnenet"] - arq_row_3q_ago["ppnenet"]) * 0.01
+
+            if arq_row_3q_ago["revenueusd"] != 0:
+                chppne_sales_q_3 = (arq_row_3q_ago["ppnenet"] - arq_row_4q_ago["ppnenet"]) / arq_row_3q_ago["revenueusd"]
+            else:
+                chppne_sales_q_3 = (arq_row_3q_ago["ppnenet"] - arq_row_4q_ago["ppnenet"]) * 0.01
+            
+            sf1_art.at[datekey_cur, "cinvest"] = chppne_sales_cur - ( (chppne_sales_q_1 + chppne_sales_q_2 + chppne_sales_q_3) / 3 )
+        
+
+        if arq_row_cur["revenueusd"] != 0:
+            chppne_sales_q_1 = (arq_row_cur["ppnenet"] - arq_row_1q_ago["ppnenet"]) / arq_row_cur["revenueusd"]
+        else: 
+            chppne_sales_q_1 = (arq_row_cur["ppnenet"] - arq_row_1q_ago["ppnenet"]) * 0.01
+
+        
+        # Number of earnings increases (nincr)	Barth, Elliott & Finn 	1999, JAR 	"Number of consecutive quarters (up to eight quarters) with an increase in earnings
+        # (ibq) over same quarter in the prior year."	for (i = 1, i++, i<=8) { if(SF1[netinc]q-i > SF1[netinc]q-i-4): counter++; else: break }
+        nr_of_earnings_increases = 0
+        for i in range(4):
+            cur_row = arq_rows[i]
+            prev_row = arq_rows[i+4]
+            if (not cur_row.empty) and (not prev_row.empty):
+                cur_netinc = cur_row["netinc"]
+                prev_netinc = prev_row["netinc"]
+                if cur_netinc > prev_netinc:
+                    nr_of_earnings_increases += 1
+                else:
+                    break
+            else:
+                break
+
+        sf1_art.at[datekey_cur, "nincr"] = nr_of_earnings_increases
+
+        # Earnings volatility (roavol)	Francis, LaFond, Olsson & Schipper 	2004, TAR 	
+        # "Standard deviaiton for 16 quarters of income before extraordinary items (ibq) divided by average total assets (atq)."	
+        # Formula: std(SF1[netinc]q) / avg(SF1[assets]q) for 8 - 16 quarters
+        
+        # OBS: Maybe be a litt less strict...
+        if (not arq_row_cur.empty) and (not arq_row_1q_ago.empty) and (not arq_row_2q_ago.empty) \
+            and (not arq_row_3q_ago.empty) and (not arq_row_4q_ago.empty) and (not arq_row_5q_ago.empty) \
+            and (not arq_row_6q_ago.empty) and (not arq_row_7q_ago.empty) and (not arq_row_8q_ago.empty):
+            sum_netinc_assets = 0
+            for row in arq_rows:
+                sum_netinc_assets += row["netinc"] / row["assetsavg"]
+            mean_netinc_assets = sum_netinc_assets / len(arq_rows)
+            sum_sqrd_distance_netinc_assets = 0
+            for row in arq_rows:
+                netinc_assets = row["netinc"] / row["assetsavg"]
+                sum_sqrd_distance_netinc_assets += ((netinc_assets - mean_netinc_assets))**2
+
+            std_netinc_assets = sum_sqrd_distance_netinc_assets / len(arq_rows)
+            
+            sf1_arq.at[datekey_cur, "roavol"] = std_netinc_assets
+
+
+        # _____________________QUARTER FILING BASED FEATURES END_______________________
+
         # _______________________YEARLY FILING BASED FEATURES START_________________________
 
         # CALCULATIONS IN PREPARATION FOR LATER
@@ -450,111 +556,7 @@ def add_sf1_features(sf1_art, sf1_arq, metadata):
         
         # _______________________YEARLY FILING BASED FEATURES END_________________________
 
-        # _____________________QUARTER FILING BASED FEATURES START_______________________
-
-        # I might want to implement approximations for those companies that do not have quarterly statements
-        if (not arq_row_cur.empty) and (not arq_row_1q_ago.empty):
-            # CALCULATE QUARTER TO QUARTER FEATURES
-            
-            # Return on assets (roaq), Formula: SF1[netinc]q-1 / SF1[assets]q-2
-            if arq_row_1q_ago["assets"] != 0:
-                sf1_art.at[datekey_cur, "assets"] = arq_row_cur["netinc"] / arq_row_1q_ago["assets"]
-
-        if (not arq_row_cur.empty) and (not arq_row_4q_ago.empty):
-            # CALCULATE FEATURES BASED ON THE SAME QUARTER FOR THAT LAST TWO YEARS
-            
-            # Change in tax expense (chtx), Formula: (SF1[taxexp]q-1 / SF1[taxexp]q-5) - 1
-            if arq_row_4q_ago["taxexp"] != 0:
-                sf1_art.at[datekey_cur, "chtx"] = (arq_row_cur["taxexp"] / arq_row_4q_ago["taxexp"]) - 1
-
-            # Revenue surprise (rsup), Formula: ( SF1[revenueusd]q-1 - SF1[revenueusd]q-5 ) / SF1[marketcap]q-1
-            if arq_row_1q_ago["marketcap"] != 0:
-                sf1_art.at[datekey_cur, "rsup"] = (arq_row_1q_ago["revenueusd"] - arq_row_4q_ago["revenueusd"]) / arq_row_1q_ago["marketcap"]
-
-            # Earnings Surprise (sue), Formula: (SF1[netinc]q-1 - SF1[netinc]q-5) / SF1[marketcap]q-1
-            if arq_row_1q_ago["marketcap"] != 0:
-                sf1_art.at[datekey_cur, "sue"] = (arq_row_1q_ago["netinc"] - arq_row_4q_ago["netinc"]) / arq_row_1q_ago["marketcap"]
-            
-            
-
-        # MORE ADVANCED MULTI-QUARTER CALCULATIONS
-
-        # Corporate investment (cinvest), 
-        # "Change over one quarter in net PP&E (ppentq) divided by sales (saleq) - average of this variable for prior 3 quarters; if saleq = 0, then scale by 0.01."
-        # Formula: 
-        # (SF1[ppnenet]q-1 - SF1[ppnenet]q-2) / SF1[revenueusd]q-1 - avg((SF1[ppnenet]q-i - SF1[ppnenet]q-i-1) / SF1[revenueusd]q-i, i=[2,3,4]) NB: if sales is zero scale change in ppenet by 0.01
-        if (not arq_row_cur.empty) and (not arq_row_1q_ago.empty) and (not arq_row_2q_ago.empty) and (not arq_row_3q_ago.empty) and (not arq_row_4q_ago.empty):
-            # Most recent quarter's chppne/sales
-            if arq_row_cur["revenueusd"] != 0:
-                chppne_sales_cur = (arq_row_cur["ppnenet"] - arq_row_1q_ago["ppnenet"]) / arq_row_cur["revenueusd"]
-            else:
-                chppne_sales_cur = (arq_row_cur["ppnenet"] - arq_row_1q_ago["ppnenet"]) * 0.01
-            # Previous three quarters of chppne/sales
-            if arq_row_1q_ago["revenueusd"] != 0:
-                chppne_sales_q_1 = (arq_row_1q_ago["ppnenet"] - arq_row_2q_ago["ppnenet"]) / arq_row_1q_ago["revenueusd"]
-            else:
-                chppne_sales_q_1 = (arq_row_1q_ago["ppnenet"] - arq_row_2q_ago["ppnenet"]) * 0.01
-
-            if arq_row_2q_ago["revenueusd"] != 0:
-                chppne_sales_q_2 = (arq_row_2q_ago["ppnenet"] - arq_row_3q_ago["ppnenet"]) / arq_row_2q_ago["revenueusd"]
-            else:
-                chppne_sales_q_2 = (arq_row_2q_ago["ppnenet"] - arq_row_3q_ago["ppnenet"]) * 0.01
-
-            if arq_row_3q_ago["revenueusd"] != 0:
-                chppne_sales_q_3 = (arq_row_3q_ago["ppnenet"] - arq_row_4q_ago["ppnenet"]) / arq_row_3q_ago["revenueusd"]
-            else:
-                chppne_sales_q_3 = (arq_row_3q_ago["ppnenet"] - arq_row_4q_ago["ppnenet"]) * 0.01
-            
-            sf1_art.at[datekey_cur, "cinvest"] = chppne_sales_cur - ( (chppne_sales_q_1 + chppne_sales_q_2 + chppne_sales_q_3) / 3 )
-        
-
-        if arq_row_cur["revenueusd"] != 0:
-            chppne_sales_q_1 = (arq_row_cur["ppnenet"] - arq_row_1q_ago["ppnenet"]) / arq_row_cur["revenueusd"]
-        else: 
-            chppne_sales_q_1 = (arq_row_cur["ppnenet"] - arq_row_1q_ago["ppnenet"]) * 0.01
-
-        
-        # Number of earnings increases (nincr)	Barth, Elliott & Finn 	1999, JAR 	"Number of consecutive quarters (up to eight quarters) with an increase in earnings
-        # (ibq) over same quarter in the prior year."	for (i = 1, i++, i<=8) { if(SF1[netinc]q-i > SF1[netinc]q-i-4): counter++; else: break }
-        nr_of_earnings_increases = 0
-        for i in range(4):
-            cur_row = arq_rows[i]
-            prev_row = arq_rows[i+4]
-            if (not cur_row.empty) and (not prev_row.empty):
-                cur_netinc = cur_row["netinc"]
-                prev_netinc = prev_row["netinc"]
-                if cur_netinc > prev_netinc:
-                    nr_of_earnings_increases += 1
-                else:
-                    break
-            else:
-                break
-
-        sf1_art.at[datekey_cur, "nincr"] = nr_of_earnings_increases
-
-        # Earnings volatility (roavol)	Francis, LaFond, Olsson & Schipper 	2004, TAR 	
-        # "Standard deviaiton for 16 quarters of income before extraordinary items (ibq) divided by average total assets (atq)."	
-        # Formula: std(SF1[netinc]q) / avg(SF1[assets]q) for 8 - 16 quarters
-        
-        # OBS: Maybe be a litt less strict...
-        if (not arq_row_cur.empty) and (not arq_row_1q_ago.empty) and (not arq_row_2q_ago.empty) \
-            and (not arq_row_3q_ago.empty) and (not arq_row_4q_ago.empty) and (not arq_row_5q_ago.empty) \
-            and (not arq_row_6q_ago.empty) and (not arq_row_7q_ago.empty) and (not arq_row_8q_ago.empty):
-            sum_netinc_assets = 0
-            for row in arq_rows:
-                sum_netinc_assets += row["netinc"] / row["assetsavg"]
-            mean_netinc_assets = sum_netinc_assets / len(arq_rows)
-            sum_sqrd_distance_netinc_assets = 0
-            for row in arq_rows:
-                netinc_assets = row["netinc"] / row["assetsavg"]
-                sum_sqrd_distance_netinc_assets += ((netinc_assets - mean_netinc_assets))**2
-
-            std_netinc_assets = sum_sqrd_distance_netinc_assets / len(arq_rows)
-            
-            sf1_arq.at[datekey_cur, "roavol"] = std_netinc_assets
-
-
-        # _____________________QUARTER FILING BASED FEATURES END_______________________
+       
 
         # _________________________________OTHER_______________________________________
         # Age (age): Formula: SF1[datekey]t-1 - TICKERS[firstpricedate]

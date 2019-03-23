@@ -4,6 +4,7 @@ from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 import pandas as pd
 import math
+import numpy as np
 
 def print_exception_info(e):
     """
@@ -101,17 +102,23 @@ def get_calendardate_index(start: pd.datetime, end: pd.datetime):
 
     return calendardate_index
 
-
 def forward_fill_gaps(sf1, quarters):
+    """
+    NOTE: this function require calendardate index.
+    Fill in missing data in $quarters number of quarters into the future.
+    """
     sf1 = sf1.fillna(value="IAMNAN")
-    sf1 = sf1["calendardate"] = sf1.index
+    sf1["calendardate"] = sf1.index
 
     calendardate_index = get_calendardate_index(sf1.iloc[0]["calendardate"], sf1.iloc[-1]["calendardate"])
+    # print(calendardate_index)
     sf1_reindexed = sf1.reindex(calendardate_index)
-    sf1_filled = sf1.fillna(method="ffill")
 
+    sf1_filled = sf1_reindexed.fillna(method="ffill", limit=3)
+    
     sf1_filled.drop(columns=["calendardate"])
-    sf1_filled = sf1.replace(to_replace="IAMNAN", value=np.nan)
+    sf1_filled = sf1_filled.dropna(axis=0)
+    sf1_filled = sf1_filled.replace(to_replace="IAMNAN", value=np.nan)
 
     return sf1_filled
 

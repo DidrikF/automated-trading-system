@@ -1,6 +1,9 @@
 import pandas as pd
 import pytest
 from dateutil.relativedelta import *
+import numpy as np
+import math
+import pytest
 from .helpers import get_acceptable_dates, select_row_closes_to_date, get_row_with_closest_date
 from . helpers import get_most_up_to_date_10k_filing, get_most_up_to_date_10q_filing,\
     get_calendardate_x_quarters_ago, get_calendardate_index, forward_fill_gaps
@@ -35,7 +38,6 @@ def test_get_calendardate_x_quarters_ago():
     assert get_calendardate_x_quarters_ago(cur_reportperiod, 7) == pd.to_datetime("2001-06-30")
     assert get_calendardate_x_quarters_ago(cur_reportperiod, 12) == pd.to_datetime("2000-03-31")
     
-
 def test_get_most_up_to_date_10k_filing():
     global sf1_art
     date_2012_05_10 = pd.to_datetime("2012-05-10") # report period: 2012-03-31
@@ -51,7 +53,6 @@ def test_get_most_up_to_date_10k_filing():
     filing_correction = get_most_up_to_date_10k_filing(sf1_art_ntk, date_2012_08_09, 1)
     assert filing_correction["datekey"] == pd.to_datetime("2011-11-14")
     assert filing_correction["calendardate"] == pd.to_datetime("2011-06-30")
-
 
 
 def test_get_most_up_to_date_10q_filing():
@@ -73,21 +74,48 @@ def test_get_most_up_to_date_10q_filing():
     assert get_most_up_to_date_10q_filing(sf1_arq_ntk, date_2012_05_10, 0)["datekey"] == \
         date_2012_05_10
 
-
 def test_get_calendardate_index():
     start = pd.to_datetime("2012-06-30")
-    end = pd.to_datetime("2018-12-31")
+    end = pd.to_datetime("2013-12-31")
 
     index = get_calendardate_index(start, end)
 
-    print(index) # Prints as expected, need to add some assertions...
-    assert False
+    desired = [pd.to_datetime("2012-06-30"), pd.to_datetime("2012-09-30"), pd.to_datetime("2012-12-31"), pd.to_datetime("2013-03-31"), pd.to_datetime("2013-06-30"), pd.to_datetime("2013-09-30"), pd.to_datetime("2013-12-31")]
 
+    for date1, date2 in zip(index, desired):
+        assert date1 == date2
 
 def test_forward_fill_gaps():
-    sf1 = pd.read_csv("../../datasets/testing/ffill_sf1_art.csv")
+    sf1_missing = pd.read_csv("../../datasets/testing/ffill_sf1_art.csv", parse_dates=["datekey", "calendardate", "reportperiod"], index_col="calendardate")
     # First three quarters of 2000 is missing (should be filled completely)
     # All four quarters of 2007 is missing (should not fill completely)
+    sf1_miss_aapl = sf1_missing.loc[sf1_missing.ticker=="AAPL"]
+    
+    assert math.isnan(sf1_miss_aapl.loc["1998-06-30"]["capex"]) == True
+    
+    with pytest.raises(KeyError):
+        row = sf1_miss_aapl.loc["2000-03-31"]
+        row = sf1_miss_aapl.loc["2007-06-30"]
+
+    
+    sf1_filled = forward_fill_gaps(sf1_miss_aapl, 3)
+
+    try:
+        sf1_filled.loc["2000-03-31"]
+        sf1_filled.loc["2000-06-30"]
+        sf1_filled.loc["2000-09-30"]
+        sf1_filled.loc["2007-03-31"]
+        sf1_filled.loc["2007-03-31"]
+        sf1_filled.loc["2007-06-30"]
+        sf1_filled.loc["2007-09-30"]
+    except KeyError as e:
+        pytest.fail("KeyError raised when it should not have been")
+
+
+    with pytest.raises(KeyError):
+        row = sf1_filled.loc["2007-12-31"]
+
+    assert math.isnan(sf1_filled.loc["1998-06-30"]["capex"]) == True
 
 
 #____________________________________END____________________________________
