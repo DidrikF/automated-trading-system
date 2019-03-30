@@ -29,6 +29,7 @@ def test_add_indmom():
     sep = pandas_mp_engine(callback=add_indmom, atoms=sep, data=None, \
         molecule_key='sep', split_strategy= 'industry', \
             num_processes=4, molecules_per_process=1)
+    
     completed = True
 
     sep.sort_values(by=["ticker", "date"], ascending=True, inplace=True)
@@ -43,7 +44,6 @@ def test_add_indmom():
 
     assert sep_ntk.loc["2011-05-04"]["indmom"] == \
             pytest.approx(industry_sep.loc["2011-05-04", "mom12m_actual"].mean())
-
 
 
 

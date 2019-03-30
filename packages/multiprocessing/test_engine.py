@@ -2,8 +2,9 @@ import numpy as np
 import pytest
 import timeit
 import multiprocessing as mp
-from engine import pandas_mp_engine
+from .engine import pandas_mp_engine, split_df_into_molecules
 import time
+import pandas as pd
   
 
 # Experimentation, not used
@@ -60,7 +61,7 @@ def setup():
     # Will be executed after the last test in the module
     
 
-
+@pytest.mark.skip()
 def test_pandas_mp_engine():
     # global sep_extended 
     # assert sep_featured.loc[(sep_featured["ticker"] == "AAPL") & (sep_featured["date"] == date_1999_01_04)].iloc[-1]["return"] == pytest.approx((1.3530000000000002 / 1.473) -1)
@@ -83,3 +84,15 @@ def test_pandas_mp_engine():
     time_mp = time11 - time10
 
     assert time_standard/2 > time_mp
+
+
+
+def test_split_df_into_molecules():
+    sep = pd.read_csv("../../datasets/testing/sep.csv", parse_dates=["date"], index_col="date")
+
+    dfs = split_df_into_molecules(sep, "date", 3)
+
+    print(dfs)
+
+
+    assert False

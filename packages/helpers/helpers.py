@@ -27,6 +27,9 @@ def get_x_past_months_of_data(df, date, months):
     return df.loc[(df.index <= date) & (df.index >= date_in_past)]
 
 def get_calendardate_x_quarters_ago(date: pd.datetime, quarters: int):
+    """
+    Returns the normalized report period date (calendardate) $quarters number of quarters in the past.
+    """
     m_d_list = [[3,31],[6,30],[9, 30],[12, 31]]
     valid = False
     for m_d in m_d_list:
@@ -36,8 +39,9 @@ def get_calendardate_x_quarters_ago(date: pd.datetime, quarters: int):
     if valid == False:
         raise ValueError("date must be a valid report period")
 
+    first_year = date.year - (math.ceil(quarters/4) + 1)
     quarter_list = []
-    for year in range(1995, 2020):
+    for year in range(first_year, date.year + 1):
         for month_day in m_d_list:
             quarter_list.append(datetime(year=year, month=month_day[0], day=month_day[1]))
 
@@ -45,49 +49,81 @@ def get_calendardate_x_quarters_ago(date: pd.datetime, quarters: int):
 
     return quarter_list[cur_index-quarters]
 
-
-
-def get_most_up_to_date_10k_filing(df, date, years):
+def get_calendardate_x_quarters_later(date: pd.datetime, quarters: int):
     """
-    NOTE: This function requires df to have a DateTimeIndex, only contain data for one ticker and is sorted on datekey.
+    Returns the normalized report period date (calendardate) $quarters number of quarters in the future.
+    """
+    m_d_list = [[3,31],[6,30],[9, 30],[12, 31]]
+    valid = False
+    for m_d in m_d_list:
+        if (m_d[0] == date.month) and (m_d[1] == date.day):
+            valid = True
+
+    if valid == False:
+        raise ValueError("date must be a valid report period")
+
+    last_year = date.year + (math.ceil(quarters/4) + 1)
+    quarter_list = []
+    for year in range(date.year, last_year):
+        for month_day in m_d_list:
+            quarter_list.append(datetime(year=year, month=month_day[0], day=month_day[1]))
+
+    cur_index = quarter_list.index(date)
+
+    return quarter_list[cur_index+quarters]
+
+def get_most_up_to_date_10k_filing(sf1_art, caldate_cur: pd.datetime, datekey_cur: pd.datetime, years):
+    """
+    NOTE: This function requires sf1_art to have a DateTimeIndex, only contain data for one ticker and is sorted on datekey.
+    NOTE: sf1_art has a numerical index and calendardate column
+    
     Returns the the most recent 10-K filing with calendardate (normalized report period) $years number of years 
     earliar than date.
-    """
-    # What if 10K report is not available for the report period?
-    cur_row = df.loc[date]
-    calendardate = cur_row["calendardate"]
 
-    desired_calendardate = get_calendardate_x_quarters_ago(calendardate, 4*years)
-    candidates = df.loc[df.calendardate==desired_calendardate]
-    candidates = candidates.loc[candidates.index <= date] # Ensure that no future information gets used
+    """
+    desired_calendardate = get_calendardate_x_quarters_ago(caldate_cur, 4*years)
+    candidates = sf1_art.loc[sf1_art.calendardate==desired_calendardate]
+
+
+    candidates = candidates.loc[candidates.datekey <= datekey_cur] # Ensure that no future information gets used
 
     if len(candidates) == 0:
-        raise KeyError("No 10K filing for report period {}".format(desired_calendardate))
+        # raise KeyError("No 10K filing for report period {}".format(desired_calendardate))
+        return pd.Series(index=sf1_art.columns)
+
+    candidates = candidates.sort_values(by="datekey", ascending=True)
 
     return candidates.iloc[-1]
 
 
-def get_most_up_to_date_10q_filing(df, date, quarters):
+def get_most_up_to_date_10q_filing(sf1_arq: pd.DataFrame, caldate_cur: pd.datetime, datekey_cur: pd.datetime, quarters: int):
     """
-    NOTE: This function requires df to have a DateTimeIndex, only contain data for one ticker and is sorted on datekey.
+    NOTE: This function requires sf1_arq to have a DateTimeIndex, only contain data for one ticker and is sorted on datekey.
+    NOTE: sf1_arq has a calendardate index
+
     Returns the most recnet 10-Q filing with calendardate (normalized report period) $quarters number 
     of quarters earlier than $date.
     """
-    cur_row = df.loc[date]
-    calendardate = cur_row["calendardate"]
 
-    desired_calendardate = get_calendardate_x_quarters_ago(calendardate, quarters)
-    candidates = df.loc[df.calendardate==desired_calendardate]
-    candidates = candidates.loc[candidates.index <= date] # Ensure that no future information gets used
+    desired_calendardate = get_calendardate_x_quarters_ago(caldate_cur, quarters)
+    candidates = sf1_arq.loc[sf1_arq.index == desired_calendardate]
+    candidates = candidates.loc[candidates.datekey <= datekey_cur] # Ensure that no future information gets used
 
-    # What if 10Q report is not available for the report period?
     if len(candidates) == 0:
-        raise KeyError("No 10K filing for ticker {} and report period {}".format(df.iloc[0]["ticker"], desired_calendardate))
+        # raise KeyError("No 10K filing for ticker {} and report period {}".format(sf1_arq.iloc[0]["ticker"], desired_calendardate))
+        return pd.Series(index=sf1_arq.columns)
+
+
+    candidates = candidates.sort_values(by="datekey", ascending=True)
 
     return candidates.iloc[-1]
 
 
 def get_calendardate_index(start: pd.datetime, end: pd.datetime):
+    """
+    Returns a DateTimeIndex containing the complete set of normalized report period dates (calendardates)
+    from the date $start to the date $end.
+    """
     calendardate_index = []
     m_d_list = [[3,31],[6,30],[9, 30],[12, 31]]
     month_of_first_filing = start.month
@@ -100,6 +136,11 @@ def get_calendardate_index(start: pd.datetime, end: pd.datetime):
         for month_day in m_d_list:
             calendardate_index.append(datetime(year=year, month=month_day[0], day=month_day[1]))
 
+    # Need to drop dates after end
+    for j, date in enumerate(calendardate_index):
+        if date > end:
+            del calendardate_index[j]
+
     return calendardate_index
 
 def forward_fill_gaps(sf1, quarters):
@@ -108,23 +149,49 @@ def forward_fill_gaps(sf1, quarters):
     Fill in missing data in $quarters number of quarters into the future.
     """
     sf1 = sf1.fillna(value="IAMNAN")
-    sf1["calendardate"] = sf1.index
+    sf1["calendardate_temp1"] = sf1.index # Don't know another awy to get the index value after selection
 
-    calendardate_index = get_calendardate_index(sf1.iloc[0]["calendardate"], sf1.iloc[-1]["calendardate"])
-    # print(calendardate_index)
-    sf1_reindexed = sf1.reindex(calendardate_index)
+    calendardate_index = get_calendardate_index(sf1.iloc[0]["calendardate_temp1"], sf1.iloc[-1]["calendardate_temp1"])
 
-    sf1_filled = sf1_reindexed.fillna(method="ffill", limit=3)
+    # sf1_reindexed = sf1.reindex(calendardate_index) # ValueError: cannot reindex from a duplicate axis
+
+    sf1_reindexed = fill_in_missing_dates_in_calendardate_index(sf1)
+
+    sf1_filled = sf1_reindexed.fillna(method="ffill", limit=quarters)
     
-    sf1_filled.drop(columns=["calendardate"])
+    sf1_filled = sf1_filled.drop(columns=["calendardate_temp1"])
     sf1_filled = sf1_filled.dropna(axis=0)
     sf1_filled = sf1_filled.replace(to_replace="IAMNAN", value=np.nan)
 
     return sf1_filled
 
+
+def fill_in_missing_dates_in_calendardate_index(sf1):
+    sf1["calendardate_temp2"] = sf1.index # Don't know another awy to get the index value after selection
+    desired_index = get_calendardate_index(sf1.iloc[0]["calendardate_temp2"], sf1.iloc[-1]["calendardate_temp2"])
+
+    index_difference = list(set(desired_index).difference(set(sf1.index)))
+
+    for caldate_index in index_difference:
+        # sf1.index.insert(-1, caldate_index)
+        sf1.loc[caldate_index] = pd.Series()
+
+    sf1 = sf1.drop(columns=["calendardate_temp2"])
+    sf1 = sf1.sort_values(by=["calendardate", "datekey"], ascending=True)
+
+    return sf1
+
+
+
+
 #____________________________END_______________________________________
 
 def get_row_with_closest_date(df, date, margin):
+    """
+    Returns the row in the df closest to the date as long as it is within the margin.
+    If no such date exist it returns None.
+    Assumes only one ticker in the dataframe.
+    """
     acceptable_dates = get_acceptable_dates(date, margin)
     candidates = df.loc[df.index.isin(acceptable_dates)]
     if len(candidates.index) == 0:

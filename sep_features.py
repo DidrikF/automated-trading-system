@@ -26,7 +26,7 @@ def add_sep_features(sep_sampled, sep, sf1_art):
 
     pd.options.mode.chained_assignment = None  # default='warn'
 
-    date_index = pd.date_range(sep.index[0], sep.index[-1])
+    date_index = pd.date_range(sep.index.min(), sep.index.max())
     sep_filled = sep.reindex(date_index)
     sep_filled["adj_close"] = sep_filled["adj_close"].fillna(method="ffill")
 
@@ -63,6 +63,7 @@ def add_sep_features(sep_sampled, sep, sf1_art):
     sep_filled["chmom"] = sep_filled["mom6m"] - sep_filled["mom12m_to_7m"]
 
 
+
     def custom_resample(array_like):
         return array_like[0]
 
@@ -78,7 +79,7 @@ def add_sep_features(sep_sampled, sep, sf1_art):
         if first_date is None:
             first_date = date
 
-        sf1_row = sf1_art.loc[row["datekey"]]
+        sf1_row = sf1_art.loc[sf1_art.datekey == row["datekey"]].iloc[-1]
         sharesbas = sf1_row["sharesbas"]
         sharefactor = sf1_row["sharefactor"]
         price = row["close"]
@@ -123,7 +124,7 @@ def add_sep_features(sep_sampled, sep, sf1_art):
             std_stock_less_market_return = weekly_samples["diff"].std()
             sep_sampled.at[date, "idiovol"] = std_stock_less_market_return
 
-
+            """
             # Printing for testing and debugging
             if print_first_good_result_1 == True:
                 print(row["ticker"], date)
@@ -131,7 +132,7 @@ def add_sep_features(sep_sampled, sep, sf1_art):
                 print("cov: ", covariance, "var: ", variance_market, "beta: ", beta)
                 print("std diff: ", std_stock_less_market_return)
                 print_first_good_result_1 = False    
-
+            """
         
         if date >= (first_date + relativedelta(years=1)):
             # NOTE: sep_past_year is not forward-filled
@@ -150,7 +151,7 @@ def add_sep_features(sep_sampled, sep, sf1_art):
             # Dividend to price (dy): (sum(SEP[dividend]) the past year at t-1) / SF1[marketcap]t-1
             sep_sampled.at[date, "dy"] = sep_past_year["dividends"].sum() / marketcap
 
-
+            """
             if print_first_good_result_2 == True:
                 print(row["ticker"], date)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None):
@@ -160,7 +161,7 @@ def add_sep_features(sep_sampled, sep, sf1_art):
                 print(row["datekey"], sharesbas, sharefactor, price, marketcap)
                 print(sep_sampled.at[date, "dy"])
                 print_first_good_result_2 = False
-
+            """
 
         if date >= (first_date + relativedelta(months=3)):
             # ONLY DO FOR SAMPLES, NEED TO RUN SEP_PREPARATION
@@ -234,7 +235,7 @@ def add_sep_features(sep_sampled, sep, sf1_art):
 
             sep_sampled.at[date, "zerotrade"] = (num_zero_trading_days_the_past_month + (1/monthly_turnover)/deflator) * 21/number_of_trading_days_past_month
             
-
+            """
             if (print_first_good_result_3 == True) and (num_zero_trading_days_the_past_month > 0):
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None):
                     print(row["ticker"], date)
@@ -243,44 +244,16 @@ def add_sep_features(sep_sampled, sep, sf1_art):
                     print("number_of_trading_days_past_month: ", number_of_trading_days_past_month)
                     print(sep_sampled.at[date, "zerotrade"])
                 print_first_good_result_3 = False
-
-
-
+            """
+    
+    # Downsample and move values over to sep_sampled (which is what gets returned in the end)
     sep_filled = sep_filled.loc[sep_sampled.index]
+    # Remember to copy over any features added in sep_industry_features.py
+    sep_sampled[["return_1m", "return_2m", "return_3m", "mom1m", "mom6m", "mom12m", "mom24m", "chmom", "indmom"]] = \
+         sep_filled[["return_1m", "return_2m", "return_3m", "mom1m", "mom6m", "mom12m", "mom24m", "chmom", "indmom"]]
 
 
-    sep_sampled[["return_1m", "return_2m", "return_3m", "mom1m", "mom6m", "mom12m", "mom24m", "chmom"]] = \
-         sep_filled[["return_1m", "return_2m", "return_3m", "mom1m", "mom6m", "mom12m", "mom24m", "chmom"]]
-    
     return sep_sampled
-
-def get_row_with_closest_date(df, date, margin):
-    """
-    Returns the row in the df closest to the date as long as it is within the margin.
-    If no such date exist it returns None.
-    Assumes only one ticker in the dataframe.
-    """
-    acceptable_dates = get_acceptable_dates(date, margin)
-    candidates = df.loc[df.index.isin(acceptable_dates)]
-    if len(candidates.index) == 0:
-        return pd.DataFrame()
-    
-    best_row = select_row_closes_to_date(candidates, date)
-    return best_row
-
-
-def get_acceptable_dates(date, margin):
-    dates = [(date + timedelta(days=x)).isoformat() for x in range(-margin, +margin)]
-    dates.insert(0, date.isoformat())
-    return dates
-
-def select_row_closes_to_date(candidates, desired_date):
-    candidate_dates = candidates.index.tolist()
-    
-    best_date = min(candidate_dates, key=lambda candidate_date: abs(desired_date - candidate_date))
-    best_row = candidates.loc[candidates.index == best_date].iloc[0]
-
-    return best_row
 
 
 

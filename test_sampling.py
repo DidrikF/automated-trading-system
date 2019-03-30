@@ -30,8 +30,8 @@ def setup():
     global sep, sf1_art, sf1_arq, metadata
     global sep_extended, sep_sampled
     sep = pd.read_csv("./datasets/testing/sep.csv", parse_dates=["date"], index_col="date", low_memory=False)
-    sf1_art = pd.read_csv("./datasets/testing/sf1_art.csv", parse_dates=["datekey"], index_col="datekey", low_memory=False)
-    sf1_arq = pd.read_csv("./datasets/testing/sf1_arq.csv", parse_dates=["datekey"], index_col="datekey", low_memory=False)
+    sf1_art = pd.read_csv("./datasets/testing/sf1_art.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate", low_memory=False)
+    sf1_arq = pd.read_csv("./datasets/testing/sf1_arq.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate", low_memory=False)
     metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", low_memory=False)
     
     yield
@@ -79,7 +79,7 @@ def test_extend_sep_for_sampling():
     assert sep_extended_aapl.loc["1999-01-04"]["sector"] == metadata_aapl["sector"]
     assert sep_extended_aapl.loc["1999-01-04"]["siccode"] == metadata_aapl["siccode"]
     assert sep_extended_aapl.loc["1999-01-04"]["sharesbas"] == \
-        sf1_art.loc[sep_extended_aapl.loc["1999-01-04"]["datekey"]]["sharesbas"]
+        sf1_art.loc[sf1_art.datekey == sep_extended_aapl.loc["1999-01-04"]["datekey"]].iloc[-1]["sharesbas"]
 
     # Tests for NTK
     sep_extended_ntk = sep_extended.loc[sep_extended["ticker"] == "NTK"]

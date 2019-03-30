@@ -90,6 +90,33 @@ def report_updates_after_fill(sf1):
             i += 1
     return report
 
+def report_duplicate_datekeys(sf1):
+    ticker = sf1.iloc[0].ticker
+    
+    duplicates = sf1.duplicated(subset="datekey")
+    any_duplicates = any(duplicates==True)
+
+    return pd.DataFrame(data=[any_duplicates], index=[ticker])
+
+
+
+
+def report_date_relationship(sf1):
+    ticker = sf1.iloc[0]["ticker"]
+
+    sf1["datekey_after_caldate"] = sf1["datekey"] >sf1["calendardate"]
+
+    sf1_selected = sf1.loc[sf1["datekey_after_caldate"] == False]
+    report = pd.DataFrame()
+
+    if len(sf1_selected) > 0:
+        report.at[ticker, "datekey_after_caldate"] = False
+    else:
+        report.at[ticker, "datekey_after_caldate"] = True
+
+
+    return report
+
 
 if __name__ == "__main__":
     
@@ -97,6 +124,7 @@ if __name__ == "__main__":
     # ./datasets/sharadar/SHARADAR_SF1_ARQ.csv
     sf1_arq = pd.read_csv("./datasets/sharadar/SHARADAR_SF1_ARQ.csv", parse_dates=["datekey", \
         "calendardate", "reportperiod"], index_col="calendardate")
+    
 
     update_report_arq = pandas_mp_engine(callback=report_updates, atoms=sf1_arq, \
         data=None, molecule_key='sf1', split_strategy= 'ticker', \
@@ -106,20 +134,25 @@ if __name__ == "__main__":
         data=None, molecule_key='sf1', split_strategy= 'ticker', \
             num_processes=8, molecules_per_process=1)
 
-    update_report_arq.to_csv("./datasets/testing/update_report_arq.csv", index=False)
-    gap_report_arq.to_csv("./datasets/testing/gap_report_arq.csv", index=False)
-    """
+    duplicate_report_arq = pandas_mp_engine(callback=report_duplicate_datekeys, atoms=sf1_arq, \
+        data=None, molecule_key='sf1', split_strategy= 'ticker', \
+            num_processes=8, molecules_per_process=1)
 
     
+    update_report_arq.to_csv("./datasets/testing/update_report_arq.csv", index=False)
+    gap_report_arq.to_csv("./datasets/testing/gap_report_arq.csv", index=False)
+    duplicate_report_arq.to_csv("./datasets/testing/duplicates_report_sf1_arq.csv")
+    """
+
+
+    """
     # "./datasets/sharadar/SHARADAR_SF1_ART.csv"
     # "./datasets/testing/sf1_art.csv"
-    sf1_art = pd.read_csv("./datasets/testing/sf1_art.csv", parse_dates=["datekey", \
-        "calendardate", "reportperiod"], index_col="calendardate")
+
 
     # Forward fill up to three quarters and see how it looks after
     # Needs to be done per ticker, so this work is moved into report* functions.
     
-
 
 
     update_report_art = pandas_mp_engine(callback=report_updates_after_fill, atoms=sf1_art, \
@@ -130,13 +163,29 @@ if __name__ == "__main__":
         data=None, molecule_key='sf1', split_strategy= 'ticker', \
             num_processes=8, molecules_per_process=1)
 
+    duplicate_report_art = pandas_mp_engine(callback=report_duplicate_datekeys, atoms=sf1_art, \
+        data=None, molecule_key='sf1', split_strategy= 'ticker', \
+            num_processes=8, molecules_per_process=1)
+
     # WRITTEN FOR FILLED VERSION
     update_report_art.to_csv("./datasets/testing/update_report_art_filled.csv", index=False)
     gap_report_art.to_csv("./datasets/testing/gap_report_art_filled.csv", index=False)
+    duplicate_report_art.to_csv("./datasets/testing/duplicates_report_sf1_art.csv")
 
+    """
+    sf1_art = pd.read_csv("./datasets/sharadar/SHARADAR_SF1_ART.csv", parse_dates=["datekey", \
+        "calendardate", "reportperiod"]) # , index_col="calendardate"
+
+
+    date_relationship_report_art = pandas_mp_engine(callback=report_date_relationship, atoms=sf1_art, \
+        data=None, molecule_key='sf1', split_strategy= 'ticker', \
+            num_processes=8, molecules_per_process=1)
+
+    date_relationship_report_art.to_csv("./datasets/testing/date_relationship_report_art.csv")
 
     """
     Notes:
     sf1_arq contains 12887 tickers.
+    Datekey is unique for all tickers in sf1_art!!!
 
     """

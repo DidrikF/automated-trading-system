@@ -6,12 +6,6 @@ from datetime import datetime, timedelta
 from packages.multiprocessing.engine import pandas_mp_engine
 
 
-def add_sep_industry_features(sep):
-    # DIFFICULT, NEED TO RUN SEP_PREPARATION
-    # Industry momentum (indmom): equal_weight_industry_avg(SEP[close]m-1 / SEP[close]m-12 - 1) 
-    pass
-
-
 
 def add_indmom(sep):
     # sep contains tickers in one industry

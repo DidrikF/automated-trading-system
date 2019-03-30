@@ -4,7 +4,6 @@ from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 
-from packages.helpers.helpers import print_exception_info
 from packages.multiprocessing.engine import pandas_mp_engine
 
 """
@@ -72,7 +71,7 @@ def add_weekly_and_12m_stock_returns(sep):
 
     pd.options.mode.chained_assignment = None  # default='warn'
     # Reindex, forward fill and shift
-    date_index = pd.date_range(sep.index[0], sep.index[-1])
+    date_index = pd.date_range(sep.index.min(), sep.index.max()) # [0], [1]
     sep_filled = sep.reindex(date_index)
     sep_filled["adj_close"] = sep_filled["adj_close"].fillna(method="ffill")
     sep_filled_1w_behind = sep_filled.shift(periods=7)
@@ -97,6 +96,11 @@ def add_equally_weighted_weekly_market_returns(sep):
     pd.options.mode.chained_assignment = None  # default='warn'
 
     dates = list(sep.index.unique())
+    print("add_equally_weighted_weekly_market_returns")
+    print("Dates: ", sep.index.min(), sep.index.max(), "Tickers: ", sep.ticker.unique())
+
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        pass
 
     for date in dates:
         sep_for_date = sep.loc[sep.index == date]

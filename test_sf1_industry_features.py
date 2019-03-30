@@ -1,8 +1,10 @@
-from sf1_industry_features import add_industry_sf1_features
 import pandas as pd
 import pytest
-from packages.dataset_builder.dataset import Dataset
 import numpy as np
+from packages.dataset_builder.dataset import Dataset
+from packages.multiprocessing.engine import pandas_mp_engine
+from sf1_industry_features import add_industry_sf1_features
+from packages.helpers.helpers import get_most_up_to_date_10k_filing
 
 """
 Each step is performed for each industry separately
@@ -17,97 +19,211 @@ Step-by-Step Dataset Construction:
 6. Select the features you want and combine into one ML ready dataset
 """
 
-testing_index_filename_tuple = (0, "filepath")
+sf1_art_featured = None
 industry_sf1_art_featured = None
+metadata = None
+sf1_aapl = None
+check_row = None
+sf1_ce_industry = None
+
+features = ["bm_ia", "cfp_ia", "chatoia", "mve_ia", "pchcapex_ia", "chpmia", "herf", "ms"]
 
 
 @pytest.fixture(scope='module', autouse=True)
 def setup():
-    global industry_sf1_art_featured
+    global industry_sf1_art_featured, sf1_art_featured, metadata
     # Will be executed before the first test in the module
-    industry_sf1_art_featured = add_industry_sf1_features(testing_index_filename_tuple, True)
+    sf1_art_featured = pd.read_csv("./datasets/testing/sf1_art_featured_snapshot.csv", parse_dates=["calendardate", "datekey", "reportperiod"],\
+        index_col="calendardate", low_memory=False)
+    metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", parse_dates=["firstpricedate"], low_memory=False)
+    
     yield
     
     # Will be executed after the last test in the module
     industry_sf1_art_featured.to_csv("./datasets/testing/industry_sf1_art_featured.csv", index=False)
 
-def test_industry_adjusted_change_in_profit_margin():
-    # Industry-adjusted change in profit margin	Soliman (chpmia), 
-    # Formula: (SF1[netinc]t-1 / SF1[revenueusd]t-1) - (SF1[netinc]t-2 / SF1[revenueusd]t-2) - industry_mean((SF1[netinc]t-1 / SF1[revenueusd]t-1) - (SF1[netinc]t-2 / SF1[revenueusd]t-2))  --> [chprofitmargin]t-1 - industry_mean([chprofitmargin]t-1)
-    # 2-digit SIC - fiscal-year mean adjusted change in income before extraordinary items (ib) divided by sales (sale).
-    global industry_sf1_art_featured
-    date_2010_03_31 = pd.to_datetime("2010-03-31")
 
-    cnvr_row = industry_sf1_art_featured.loc[(industry_sf1_art_featured["ticker"] == "CNVR") & (industry_sf1_art_featured["calendardate"] == date_2010_03_31)].iloc[-1]
-    ipg_row = industry_sf1_art_featured.loc[(industry_sf1_art_featured["ticker"] == "IPG") & (industry_sf1_art_featured["calendardate"] == date_2010_03_31)].iloc[-1]
+def test_running_add_industry_sf1_features():
+    global industry_sf1_art_featured, sf1_art_featured, metadata, sf1_aapl, sf1_ce_industry
 
-    assert cnvr_row["chpmia"] == pytest.approx(0.5761777844 - 0.27694930664)
-    assert ipg_row["chpmia"] == pytest.approx(-0.02227917111 - 0.27694930664)
+    # I NEED TO ADD INDUSTRY COLUMN TO SF1_ART_FEATURED (do this in sf1_faetures.py)
 
+    industry_sf1_art_featured = pandas_mp_engine(callback=add_industry_sf1_features, atoms=sf1_art_featured, \
+        data={'metadata': metadata}, molecule_key='sf1_art', split_strategy= 'industry', \
+            num_processes=1, molecules_per_process=1)
+    
+    industry_sf1_art_featured = industry_sf1_art_featured.sort_values(by=["ticker", "calendardate", "datekey"])
 
 
-# @pytest.mark.skip(reason="Not interested in this atm")
-def test_industry_adjusted_percent_change_in_capital_expenditure():
-    # Industry-adjusted % change in capital expenditure (pchcapx_ia), Formula: ((SF1[capex]t-1 / SF1[capex]2-1) - 1) - industry_mean((SF1[capex]t-1 / SF1[capex]2-1))
-    # 2-digit SIC - fiscal-year mean adjusted percent change in capital expenditures (capx).
-    global industry_sf1_art_featured
-    date_2010_03_31 = pd.to_datetime("2010-03-31")
+    industry_sf1_art_featured_aapl = industry_sf1_art_featured.loc[industry_sf1_art_featured.ticker=="AAPL"]
+
+    # print(industry_sf1_art_featured)
+
+    # Only temporary...
+    cols = list(set(features).intersection(set(industry_sf1_art_featured.columns)))
+    industry_sf1_aapl_only_features = industry_sf1_art_featured_aapl[cols]
+
+    industry_sf1_art_featured.to_csv("./datasets/testing/industry_sf1_art_featured_snapshot.csv")
+    industry_sf1_aapl_only_features.to_csv("./datasets/testing/industry_sf1_art_aapl_only_features.csv")
+
+    # assert False
+
+def test_setup_aapl_2001_03_31():
+    global check_row, sf1_aapl, art_row_cur, art_row_1y_ago, sf1_art_featured, sf1_ce_industry
 
 
-    cnvr_row = industry_sf1_art_featured.loc[(industry_sf1_art_featured["ticker"] == "CNVR") & (industry_sf1_art_featured["calendardate"] == date_2010_03_31)].iloc[-1]
-    ipg_row = industry_sf1_art_featured.loc[(industry_sf1_art_featured["ticker"] == "IPG") & (industry_sf1_art_featured["calendardate"] == date_2010_03_31)].iloc[-1]
+    # Not touched by add_industry_sf1_features:    
+    sf1_aapl = sf1_art_featured.loc[sf1_art_featured.ticker == "AAPL"]
+    sf1_aapl["caldate"] = sf1_aapl.index # not optimal, but ok for testing i guess...
+    sf1_aapl = sf1_aapl.reset_index() # this should be the same dataframe used in add_industry_sf1_features()
+
+    sf1_ce_industry = sf1_art_featured.loc[sf1_art_featured.industry == "Consumer Electronics"]
+
+    art_row_cur = sf1_aapl.loc[sf1_aapl.calendardate == "2015-03-31"].iloc[-1]
+    caldate = art_row_cur["caldate"]
+    datekey = art_row_cur["datekey"]
 
 
-    print("cnvr pchcapex_ia: ", cnvr_row["pchcapex_ia"], type(cnvr_row["pchcapex_ia"]), np.isnan(cnvr_row["pchcapex_ia"]))
+    """ I will for now assume I can get around needing two years of data for calculating industry features """
 
-    assert cnvr_row["pchcapex_ia"] == pytest.approx(-0.01106953539 - (-0.23142309256))
-    assert ipg_row["pchcapex_ia"] == pytest.approx(-0.45177664974 - (-0.23142309256))
+    # art_row_1y_ago = get_most_up_to_date_10k_filing(sf1_aapl, caldate, datekey, 1)
+    # print(art_row_1y_ago) # Not there because it needs to be forward filled
 
+    # The row to verify has the correct values (touched by add_industry_sf1_features)
+    check_row = industry_sf1_art_featured.loc[(industry_sf1_art_featured.ticker=="AAPL") & \
+        (industry_sf1_art_featured.index == "2015-03-31")].iloc[-1]
 
+    assert (np.array(sf1_ce_industry.ticker.unique()) == np.array(["AAPL", "NTK"])).all()
 
-"""
-Ticker  date        capex        Netinc      Revenueusd  profit_margin   im_profit_margin    pch_capx   im_pch_capex    ch_profit_margin    im_ch_profit_margin
-CNVR    2008-03-31  -9156000    71145000    664726000
-CNVR    2008-06-30  -10558000   70006000    679881000
-CNVR    2008-09-30  -11099000   55174000    675889000
-CNVR    2008-12-31  -7227000    -214112000  625806000
-CNVR    2009-03-31  -6414000    -220062000  584813000
-CNVR    2009-06-30  -4446000    -221679000  551346000
-CNVR    2009-09-30  -4244000    -198648000  528607000
-CNVR    2009-12-31  -4625000    68616000    422723000
-CNVR    2010-03-31  -6343000    76628000    383364000
-CNVR    2010-06-30  -4056000    73798000    352601000
-CNVR    2010-09-30  -5485000    84945000    329208000
-CNVR    2010-12-31  -7416000    90510000    430798000
-IPG     2008-03-31  -151500000  230700000   6680300000
-IPG     2008-06-30  -139900000  188800000   6863300000
-IPG     2008-09-30  -134000000  256400000   7043400000
-IPG     2008-12-31  -138400000  295000000   6962700000
-IPG     2009-03-31  -118200000  290800000   6802800000
-IPG     2009-06-30  -107300000  223500000   6441500000
-IPG     2009-09-30  -99300000   201900000   6128200000
-IPG     2009-12-31  -67100000   121300000   6027600000
-IPG     2010-03-31  -64800000   123700000   6043600000
-IPG     2010-06-30  -67700000   178400000   6187000000
-IPG     2010-09-30  -73100000   199600000   6321100000
-IPG     2010-12-31  -96300000   261100000   6531900000
-RLOC    2010-03-31  0           0           0
-RLOC    2010-06-30  0           0           0
-RLOC    2010-09-30  0           0           0
-RLOC    2010-12-31  -9929000    -11147000   291689000
-RLOC    2011-03-31  -12180000   -12340000   312121000
-RLOC    2011-06-30  -12575000   -10895000   334511000
+    assert art_row_cur["datekey"] == pd.to_datetime("2015-04-28")
+    # assert art_row_1y_ago["datekey"] == pd.to_datetime("2000-02-01") # I need to forward fill...
+
+    assert check_row["datekey"] == pd.to_datetime("2015-04-28")
 
 
-CNVR    2008-03-31  -9156000    71145000    664726000
-CNVR    2009-03-31  -6414000    -220062000  584813000   -0.3762946446   -0.16677377023  -0.2994757536   
-CNVR    2010-03-31  -6343000    76628000    383364000   0.1998831398    0.11017553641   -0.01106953539  -0.23142309256  0.5761777844    0.27694930664
+def test_add_industry_adjusted_book_to_market():
+    global check_row, art_row_cur, sf1_ce_industry
 
-IPG     2008-03-31  -151500000  230700000   6680300000
-IPG     2009-03-31  -118200000  290800000   6802800000  0.04274710413   -0.16677377023  -0.21980198019
-IPG     2010-03-31  -64800000   123700000   6043600000  0.02046793302   0.11017553641   -0.45177664974  -0.23142309256  -0.02227917111  0.27694930664
+    sf1_art_for_date = sf1_ce_industry.loc[sf1_ce_industry.index == "2015-03-31"]
 
-Missing
-RLOC    2010-03-31  0           0           0
+    industry_mean_bm = (sf1_art_for_date["equityusd"] / sf1_art_for_date["marketcap"]).mean()
 
-"""
+    bm_ia = (art_row_cur["equityusd"] / art_row_cur["marketcap"]) - industry_mean_bm
+
+    assert check_row["bm_ia"] == bm_ia
+
+
+def test_add_industry_adjusted_cfp():
+    global check_row, art_row_cur, sf1_ce_industry
+
+    sf1_art_for_date = sf1_ce_industry.loc[sf1_ce_industry.index == "2015-03-31"]
+
+    industry_mean_cfp =  (sf1_art_for_date["ncfo"] / sf1_art_for_date["marketcap"]).mean()
+
+    cfp_ia =   (art_row_cur["ncfo"] / art_row_cur["marketcap"]) - industry_mean_cfp
+
+    assert check_row["cfp_ia"] == cfp_ia
+
+
+def test_add_chatoia():
+    global check_row, art_row_cur, sf1_ce_industry
+
+    sf1_art_for_date = sf1_ce_industry.loc[sf1_ce_industry.index == "2015-03-31"]
+
+    industry_mean_asset_turnover =  (sf1_art_for_date["change_sales"] / sf1_art_for_date["assetsavg"]).mean()
+
+    chatoia = (art_row_cur["change_sales"]  / art_row_cur["assetsavg"]) - industry_mean_asset_turnover
+
+    assert check_row["chatoia"] == chatoia
+
+
+def test_add_mve_ia():
+    global check_row, art_row_cur, sf1_ce_industry
+
+    sf1_art_for_date = sf1_ce_industry.loc[sf1_ce_industry.index == "2015-03-31"]
+
+    industry_mean_marketcap = sf1_art_for_date["marketcap"].mean()
+
+    mve_ia =  art_row_cur["marketcap"] - industry_mean_marketcap
+
+    assert check_row["mve_ia"] == mve_ia
+
+
+def test_add_pchcapex_ia():
+    global check_row, art_row_cur, sf1_ce_industry
+
+    sf1_art_for_date = sf1_ce_industry.loc[sf1_ce_industry.index == "2015-03-31"]
+    
+    industry_mean_percent_change_capex = sf1_art_for_date["grcapx"].mean()
+
+    pchcapex_ia = art_row_cur["grcapx"] - industry_mean_percent_change_capex
+
+    assert check_row["pchcapex_ia"] == pchcapex_ia
+
+
+
+def test_add_chpmia():
+    global check_row, art_row_cur, sf1_ce_industry
+
+    sf1_art_for_date = sf1_ce_industry.loc[sf1_ce_industry.index == "2015-03-31"]
+
+    industry_mean_change_profit_margin = sf1_art_for_date["chprofitmargin"].mean()
+
+    chpmia = art_row_cur["chprofitmargin"] - industry_mean_change_profit_margin
+
+    assert check_row["chpmia"] == chpmia
+
+
+def test_add_herf():
+    global check_row, art_row_cur, sf1_ce_industry
+
+    sf1_art_for_date = sf1_ce_industry.loc[sf1_ce_industry.index == "2015-03-31"]
+
+    sum_industry_revenue = sf1_art_for_date["revenueusd"].sum()
+
+    sum_sqrd_percent_of_revenue = 0
+
+    for i, company_row in sf1_art_for_date.iterrows():
+        sum_sqrd_percent_of_revenue += (company_row["revenueusd"] / sum_industry_revenue)**2
+
+    assert check_row["herf"] == sum_sqrd_percent_of_revenue
+
+
+
+def test_add_ms():
+    global check_row, art_row_cur, sf1_ce_industry
+
+    sf1_art_for_date = sf1_ce_industry.loc[sf1_ce_industry.index == "2015-03-31"]
+
+    industry_mean_return_on_assets = (sf1_art_for_date["netinc"] / sf1_art_for_date["assetsavg"]).mean()
+    industry_mean_cash_flow_return_on_assets = (sf1_art_for_date["ncfo"] / sf1_art_for_date["assetsavg"]).mean()
+    industry_mean_rnd_intensity = (sf1_art_for_date["rnd"] / sf1_art_for_date["assetsavg"]).mean()
+    industry_mean_capex_intensity = (sf1_art_for_date["capex"] / sf1_art_for_date["assetsavg"]).mean()
+    industry_mean_advertising_intensity = (sf1_art_for_date["sgna"] / sf1_art_for_date["assetsavg"]).mean()
+
+
+    if (art_row_cur["assetsavg"] != 0) and (art_row_cur["netinc"] != 0):
+        i1_roa_above_avg = 1 if ((art_row_cur["netinc"] / art_row_cur["assetsavg"]) > industry_mean_return_on_assets) else 0
+        
+        i2_cf_roa_above_avg = 1 if ((art_row_cur["ncfo"] / art_row_cur["assetsavg"]) > industry_mean_cash_flow_return_on_assets) else 0
+        
+        i3_ncfo_exceeds_netinc = 1 if (art_row_cur["ncfo"] > art_row_cur["netinc"]) else 0
+        
+        i6_rnd_intensity = 1 if ((art_row_cur["rnd"] / art_row_cur["assetsavg"]) > industry_mean_rnd_intensity) else 0
+        
+        i7_capex_indensity = 1 if ((art_row_cur["capex"] / art_row_cur["assetsavg"]) > industry_mean_capex_intensity) else 0
+        
+        i8_advertising_intensity = 1 if ((art_row_cur["sgna"] / art_row_cur["assetsavg"]) > industry_mean_advertising_intensity) else 0
+
+
+    ms = i1_roa_above_avg + i2_cf_roa_above_avg + i3_ncfo_exceeds_netinc + i6_rnd_intensity + i7_capex_indensity + i8_advertising_intensity
+
+    """
+    print(i1_roa_above_avg, i2_cf_roa_above_avg, i3_ncfo_exceeds_netinc, i6_rnd_intensity, i7_capex_indensity, i8_advertising_intensity)
+    print(art_row_cur["capex"] / art_row_cur["assetsavg"])
+    print(industry_mean_capex_intensity)
+    print(ms)
+    """
+
+    assert check_row["ms"] == ms
+

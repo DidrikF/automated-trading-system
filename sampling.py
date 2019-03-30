@@ -11,6 +11,7 @@ def extend_sep_for_sampling(sep, sf1_art, metadata):
     """
     Data is given per ticker
     Require sep to be sorted
+    sf1_art has a calendardate index
     """
 
     if len(metadata) == 0:
@@ -19,6 +20,7 @@ def extend_sep_for_sampling(sep, sf1_art, metadata):
     ticker = metadata["ticker"]
 
     metadata = metadata.iloc[-1]
+
     sep.loc[:, "industry"] = metadata["industry"]
     sep.loc[:, "sector"] = metadata["sector"]
     sep.loc[:, "siccode"] = metadata["siccode"]
@@ -28,11 +30,28 @@ def extend_sep_for_sampling(sep, sf1_art, metadata):
     # Add date date of last 10-K filing and age of sf1_art data
     for date, sep_row in sep.iterrows():
         
+        """
+        I want each sample to have associated with it, the most up to date 
+
+        If a new report (datekey) is recorded, but it is for a 10K/Q that was released 6 months ago, it is not the one
+        I want.
+        I want the most up to date (datekey) for a report for the latest period
+
+        date
+        2010-08-12
+
+        calendardate    datekey
+        2010-06-30      2010-08-10 <- I want this
+        2010-03-30      2010-08-11
+
+        Need to update, but will postpone to later
+        """
+
         # Extract past dates
-        past_sf1_art = sf1_art.loc[sf1_art.index <= date]
+        past_sf1_art = sf1_art.loc[sf1_art.datekey <= date]
         
         # Get date of latest 10-K form filing
-        date_of_latest_filing = past_sf1_art.index.max()
+        date_of_latest_filing = past_sf1_art.datekey.max()
 
         # Capture the indexes of rows with dates earlier than the first sf1_art entry
         if date_of_latest_filing is pd.NaT:
@@ -41,7 +60,7 @@ def extend_sep_for_sampling(sep, sf1_art, metadata):
 
         sep.at[date, "datekey"] = date_of_latest_filing
         sep.at[date, "age"] = (date - date_of_latest_filing)
-        sep.at[date, "sharesbas"] = sf1_art.at[date_of_latest_filing, "sharesbas"] # Needed when calculating std_turn in sep_features.py
+        sep.at[date, "sharesbas"] = sf1_art.loc[sf1_art.datekey == date_of_latest_filing].iloc[-1]["sharesbas"] # Needed when calculating std_turn in sep_features.py
         
     # Drop rows with no prior form 10-K release or missing metadata
     sep = sep.drop(list(drop_indexes))
