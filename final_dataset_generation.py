@@ -103,7 +103,7 @@ if __name__ == "__main__":
                 "index_col": "date",
                 "report_every": 500000,
                 "length": 31971372,
-                "sort_by": ["date"],
+                "sort_by": ["ticker", "date"],
                 "cache": True,
             },
             "sf1_art": {
@@ -114,7 +114,7 @@ if __name__ == "__main__":
                 "index_col": "calendardate",
                 "report_every": 20000,
                 "length": 433417,
-                "sort_by": ["calendardate", "datekey"],
+                "sort_by": ["ticker", "calendardate", "datekey"],
                 "cache": True,
             },
             "metadata": {
