@@ -96,8 +96,8 @@ def add_equally_weighted_weekly_market_returns(sep):
     pd.options.mode.chained_assignment = None  # default='warn'
 
     dates = list(sep.index.unique())
-    print("add_equally_weighted_weekly_market_returns")
-    print("Dates: ", sep.index.min(), sep.index.max(), "Tickers: ", sep.ticker.unique())
+    # print("add_equally_weighted_weekly_market_returns")
+    # print("Dates: ", sep.index.min(), sep.index.max(), "Tickers: ", sep.ticker.unique())
 
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         pass
