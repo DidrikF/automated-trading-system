@@ -415,7 +415,7 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
         if os.path.isfile(pickle_path):
             print("Loading pickle: " + pickle_path)
             pickle_in = open(pickle_path,"rb")
-            dfs = pickle.load(pickle_in)
+            molecules_dict[disk_name] = pickle.load(pickle_in)
         else:
             print("Reading and parsing: ", atoms_config["csv_path"])
             atoms = pd.read_csv(atoms_config["csv_path"], parse_dates=atoms_config["parse_dates"], index_col=atoms_config["index_col"], low_memory=False)
