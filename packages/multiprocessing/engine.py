@@ -8,6 +8,7 @@ import os.path
 import pickle
 from io import StringIO
 import math
+import re
 
 __all__ = ["lin_parts", "pandas_mp_engine"]
 
@@ -309,7 +310,7 @@ def get_jobs_fast(task, primary_molecules, molecules_dict):
                         data_molecule = sf1_art_base
                     elif molecule_dict_name == "sf1_arq":
                         data_molecule = sf1_arq_base
-                    elif molecule_dict_name == "sep":
+                    elif re.match(".*sep.*", molecule_dict_name):
                         data_molecule = sep_base
                     else:
                         data_molecule = pd.DataFrame()
