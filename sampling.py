@@ -15,11 +15,12 @@ def extend_sep_for_sampling(sep, sf1_art, metadata):
     """
 
     if len(metadata) == 0:
-        return pd.DataFrame()
+        return pd.DataFrame(data=None, columns=sep.columns)
 
+    if isinstance(metadata, pd.DataFrame):
+        metadata = metadata.iloc[-1]
+    
     ticker = metadata["ticker"]
-
-    metadata = metadata.iloc[-1]
 
     sep.loc[:, "industry"] = metadata["industry"]
     sep.loc[:, "sector"] = metadata["sector"]
