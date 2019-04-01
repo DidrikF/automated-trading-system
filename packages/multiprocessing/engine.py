@@ -333,8 +333,8 @@ def process_jobs_fast(jobs, task=None, num_processes=8, sort_by=[]):
         i = 1
         # Process asynchronous output, report progress
         for out_ in outputs:
-            print("Job name: ", out_[0])
-            print(out_[1].head(1))
+            # print("Job name: ", out_[0])
+            # print(out_[1].head(1))
             out[out_[0]] = out_[1].sort_values(by=sort_by)
             report_progress(i, len(jobs), time0, task)
             i += 1

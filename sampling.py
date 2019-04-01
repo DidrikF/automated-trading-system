@@ -15,7 +15,10 @@ def extend_sep_for_sampling(sep, sf1_art, metadata):
     """
 
     if len(metadata) == 0:
-        return pd.DataFrame(data=None, columns=sep.columns)
+        sep = pd.DataFrame(data=None, columns=sep.columns, index=sep.index)
+        sep = sep.dropna(axis=0)
+        print(sep)
+        return sep
 
     if isinstance(metadata, pd.DataFrame):
         metadata = metadata.iloc[-1]
