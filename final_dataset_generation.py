@@ -92,8 +92,6 @@ if __name__ == "__main__":
         Purged metadata length:  14135
         """
 
-        requried_tickers = pd.read_csv("./datasets/tickers")
-
         atoms_configs = {
             "sep": { # atoms_info
                 "cache_name": "sep",
