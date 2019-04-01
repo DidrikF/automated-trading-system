@@ -6,7 +6,6 @@ The most recent row from sep_featured.csv, and the most recent SF1 row based on 
 - If SF1 row is too old compared to the sample date, the sample is dropped.
 - If too much fabricated data was used in the generation of the SF1 features, the samples using this row
   is dropped.
-
 """
 
 import datetime
@@ -49,16 +48,29 @@ if __name__ == "__main__":
 
     industry_sf1_features = ["bm_ia", "cfp_ia", "chatoia", "mve_ia", "pchcapex_ia", "chpmia", "herf", "ms"]
 
+    """
+    sf1_arq_cols = ticker,dimension,calendardate,datekey,reportperiod,lastupdated,accoci,assets,assetsavg,\
+    assetsc,assetsnc,assetturnover,bvps,capex,cashneq,cashnequsd,cor,consolinc,currentratio,de,debt,\
+        debtc,debtnc,debtusd,deferredrev,depamor,deposits,divyield,dps,ebit,ebitda,ebitdamargin,\
+            ebitdausd,ebitusd,ebt,eps,epsdil,epsusd,equity,equityavg,equityusd,ev,evebit,evebitda,\
+                fcf,fcfps,fxusd,gp,grossmargin,intangibles,intexp,invcap,invcapavg,inventory,investments,\
+                    investmentsc,investmentsnc,liabilities,liabilitiesc,liabilitiesnc,marketcap,ncf,ncfbus,\
+                        ncfcommon,ncfdebt,ncfdiv,ncff,ncfi,ncfinv,ncfo,ncfx,netinc,netinccmn,netinccmnusd,\
+                            netincdis,netincnci,netmargin,opex,opinc,payables,payoutratio,pb,pe,pe1,ppnenet,\
+                                prefdivis,price,ps,ps1,receivables,retearn,revenue,revenueusd,rnd,roa,roe,roic,\
+                                    ros,sbcomp,sgna,sharefactor,sharesbas,shareswa,shareswadil,sps,tangibles,\
+                                        taxassets,taxexp,taxliabilities,tbvps,workingcapital
+    """
 
 
     # Script configuration
-    generate_sep_features = False
+    generate_sep_features = True
 
-    generate_sf1_features = True
+    generate_sf1_features = False
 
     write_to_disk = True
 
-    num_processes = 8
+    num_processes = 64
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     save_path = "./datasets/ml_ready_live/dataset_" + timestamp
     # read_path = "./datasets/ml/dataset_20190327-153153"
@@ -79,6 +91,8 @@ if __name__ == "__main__":
         Purged sep length:  31971372
         Purged metadata length:  14135
         """
+
+        requried_tickers = pd.read_csv("./datasets/tickers")
 
         atoms_configs = {
             "sep": { # atoms_info
@@ -284,7 +298,7 @@ if __name__ == "__main__":
                 "split_strategy": "ticker", # How the molecules needs to be split for this task
                 "save_result_to_disk": False, # Whether to combine and store the resulting molecules to disk (as a csv file)
                 "sort_by": ["ticker", "calendardate", "datekey"], # Sorting parameters, used both for molecules individually and when combined
-                "cache_result": False,  # Whether to cache the resulting molecules, because they are needed later in the chain
+                "cache_result": True,  # Whether to cache the resulting molecules, because they are needed later in the chain
                 "disk_name": "sf1_art_featured", # Name of molecules saved as pickle in cache_dir or as one csv file in save_dir
             },
             {

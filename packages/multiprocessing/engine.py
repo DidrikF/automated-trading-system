@@ -190,6 +190,9 @@ def expandCall(kwargs):
 
 #____________________________________NEW FASTER ENGINE WITH TASK PIPELINE___________________________________
 
+sf1_art_base = pd.read_csv("./datasets/sharadar/SF1_ART_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
+sf1_arq_base = pd.read_csv("./datasets/sharadar/SF1_ARQ_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
+
 
 # atoms_name, atoms_info, split_strategy, cache_dir
 #                       "sep"       "ticker"        "./datasets/mc_cache"
@@ -282,7 +285,7 @@ def get_jobs_fast(task, primary_molecules, molecules_dict):
     jobs = []
     # print("Type of primary_molecules: ", type(primary_molecules))
     for job_key, molecule in primary_molecules.items(): # primary_molecules is a list??
-        # job_key is AAPL, Electronics etc. // is sep ???
+        # job_key is AAPL, Electronics etc.
         # molecule is this jobs atoms (molecule)
         job = {
             "callback": task["callback"],
@@ -298,7 +301,18 @@ def get_jobs_fast(task, primary_molecules, molecules_dict):
                 # print(job_key, kw_name, molecule_dict_name, molecules_dict.keys())
                 # data_key is sep, sf1_art, sf1_arq, metadata
                 # molecules_dict["sep"]["AAPL"] is the relevant df for this job
-                job_data[kw_name] = molecules_dict[molecule_dict_name][job_key]
+
+                try:
+                    data_molecule = molecules_dict[molecule_dict_name][job_key]
+                except Exception as e:
+                    if molecule_dict_name == "sf1_art":
+                        data_molecule = sf1_art_base
+                    elif molecule_dict_name == "sf1_arq":
+                        data_molecule = sf1_arq_base
+                    else:
+                        data_molecule = pd.DataFrame()
+
+                job_data[kw_name] = data_molecule
             job.update(job_data)
 
         jobs.append(job)
@@ -313,11 +327,12 @@ def process_jobs_fast(jobs, task=None, num_processes=8, sort_by=[]):
         outputs = pool.imap_unordered(expandCall_fast, jobs)
         out = {}
         time0 = time.time()
-
+        i = 1
         # Process asynchronous output, report progress
-        for i, out_ in enumerate(outputs, 1):
+        for out_ in outputs:
             out[out_[0]] = out_[1].sort_values(by=sort_by) # .sort_values(by="date") # OBS NEED TO UPDATE
             report_progress(i, len(jobs), time0, task)
+            i += 1
         
         pool.close()
         pool.join()
@@ -328,7 +343,7 @@ def expandCall_fast(kwargs):
     job_key = kwargs['job_key']
     del kwargs['callback']
     del kwargs['job_key']
-
+    # print(kwargs.keys())
     out = callback(**kwargs)
     return (job_key, out)
 
@@ -436,19 +451,10 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
 
                 # If the next task has any other data than the primary molecules it needs, we need to split those as well according to the required strategy.
                 if next_task["data"] is not None: 
-                    print("before data split_df_into_molecules")
-
                     for molecules_dict_name in next_task["data"].values():
-                        print("before data combine_molecules")
                         atoms = combine_molecules(molecules_dict[molecules_dict_name])
-                        print("after data combine_molecules")
                         molecules_dict[molecules_dict_name] = split_df_into_molecules(atoms, next_task["split_strategy"], num_processes*molecules_per_process)
-                        print("after data split_df_into_molecules for ", molecules_dict_name)
                     
-                    print("after data all split_df_into_molecules")
-
-        print("before add_to_molecule_dict")
-
         # Add molecules to molecules_dict for later use by another task
         if task.get("add_to_molecules_dict", False) == True:
             molecules_to_add_to_molecules_dict = primary_molecules

@@ -25,8 +25,8 @@ Step-by-Step Dataset Construction:
 # Adjust volume? (as long as it is used at a point in time, there is no problem. features are calculated by deviding by sharesbas...)
 
 def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.DataFrame):
-    print("add_sf1_features: ", sf1_art.ticker.unique(), sf1_art.index.min(), sf1_art.index.max())
-    print("add_sf1_features: ", sf1_arq.ticker.unique(), sf1_arq.index.min(), sf1_arq.index.max())
+    # print("add_sf1_features: ", sf1_art.ticker.unique(), sf1_art.index.min(), sf1_art.index.max())
+    # print("add_sf1_features: ", sf1_arq.ticker.unique(), sf1_arq.index.min(), sf1_arq.index.max())
 
     """
     This function takes in SF1_ART and SF1_ARQ datasets from Sharadar and computed various features based on the
@@ -36,7 +36,13 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
     # sf1_art = sf1_art.sort_values(by=["calendardate", "datekey"])
     # sf1_arq = sf1_arq.sort_values(by=["calendardate", "datekey"])
 
-    if isinstance(metadata, pd.DataFrame) == True:
+    metadata_empty = True if (len(metadata) == 0) else False
+
+    if metadata_empty == True:
+        return sf1_art
+
+
+    if isinstance(metadata, pd.DataFrame):
         metadata = metadata.iloc[0]
 
     ticker = metadata["ticker"]
@@ -102,9 +108,10 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
 
     # Foreward fill gaps
     sf1_art = forward_fill_gaps(sf1_art, 3)
-    sf1_arq = forward_fill_gaps(sf1_arq, 3)
 
     sf1_arq_empty = True if (len(sf1_arq) == 0) else False
+    if sf1_arq_empty == False:
+        sf1_arq = forward_fill_gaps(sf1_arq, 3)
 
     # This gives the forward filled dataframe a numerical index and sets the old index as a column.
     sf1_art = sf1_art.reset_index()
@@ -250,7 +257,7 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
             netinc_assets_list = []
             for row in arq_rows:
                 row_empty = row.dropna().empty
-                if (row["assetsavg"] != 0) and (not row_empty):
+                if (row["assets"] != 0) and (not row_empty):
                     netinc_assets_list.append(row["netinc"] / row["assets"])
 
             std_netinc_assets = np.std(netinc_assets_list)
@@ -409,11 +416,11 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
 
 
             # Percent change in current ratio (pchcurrat), Formula: (SF1[assetsc]t-1 / SF1[liabilitiesc]t-1) / (SF1[assetsc]t-2 / SF1[liabilitiesc]t-2) - 1
-            if (art_row_cur["liabilitiesc"] != 0) and (art_row_1y_ago["liabilitiesc"] != 0):
+            if (art_row_cur["liabilitiesc"] != 0) and (art_row_1y_ago["liabilitiesc"] != 0) and (art_row_1y_ago["assetsc"] != 0):
                 sf1_art.at[index_cur, "pchcurrat"] = ( (art_row_cur["assetsc"] / art_row_cur["liabilitiesc"]) / (art_row_1y_ago["assetsc"] / art_row_1y_ago["liabilitiesc"]) ) - 1
 
             # Percent chang ein depreciation (pchdepr), Formula: (SF1[depamor]t-1 / SF1[ppnenet]t-1) / (SF1[depamor]t-2 / SF1[ppnenet]t-2) - 1
-            if (art_row_cur["ppnenet"] != 0) and (art_row_1y_ago["ppnenet"] != 0):
+            if (art_row_cur["ppnenet"] != 0) and (art_row_1y_ago["ppnenet"] != 0) and (art_row_1y_ago["depamor"] != 0):
                 sf1_art.at[index_cur, "pchdepr"] = ( (art_row_cur["depamor"]/ art_row_cur["ppnenet"]) / (art_row_1y_ago["depamor"] / art_row_1y_ago["ppnenet"]) ) - 1
 
 
@@ -422,8 +429,8 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
             if (art_row_cur["revenueusd"] != 0) and (art_row_1y_ago["revenueusd"] != 0):
                 gross_margin_t_1 = (art_row_cur["revenueusd"] - art_row_cur["cor"]) / art_row_cur["revenueusd"]
                 gross_margin_t_2 = (art_row_1y_ago["revenueusd"] - art_row_1y_ago["cor"]) / art_row_1y_ago["revenueusd"]
-
-                sf1_art.at[index_cur, "pchgm_pchsale"] = ((gross_margin_t_1 / gross_margin_t_2) - 1) - ((art_row_cur["revenueusd"] / art_row_1y_ago["revenueusd"]) - 1)
+                if gross_margin_t_2 != 0:
+                    sf1_art.at[index_cur, "pchgm_pchsale"] = ((gross_margin_t_1 / gross_margin_t_2) - 1) - ((art_row_cur["revenueusd"] / art_row_1y_ago["revenueusd"]) - 1)
 
 
             # Percent change in quick ratio (pchquick), Formula: ([quick_ratio]t-1 / [quick_ratio]t-2) - 1
@@ -431,14 +438,15 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
             if (art_row_cur["liabilitiesc"] != 0) and (art_row_1y_ago["liabilitiesc"] != 0):
                 quick_ratio_cur = ( art_row_cur["assetsc"] - art_row_cur["inventory"] ) / art_row_cur["liabilitiesc"]
                 quick_ratio_1y_ago = ( art_row_1y_ago["assetsc"] - art_row_1y_ago["inventory"] ) / art_row_1y_ago["liabilitiesc"]
-                sf1_art.at[index_cur, "pchquick"] = (quick_ratio_cur / quick_ratio_1y_ago) - 1
+                if quick_ratio_1y_ago != 0:
+                    sf1_art.at[index_cur, "pchquick"] = (quick_ratio_cur / quick_ratio_1y_ago) - 1
 
             # Percent change in sales - percent change in inventory (pchsale_pchinvt), Formula: ((SF1[revenueusd]t-1 / SF1[revenueusd]t-2) - 1) - ((SF1[inventory]t-1 / SF1[inventory]t-2) - 1)
             if (art_row_1y_ago["revenueusd"] != 0) and (art_row_1y_ago["inventory"] != 0):
                 sf1_art.at[index_cur, "pchsale_pchinvt"] = ((art_row_cur["revenueusd"] / art_row_1y_ago["revenueusd"]) - 1) - ((art_row_cur["inventory"] / art_row_1y_ago["inventory"]) - 1)
 
             # % change in sales - % change in A/R (pchsale_pchrect), Formula: ((SF1[revenueusd]t-1 / SF1[revenueusd]t-2) - 1) - ((SF1[receivables]t-1 / SF1[receivables]t-2) - 1)
-            if (art_row_1y_ago["revenueusd"] != 0) and (art_row_1y_ago["inventory"] != 0):
+            if (art_row_1y_ago["revenueusd"] != 0) and (art_row_1y_ago["receivables"] != 0):
                 sf1_art.at[index_cur, "pchsale_pchrect"] = ((art_row_cur["revenueusd"] / art_row_1y_ago["revenueusd"]) - 1) - ((art_row_cur["receivables"] / art_row_1y_ago["receivables"]) - 1)
 
             # % change in sales - % change in SG&A (pchsale_pchxsga ), Formula: ((SF1[revenueusd]t-1 / SF1[revenueusd]t-2) - 1) - ((SF1[sgna]t-1 / SF1[sgna]t-2) - 1)
@@ -446,11 +454,11 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
                 sf1_art.at[index_cur, "pchsale_pchxsga"] = ((art_row_cur["revenueusd"] / art_row_1y_ago["revenueusd"]) - 1) - ((art_row_cur["sgna"] / art_row_1y_ago["sgna"]) - 1)
             
             # % change sales-to-inventory (pchsaleinv), Formula: ((SF1[revenueusd]t-1 / SF1[inventory]t-1) / (SF1[revenueusd]t-2 / SF1[inventory]t-2)) - 1
-            if (art_row_cur["inventory"] != 0) and (art_row_1y_ago["inventory"] != 0):
+            if (art_row_cur["inventory"] != 0) and (art_row_1y_ago["inventory"] != 0) and (art_row_1y_ago["revenueusd"] != 0):
                 sf1_art.at[index_cur, "pchsaleinv"] = ((art_row_cur["revenueusd"] / art_row_cur["inventory"]) / (art_row_1y_ago["revenueusd"] / art_row_1y_ago["inventory"])) - 1
 
             # R&D increase (rd), Formula: if (((SF1[rnd]t-1 / SF1[assets]t-1) - 1) - ((SF1[rnd]t-2 / SF1[assets]t-2) - 1)) > 0.05: 1; else: 0;
-            if (art_row_cur["assets"] != 0) and (art_row_1y_ago["assets"] != 0):
+            if (art_row_cur["assets"] != 0) and (art_row_1y_ago["assets"] != 0) and (art_row_1y_ago["rnd"] != 0):
                 rd_cur = (art_row_cur["rnd"] / art_row_cur["assets"])
                 rd_1y_ago = (art_row_1y_ago["rnd"] / art_row_1y_ago["assets"])
                 pch_rd = rd_cur/rd_1y_ago - 1
@@ -506,7 +514,7 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
                 sf1_art.at[index_cur, "chltc_laginvcap"] = (art_row_cur["liabilitiesc"] - art_row_1y_ago["liabilitiesc"]) / art_row_1y_ago["invcap"]
 
             # ΔXINT/LAGLT	(chint_laglt), Formula: (SF1[intexp]t-1  - SF1[intexp]t-2) / SF1[liabilities]t-2
-            if art_row_1y_ago["assets"] != 0:
+            if art_row_1y_ago["liabilities"] != 0:
                 sf1_art.at[index_cur, "chint_laglt"] = (art_row_cur["intexp"] - art_row_1y_ago["intexp"]) / art_row_1y_ago["liabilities"]
 
             # ΔDLTT/LAGAT (chdebtnc_lagat), Formula: (SF1[debtnc]t-1 - SF1[debtnc]t-2) / SF1[assets]t-2
@@ -515,7 +523,7 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
 
 
             # ΔINVT/LAGCOGS (chinvt_lagcor), Formula:	(SF1[inventory]t-1 - SF1[inventory]t-2) / SF1[cor]t-2
-            if art_row_1y_ago["assets"] != 0:
+            if art_row_1y_ago["cor"] != 0:
                 sf1_art.at[index_cur, "chinvt_lagcor"] = (art_row_cur["inventory"] - art_row_1y_ago["inventory"]) / art_row_1y_ago["cor"]
 
             # ΔPPENT/LAGLT (chppne_laglt), Formula: (SF1[ppnenet]t-1 - SF1[ppnenet]t-2) / SF1[liabilities]t-2
@@ -576,7 +584,6 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
             sf1_art.at[index_cur, "ipo"] = 1
         else:
             sf1_art.at[index_cur, "ipo"] = 0
-
 
 
         #_________________IN PREPARATION FOR INDUSTRY ADJUSTED VALUES___________________ ?????

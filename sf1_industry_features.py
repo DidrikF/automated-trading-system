@@ -23,7 +23,7 @@ Step-by-Step Dataset Construction:
 
 # sf1_art is forward filled and has a calendardate index
 def add_industry_sf1_features(sf1_art, metadata):
-    print("add_industry_sf1_features: ", sf1_art.ticker.unique(), sf1_art.index.min(), sf1_art.index.max())
+    # print("add_industry_sf1_features: ", sf1_art.ticker.unique(), sf1_art.index.min(), sf1_art.index.max())
     """
     NOTE: sf1_art contian data for the same industry (over a specific date rage MAYBE)
     NOTE: sf1_art has a calendardate index
@@ -158,8 +158,7 @@ def add_industry_sf1_features(sf1_art, metadata):
         # Industry-adjusted change in profit margin	Soliman (chpmia), 
         # Formula: (SF1[netinc]t-1 / SF1[revenueusd]t-1) - (SF1[netinc]t-2 / SF1[revenueusd]t-2) - industry_mean((SF1[netinc]t-1 / SF1[revenueusd]t-1) - (SF1[netinc]t-2 / SF1[revenueusd]t-2))  --> [chprofitmargin]t-1 - industry_mean([chprofitmargin]t-1)
         # 2-digit SIC - fiscal-year mean adjusted change in income before extraordinary items (ib) divided by sales (sale).
-        if art_row_cur["revenueusd"] != 0 and art_row_1y_ago["revenueusd"] != 0:
-            sf1_art.at[index_cur, "chpmia"] = art_row_cur["chprofitmargin"] - industry_means.at[caldate_cur, "industry_mean_change_profit_margin"]
+        sf1_art.at[index_cur, "chpmia"] = art_row_cur["chprofitmargin"] - industry_means.at[caldate_cur, "industry_mean_change_profit_margin"]
 
 
         # Industry sales concentration (herf), Formula: SF1[revenueusd] is used to proxy market share
