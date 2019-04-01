@@ -95,8 +95,8 @@ if __name__ == "__main__":
         atoms_configs = {
             "sep": { # atoms_info
                 "cache_name": "sep",
-                # "csv_path": "./datasets/sharadar/SEP_PURGED.csv",
-                "csv_path": "./datasets/testing/sep.csv",
+                "csv_path": "./datasets/sharadar/SEP_PURGED.csv",
+                # "csv_path": "./datasets/testing/sep.csv",
                 # "versions: 2, # use to identify different cached versions
                 # "stage_of_development": "momentum_done", # used to cache the molecules at different stages of development
                 "parse_dates": ["date"],
@@ -108,8 +108,8 @@ if __name__ == "__main__":
             },
             "sf1_art": {
                 "cache_name": "sf1",
-                # "csv_path": "./datasets/sharadar/SHARADAR_SF1_ART.csv",
-                "csv_path": "./datasets/testing/sf1_art.csv",
+                "csv_path": "./datasets/sharadar/SHARADAR_SF1_ART.csv",
+                # "csv_path": "./datasets/testing/sf1_art.csv",
                 "parse_dates": ["calendardate", "datekey"],
                 "index_col": "calendardate",
                 "report_every": 20000,
