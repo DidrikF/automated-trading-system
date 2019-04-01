@@ -226,7 +226,7 @@ if __name__ == "__main__":
 
         sep_featured = pandas_chaining_mp_engine(tasks=sep_tasks, primary_atoms="sep", atoms_configs=atoms_configs, \
             split_strategy="ticker", num_processes=num_processes, cache_dir=cache_dir, save_dir=save_dir, sort_by=["ticker", "date"], \
-                molecules_per_process=5)
+                molecules_per_process=2)
 
         
         if write_to_disk == True:
