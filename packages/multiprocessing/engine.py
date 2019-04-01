@@ -192,7 +192,7 @@ def expandCall(kwargs):
 
 sf1_art_base = pd.read_csv("./datasets/sharadar/SF1_ART_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
 sf1_arq_base = pd.read_csv("./datasets/sharadar/SF1_ARQ_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
-
+sep_base = pd.read_csv("./datasets/sharadar/SEP_BASE.csv", parse_dates=["date"], index_col="date")
 
 # atoms_name, atoms_info, split_strategy, cache_dir
 #                       "sep"       "ticker"        "./datasets/mc_cache"
@@ -309,6 +309,8 @@ def get_jobs_fast(task, primary_molecules, molecules_dict):
                         data_molecule = sf1_art_base
                     elif molecule_dict_name == "sf1_arq":
                         data_molecule = sf1_arq_base
+                    elif molecule_dict_name == "sep":
+                        data_molecule = sep_base
                     else:
                         data_molecule = pd.DataFrame()
 
@@ -408,11 +410,24 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
     molecules_dict = {} # { "AAPL": [df1, df2, ...], ... }
 
     for disk_name, atoms_config in atoms_configs.items():
-        atoms = pd.read_csv(atoms_config["csv_path"], parse_dates=atoms_config["parse_dates"], index_col=atoms_config["index_col"], low_memory=False)
-        if atoms_config["sort_by"] is not None:
-            atoms = atoms.sort_values(by=atoms_config["sort_by"])
-        molecules_dict[disk_name] = split_df_into_molecules(atoms, split_strategy, num_processes*molecules_per_process)
+        pickle_path = cache_dir + '/' + disk_name + '.pickle'
 
+        if os.path.isfile(pickle_path):
+            print("Loading pickle: " + pickle_path)
+            pickle_in = open(pickle_path,"rb")
+            dfs = pickle.load(pickle_in)
+        else:
+            print("Reading and parsing: ", atoms_config["csv_path"])
+            atoms = pd.read_csv(atoms_config["csv_path"], parse_dates=atoms_config["parse_dates"], index_col=atoms_config["index_col"], low_memory=False)
+            if atoms_config["sort_by"] is not None:
+                atoms = atoms.sort_values(by=atoms_config["sort_by"])
+            molecules_dict[disk_name] = split_df_into_molecules(atoms, split_strategy, num_processes*molecules_per_process)
+
+
+            if atoms_config["cache"] == True:
+                pickle_out = open(pickle_path,"wb")
+                pickle.dump(molecules_dict[disk_name], pickle_out)
+                pickle_out.close()
 
     primary_molecules = molecules_dict[primary_atoms]
     

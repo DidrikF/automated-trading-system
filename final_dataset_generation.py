@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
         atoms_configs = {
             "sep": { # atoms_info
-                "cache_name": "sep",
+                "disk_name": "sep",
                 "csv_path": "./datasets/sharadar/SEP_PURGED.csv",
                 # "csv_path": "./datasets/testing/sep.csv",
                 # "versions: 2, # use to identify different cached versions
@@ -107,7 +107,7 @@ if __name__ == "__main__":
                 "cache": True,
             },
             "sf1_art": {
-                "cache_name": "sf1",
+                "disk_name": "sf1",
                 "csv_path": "./datasets/sharadar/SHARADAR_SF1_ART.csv",
                 # "csv_path": "./datasets/testing/sf1_art.csv",
                 "parse_dates": ["calendardate", "datekey"],
@@ -118,7 +118,7 @@ if __name__ == "__main__":
                 "cache": True,
             },
             "metadata": {
-                "cache_name": "metadata",
+                "disk_name": "metadata",
                 "csv_path": "./datasets/sharadar/METADATA_PURGED.csv",
                 "parse_dates": ["firstpricedate"],
                 "index_col": None,
@@ -249,7 +249,7 @@ if __name__ == "__main__":
 
         sf1_atoms_configs = {
             "sf1_art": {
-                "cache_name": "sf1_art",
+                "disk_name": "sf1_art",
                 "csv_path": "./datasets/sharadar/SHARADAR_SF1_ART.csv",
                 # "csv_path": "./datasets/testing/sf1_art_no_duplicates.csv",
                 "parse_dates": ["calendardate", "datekey"],
@@ -260,7 +260,7 @@ if __name__ == "__main__":
                 "cache": True,
             },
             "sf1_arq": {
-                "cache_name": "sf1_arq",
+                "disk_name": "sf1_arq",
                 "csv_path": "./datasets/sharadar/SHARADAR_SF1_ARQ.csv",
                 # "csv_path": "./datasets/testing/sf1_arq_no_duplicates.csv",
                 "parse_dates": ["calendardate", "datekey"],
@@ -271,7 +271,7 @@ if __name__ == "__main__":
                 "cache": True,
             },
             "metadata": {
-                "cache_name": "metadata",
+                "disk_name": "metadata",
                 "csv_path": "./datasets/sharadar/METADATA_PURGED.csv",
                 "parse_dates": ["firstpricedate"],
                 "index_col": None,
