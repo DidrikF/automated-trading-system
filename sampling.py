@@ -17,7 +17,7 @@ def extend_sep_for_sampling(sep, sf1_art, metadata):
     if len(metadata) == 0:
         sep = pd.DataFrame(data=None, columns=sep.columns, index=sep.index)
         sep = sep.dropna(axis=0)
-        print(sep)
+        print("No metadata for ticker: ", sep.iloc[0]["ticker"])
         return sep
 
     if isinstance(metadata, pd.DataFrame):

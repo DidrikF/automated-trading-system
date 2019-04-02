@@ -67,7 +67,12 @@ def dividend_adjusting_prices_forwards(sep):
 
 
 def add_weekly_and_12m_stock_returns(sep):
-    # sep only contains one ticker
+    """ sep only contains one ticker """
+    sep_empty = True if (len(sep) == 0) else False
+
+    if sep_empty == True:
+        print("Got empty sep in add_weekly_and_12m_stock_returns, don't know why")
+        return sep
 
     pd.options.mode.chained_assignment = None  # default='warn'
     # Reindex, forward fill and shift

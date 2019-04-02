@@ -334,4 +334,25 @@ if __name__ == "__main__":
 
 
 
+"""
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 119, in worker
+    result = (True, func(*args, **kwds))
+  File "/home/ubuntu/pycode/automated-trading-system/packages/multiprocessing/engine.py", line 272, in expandCall_fast
+    out = callback(**kwargs)
+  File "/home/ubuntu/pycode/automated-trading-system/sep_preparation.py", line 74, in add_weekly_and_12m_stock_returns
+    date_index = pd.date_range(sep.index.min(), sep.index.max()) # [0], [1]
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/site-packages/pandas/core/indexes/datetimes.py", line 1524, in date_range
+    closed=closed, **kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/site-packages/pandas/core/arrays/datetimes.py", line 421, in _generate_range
+    raise ValueError("Neither `start` nor `end` can be NaT")
+ValueError: Neither `start` nor `end` can be NaT
 
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "final_dataset_generation.py", line 232, in <module>
+    molecules_per_process=2, resume=True)
+  File "/home/ubuntu/pycode/automated-trading-system/packages/multiprocessing/engine.py", line 430, in pandas_chaining_mp_engine
+"""

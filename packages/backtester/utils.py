@@ -5,6 +5,44 @@ def show_progress():
   pass
 
 
+class OrderCancelationPolicy(): 
+  pass
+
+
+
+
+class CommissionModel(): # Too much un needed complexity..
+    """
+    Abstract commission model interface.
+    Commission models are responsible for accepting order/transaction pairs and 
+    calculating how much commission should be charged to an algorithm’s account 
+    on each transaction.
+    """
+
+class EquityCommissionModel():
+    pass
+
+
+# CommissionPerShare
+
+# CommissionPerTrade
+
+# CommissionPerDollar
+
+
+class SlippageModel(): # Too much un needed complexity..
+    pass
+
+
+# FixedSlippage
+
+# VolumeShareSlippage
+
+
+
+
+
+
 class Order():
   """
   Parameters:	
