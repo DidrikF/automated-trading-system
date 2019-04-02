@@ -44,7 +44,7 @@ def setup():
     yield
     # Will be executed after the last test in the module
 
-
+@pytest.mark.skip()
 def test_sep_featured():
     num_processes = 1
     save_path = "./testing_datasets"
@@ -348,7 +348,6 @@ def testing_sep_featured_fast():
 
 
 
-@pytest.mark.skip()
 def testing_sf1_featured():
     save_path = "./testing_datasets"
 

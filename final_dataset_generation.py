@@ -82,6 +82,12 @@ if __name__ == "__main__":
         # create folder to write files to
         os.mkdir(save_path)
 
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
 
     if generate_sep_features == True:
     
@@ -97,8 +103,6 @@ if __name__ == "__main__":
                 "disk_name": "sep",
                 "csv_path": "./datasets/sharadar/SEP_PURGED.csv",
                 # "csv_path": "./datasets/testing/sep.csv",
-                # "versions: 2, # use to identify different cached versions
-                # "stage_of_development": "momentum_done", # used to cache the molecules at different stages of development
                 "parse_dates": ["date"],
                 "index_col": "date",
                 "report_every": 500000,
@@ -143,7 +147,7 @@ if __name__ == "__main__":
                 "split_strategy": "ticker", # How the molecules needs to be split for this task
                 "save_result_to_disk": False, # Whether to combine and store the resulting molecules to disk (as a csv file)
                 "sort_by": ["ticker", "date"], # Sorting parameters, used both for molecules individually and when combined
-                "cache_result": False,  # Whether to cache the resulting molecules, because they are needed later in the chain
+                "cache_result": True,  # Whether to cache the resulting molecules, because they are needed later in the chain
                 "disk_name": "sep_extended", # Name of molecules saved as pickle in cache_dir or as one csv file in save_dir
             },
             {
@@ -154,7 +158,7 @@ if __name__ == "__main__":
                 "kwargs": {},
                 "split_strategy": "ticker",
                 "save_result_to_disk": False,
-                "cache_result": False,
+                "cache_result": True,
                 "disk_name": "sep_extended_divadj",
             },
             {
@@ -165,7 +169,7 @@ if __name__ == "__main__":
                 "kwargs": {},
                 "split_strategy": "ticker",
                 "save_result_to_disk": False,
-                "cache_result": False,
+                "cache_result": True,
                 "disk_name": "sep_extended_divadj_ret",
             },
             {
@@ -176,7 +180,7 @@ if __name__ == "__main__":
                 "kwargs": {},
                 "split_strategy": "date",
                 "save_result_to_disk": False,
-                "cache_result": False,
+                "cache_result": True,
                 "disk_name": "sep_extended_divadj_ret_market",
             },
             {
@@ -187,7 +191,7 @@ if __name__ == "__main__":
                 "kwargs": {},
                 "split_strategy": "industry",
                 "save_result_to_disk": False,
-                "cache_result": False,
+                "cache_result": True,
                 "add_to_molecules_dict": True, # But split the wrong way
                 "split_strategy_for_molecule_dict": "ticker",
                 "disk_name": "sep_extended_divadj_ret_market_ind",
@@ -202,9 +206,8 @@ if __name__ == "__main__":
                 },
                 "split_strategy": "ticker",
                 "save_result_to_disk": False,
-                "cache_result": False,
+                "cache_result": True,
                 "disk_name": "sep_sampled",
-                "atoms_key": "sep", # Indicates what atoms_config to use when splitting data for this task
             },
             { # Sorted values
                 "name": "Add sep features, final step of SEP pipeline",
@@ -226,7 +229,7 @@ if __name__ == "__main__":
 
         sep_featured = pandas_chaining_mp_engine(tasks=sep_tasks, primary_atoms="sep", atoms_configs=atoms_configs, \
             split_strategy="ticker", num_processes=num_processes, cache_dir=cache_dir, save_dir=save_dir, sort_by=["ticker", "date"], \
-                molecules_per_process=2)
+                molecules_per_process=2, resume=True)
 
         
         if write_to_disk == True:
@@ -315,126 +318,19 @@ if __name__ == "__main__":
             }
         ]
 
-
-        cache_dir = "./datasets/molecules_cache_live"
-        save_dir = "./datasets/molecules_save_live"
-
         sf1_featured = pandas_chaining_mp_engine(tasks=sf1_tasks, primary_atoms="sf1_art", atoms_configs=sf1_atoms_configs, \
             split_strategy="ticker", num_processes=num_processes, cache_dir=cache_dir, save_dir=save_dir, sort_by=["ticker", "calendardate", "datekey"], \
-                molecules_per_process=5)
+                molecules_per_process=5, resume=True)
 
         sf1_featured = sf1_featured.sort_values(by=["ticker", "calendardate", "datekey"])
 
-        
         sf1_featured.to_csv(save_path + "/sf1_featured.csv")
 
-        
         if write_to_disk == True:
             sf1_featured.to_csv(save_path + "/sf1_featured.csv")
 
    
 
-
-
-
-
-
-"""
-
-        if generate_sf1_features == True:
-
-            sf1_art_featured = pandas_mp_engine(callback=add_sf1_features, atoms=sf1_art, \
-                data={"sf1_arq": sf1_arq, 'metadata': metadata}, molecule_key='sf1_art', split_strategy= 'ticker', \
-                    num_processes=num_processes, molecules_per_process=1)
-
-
-            sf1_art_featured = pandas_mp_engine(callback=add_industry_sf1_features, atoms=sf1_art_featured, \
-                data={'metadata': metadata}, molecule_key='sf1_art', split_strategy= 'industry', \
-                    num_processes=num_processes, molecules_per_process=1)
-
-            if write_to_disk == True:
-                sf1_art_featured.to_csv(save_path + "/sf1_art_featured.csv")
-                
-                # Select only features and save 
-                cols = list(set(sf1_features + industry_sf1_features).intersection(set(sf1_art_featured.columns)))
-                sf1_art_only_features = sf1_art_featured[cols]
-
-                sf1_art_only_features.to_csv(save_path + "/sf1_art_only_features.csv")
-
-        else:
-            sf1_art_featured = pd.read_csv(read_path)
-            
-        print("Step 5 of xxx: SF1 Calculations - COMPLETED")
-    
-    else: # Do not calculate features
-        sf1_art_featured = pd.read_csv(read_path + "/sf1_art_featured.csv", parse_dates=["calendardate", "datekey", "reportperiod"],\
-            index_col="calendardate")
-
-        sep_featured = pd.read_csv(read_path + "/sep_featured.csv", parse_dates=["date", "datekey"], index_col=["date"])
-
-
-    # At this point we have all features calculated, but they need to be assembled and features selected.
-
-    # 1. Merge features from SEP and SF1 into the samples data frame
-    sep_featured = sep_featured.reset_index()
-    sf1_art_featured = sf1_art_featured.reset_index()
-
-    dataset = pd.merge(sep_featured, sf1_art_featured,  how='left', on=["ticker", "datekey"], suffixes=("sep", ""))
-
-
-
-    # 2. Select features from SEP, SF1 etc.
-    selected_features = ["ticker", "date", "calendardate", "datekey"] + selected_sf1_features + selected_industry_sf1_features + selected_sep_features
-    dataset = dataset[selected_features]
-
-
-    dataset.to_csv(save_path + "/dataset.csv", index=False)
-
-
-    # 3. Remove or amend row with missing/NAN values (the strategy must be consistent with that for SEP data)
-    
-    # MORE EFFORT SHOULD GO INTO THIS STEP, BUT I KEEP IT SIMPLE FOR NOW, DROPPING ROWS WITH ONE OR MORE NAN VALUES
-
-    # Drop first two (one of calendardate) years
-    dataset.sort_values(by=["ticker", "calendardate"])
-
-    result = pd.DataFrame()
-
-    for ticker in list(dataset.ticker.unique()):
-        ticker_dataset = dataset.loc[dataset.ticker == ticker]
-
-        min_caldate = ticker_dataset.calendardate.min()            
-        calendardate_1y_after = get_calendardate_x_quarters_later(min_caldate, 4)
-
-        ticker_dataset = ticker_dataset[ticker_dataset.calendardate >= calendardate_1y_after]
-
-        result = result.append(ticker_dataset)
-
-    dataset = result
-
-
-    dataset.to_csv(save_path + "/dataset_dropped_first_year.csv", index=False)
-
-
-    dataset_no_nan = dataset.dropna(axis=0)
-
-    # 4. Write the almost ML ready dataset to disk
-
-    dataset_no_nan.to_csv(save_path + "/dataset_no_nan.csv")
-
-    # 5. Print statistics:
-    time_elapsed = datetime.datetime.now() - start_time
-
-    print("Dataset length: ", len(dataset))
-
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        print(dataset.isna().sum())
-
-    print("Dataset no nan length: ", len(dataset_no_nan))
-    print("Dropped: ", len(dataset) -  len(dataset_no_nan))
-    print("Time elapsed: ", time_elapsed)
-
-"""
 
 
 

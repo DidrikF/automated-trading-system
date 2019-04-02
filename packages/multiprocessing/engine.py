@@ -5,6 +5,8 @@ import time
 import datetime as dt
 import sys
 import os.path
+from os import listdir
+from os.path import isfile, join
 import pickle
 from io import StringIO
 import math
@@ -195,88 +197,6 @@ sf1_art_base = pd.read_csv("./datasets/sharadar/SF1_ART_BASE.csv", parse_dates=[
 sf1_arq_base = pd.read_csv("./datasets/sharadar/SF1_ARQ_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
 sep_base = pd.read_csv("./datasets/sharadar/SEP_BASE.csv", parse_dates=["date"], index_col="date")
 
-# atoms_name, atoms_info, split_strategy, cache_dir
-#                       "sep"       "ticker"        "./datasets/mc_cache"
-def split_into_molecules(disk_name, atoms_config, split_strategy, cache_dir): # , csv_file_in_memory=None
-    """
-    Splits atoms into molecules, if not allready availabel in the cache_dir.
-    Returns dictionary of molecules with keys being "AAPL", "Electronics..."
-    """
-    """ PROBABLY REMOVE
-    if csv_file_in_memory is not None:
-        return dfs
-    """
-
-
-    # maybe add is some way to version or identify differnet stages of development of the molecules
-    pickle_path = cache_dir + '/' + disk_name + '.pickle'
-
-    if os.path.isfile(pickle_path):
-        print("Loading pickle: " + pickle_path)
-        pickle_in = open(pickle_path,"rb")
-        dfs = pickle.load(pickle_in)
-    else:
-        csv_strings = {}
-        time0 = time.time()
-        cols = ""
-        if split_strategy in ["ticker", "industry"]:
-            with open(atoms_config["csv_path"]) as csvfile:
-                for index, line in enumerate(csvfile, 1):
-                    row = line.split(',')
-                    if index == 1:
-                        cols = line
-                        row_index = row.index(split_strategy)
-                        continue
-                    
-                    if row[row_index] not in csv_strings:
-                        csv_strings[row[row_index]] = cols
-                        csv_strings[row[row_index]] += line
-                    else:
-                        csv_strings[row[row_index]] += line
-
-                    if (index % atoms_config["report_every"]) == 0:
-                        report_progress(index, atoms_config["length"], time0, "Processing " + disk_name)
-        
-        elif split_strategy == "date":
-            with open(atoms_config["csv_path"]) as csvfile:
-                for index, line in enumerate(csvfile, 1):
-                    row = line.split(',')
-                    if index == 1:
-                        cols = line
-                        row_index = row.index(split_strategy)
-                        continue
-
-                    # Need code to split on year
-                    # May not be needed as less splits can be performed
-
-
-        index = 1
-        time0 = time.time()
-        num_iterations = len(csv_strings)
-        report_every = math.ceil(num_iterations/50)
-        dfs = {}
-        for molecule_identifier, df_string in csv_strings.items():
-            csv_file = StringIO(df_string)
-
-            df = pd.read_csv(csv_file, parse_dates=atoms_config["parse_dates"], index_col=atoms_config["index_col"], low_memory=False)
-            if atoms_config["sort_by"] is not None:
-                df = df.sort_values(by=atoms_config["sort_by"])
-            
-            dfs[molecule_identifier] = df
-
-            if (index % report_every) == 0:
-                report_progress(index, num_iterations, time0, "Create Data Frames for " + disk_name)
-
-            index += 1
-
-        # Cache the results for later use
-        if atoms_config["cache"] == True:
-            pickle_out = open(pickle_path,"wb")
-            pickle.dump(dfs, pickle_out)
-            pickle_out.close()
-
-    return dfs
-
 
 def get_jobs_fast(task, primary_molecules, molecules_dict):
     """
@@ -376,136 +296,17 @@ def split_df_into_molecules(atoms, split_strategy, num_molecules):
         for industry, molecule in grouped_molecules:
             dfs[industry] = molecule
         
-        """
-        industries = list(atoms["industry"].unique())
-        time0 = time.time()
-        for i, industry in enumerate(industries, 1):
-            dfs[industry] = atoms.loc[atoms["industry"] == industry]
-            report_progress(i, len(industries), time0, "split_df_into_molecules according to split strategy: " + split_strategy)
-        """
-    
     elif split_strategy == 'ticker':
         if 'ticker' not in atoms:
             raise Exception("Ticker column not in atoms")
         grouped_molecules = atoms.groupby("ticker")
         for industry, molecule in grouped_molecules:
             dfs[industry] = molecule
-        
-        """
-        tickers = list(atoms["ticker"].unique())
-        time0 = time.time()
-        for i, ticker in enumerate(tickers, 1):
-            dfs[ticker] = atoms.loc[atoms["ticker"] == ticker]
-            report_progress(i, len(tickers), time0, "split_df_into_molecules according to split strategy: " + split_strategy)
-        """
     else:
         raise ValueError("split_strategy cannot be " + split_strategy + ". Only 'ticker', 'industry' and 'date' are supported.")
 
     return dfs
 
-
-def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strategy, num_processes, cache_dir, \
-    save_dir, sort_by=None, molecules_per_process=5):
-    """
-    primary_atoms : What key in atoms_config to use as first molecules to create jobs from.
-    """
-    # Ready the data once, and then use a simple dictionary lookup to get the correct df when creating jobs
-    molecules_dict = {} # { "AAPL": [df1, df2, ...], ... }
-
-    for disk_name, atoms_config in atoms_configs.items():
-        pickle_path = cache_dir + '/' + disk_name + '.pickle'
-
-        if os.path.isfile(pickle_path):
-            print("Loading pickle: " + pickle_path)
-            pickle_in = open(pickle_path,"rb")
-            molecules_dict[disk_name] = pickle.load(pickle_in)
-        else:
-            print("Reading and parsing: ", atoms_config["csv_path"])
-            atoms = pd.read_csv(atoms_config["csv_path"], parse_dates=atoms_config["parse_dates"], index_col=atoms_config["index_col"], low_memory=False)
-            if atoms_config["sort_by"] is not None:
-                atoms = atoms.sort_values(by=atoms_config["sort_by"])
-            molecules_dict[disk_name] = split_df_into_molecules(atoms, split_strategy, num_processes*molecules_per_process)
-
-
-            if atoms_config["cache"] == True:
-                pickle_out = open(pickle_path,"wb")
-                pickle.dump(molecules_dict[disk_name], pickle_out)
-                pickle_out.close()
-
-    primary_molecules = molecules_dict[primary_atoms]
-    
-
-    # Loop over tasks and pass output from each task as input to the next.
-    last_index = len(tasks) - 1
-    start_time_tasks = time.time()
-    for index, task in enumerate(tasks):
-        minutes_elapsed = (time.time()-start_time_tasks)/60
-        print("Step ", str(index+1), " of ", str(len(tasks)), " - " + task["name"] + " - Time elapsed: ", str(round(minutes_elapsed, 2)), " minutes.")
-
-        # The molecules dict is not needed for all tasks, if none is listed in task["data"] it is simply never touched.
-        jobs = get_jobs_fast(task, primary_molecules, molecules_dict) # dont cache jobs
-
-        primary_molecules = process_jobs_fast(jobs, num_processes=num_processes, sort_by=sort_by) # return as list of Data Frames, I need a dict
-        
-        # Save result as csv
-        if task["save_result_to_disk"] == True:
-            save_path = save_dir + "/" + task["disk_name"] + ".csv"
-            combine_and_save_molecules(primary_molecules, save_path, sort_by=task["sort_by"])
-
-        # Cache result as pickle of DataFrames
-        if task["cache_result"] == True:
-            cache_path = cache_dir + "/" + task["disk_name"] + ".pickle"
-            pickle_out = open(cache_path,"wb")
-            pickle.dump(primary_molecules, pickle_out)
-            pickle_out.close()
-
-        # Prepare Primary Molecules
-        time0 = time.time()
-        if index < last_index:
-            next_task = tasks[index+1]
-            if next_task["split_strategy"] != task["split_strategy"]:
-                atoms = combine_molecules(primary_molecules)
-                primary_molecules = split_df_into_molecules(atoms, next_task["split_strategy"], num_processes*molecules_per_process) 
-
-                # If the next task has any other data than the primary molecules it needs, we need to split those as well according to the required strategy.
-                if next_task["data"] is not None: 
-                    for molecules_dict_name in next_task["data"].values():
-                        atoms = combine_molecules(molecules_dict[molecules_dict_name])
-                        molecules_dict[molecules_dict_name] = split_df_into_molecules(atoms, next_task["split_strategy"], num_processes*molecules_per_process)
-                    
-        # Add molecules to molecules_dict for later use by another task
-        if task.get("add_to_molecules_dict", False) == True:
-            molecules_to_add_to_molecules_dict = primary_molecules
-            
-            # We just split primary_molecules for the next task, 
-            # if this is not the format we want to cache the molecules, they must be split in the correct way.
-            if task["split_strategy_for_molecule_dict"] != next_task["split_strategy"]: 
-
-                atoms = combine_molecules(primary_molecules)
-
-                molecules_to_add_to_molecules_dict = split_df_into_molecules(atoms, task["split_strategy_for_molecule_dict"], num_processes*molecules_per_process)
-                
-            molecules_dict[task["disk_name"]] = molecules_to_add_to_molecules_dict
-
-
-    print("TASKS COMPLETED SUCCESSFULLY")
-
-    out_molecules = list(primary_molecules.values())
-
-    if isinstance(out_molecules[0], pd.DataFrame):
-        result = pd.DataFrame()
-    elif isinstance(out_molecules[0], pd.Series):
-        result = pd.Series()
-    else:
-        return out_molecules
-    
-    for i in out_molecules:
-        result = result.append(i)
-    
-    if sort_by is not None:
-        result = result.sort_values(by=sort_by)
-
-    return result
 
 def combine_and_save_molecules(molecules, path, sort_by=None):
     out_molecules = list(molecules.values())
@@ -527,35 +328,152 @@ def combine_and_save_molecules(molecules, path, sort_by=None):
 
 
 def combine_molecules(molecules):
-    # result = pd.DataFrame()
     molecules = list(molecules.values())
-    # time0 = time.time()
     result = pd.concat(molecules)
-
-    """
-    for i, df in enumerate(molecules, 1): 
-        result = result.append(df)
-        report_progress(i, len(molecules), time0, "combining molecules")
-    """
-
     return result
 
-"""
-def pandas_chaining_mp_engine_continue(tasks, primary_molecules, molecules_dict, num_processes, sort_by=None, return_molecules=False):
 
-    # primary_atoms : What key in atoms_config to use as first molecules to create jobs from.
+def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strategy, num_processes, cache_dir, \
+    save_dir, sort_by=None, molecules_per_process=5, resume=False):
+    """
+    primary_atoms : What key in atoms_config to use as first molecules to create jobs from.
+    split_strategy: What strategy is used to initially split data-atoms and primary-atoms. Once we are iterating
+                    the tasks, the task-config sets the split strategy.
+    """
+    split_strategy_changed = False
+    primary_molecules = None # Might resume from cache, or set from parsed atoms found in molecules_dict
+    # You might want to resume at a later task, if that is the case set primary_molecules from the cache and skip/ foregoing tasks
+    if resume == True:
+        """ Resume from the task that produced the latest cached molecules """
+
+        # Get index of task to resume from:
+        files_in_cache = [f for f in listdir(cache_dir) if isfile(join(cache_dir, f))]
+        task_cache_files = [(i, task["disk_name"] + ".pickle") for i, task in enumerate(tasks)]
+        task_cache_files.reverse()
+        for i_file in task_cache_files:
+            task_index = i_file[0]
+            file_name = i_file[1]
+            if file_name in files_in_cache:
+                # resume at $task_index with file $file
+                print("resuming at task index: ", task_index, " with file: ", file_name)
+                pickle_path = cache_dir + "/" + file_name
+                pickle_in = open(pickle_path,"rb")
+                primary_molecules = pickle.load(pickle_in)
+                # It might be that primary_molecules is not split correctly!
+                task_we_are_loading_output_from = tasks[task_index]
+                new_first_task = tasks[task_index + 1]
+                if task_we_are_loading_output_from["split_strategy"] != new_first_task["split_strategy"]:
+                    print("Resplitting primary_molecules when resuming because they were cached in the wrong format, needed: ", new_first_task["split_strategy"])
+                    atoms = combine_molecules(primary_molecules)
+                    primary_molecules = split_df_into_molecules(atoms, new_first_task["split_strategy"], num_processes*molecules_per_process)
+
+                tasks = tasks[(task_index+1):] # Drop the task associated with the task-output we are loading
+                if new_first_task["split_strategy"] != split_strategy:
+                    print("changing split strategy to : ", new_first_task["split_strategy"])
+                    split_strategy = new_first_task["split_strategy"] # Will change how we parse atoms
+                    split_strategy_changed = True
+                break
+        print("Tasks changed to: ", tasks)
+        print("new tasks length: ", len(tasks))
+    """
+    elif type(resume) == int:
+        # Resume from specific task
+        pass
+    """
+    # Ready the data once, and then use a simple dictionary lookup to get the correct df when creating jobs
+    molecules_dict = {} # { "AAPL": [df1, df2, ...], ...
+
+    for disk_name, atoms_config in atoms_configs.items():
+        pickle_path = cache_dir + '/' + disk_name + '.pickle'
+
+        if os.path.isfile(pickle_path):
+            print("Loading pickle: " + pickle_path)
+            pickle_in = open(pickle_path,"rb")
+            molecules_dict[disk_name] = pickle.load(pickle_in) 
+            # If we are resuming a task we don't know if this is split correctly. This is amended below.
+            # The split is only incorrect, if split_strategy changed from the original value given as a function argument!
+            # And this only matters if the new first task has a "data" value that is not none in its config!
+            if (split_strategy_changed == True) and (tasks[0]["data"] is not None):
+                new_first_task = tasks[0]
+                for molecules_dict_name in new_first_task["data"].values():
+                    atoms = combine_molecules(molecules_dict[molecules_dict_name])
+                    molecules_dict[molecules_dict_name] = split_df_into_molecules(atoms, new_first_task["split_strategy"], num_processes*molecules_per_process)
+        else:
+            print("Reading and parsing: ", atoms_config["csv_path"])
+            atoms = pd.read_csv(atoms_config["csv_path"], parse_dates=atoms_config["parse_dates"], index_col=atoms_config["index_col"], low_memory=False)
+            if atoms_config["sort_by"] is not None:
+                atoms = atoms.sort_values(by=atoms_config["sort_by"])
+            molecules_dict[disk_name] = split_df_into_molecules(atoms, split_strategy, num_processes*molecules_per_process) # Split strategy here might have changed
+
+            if (atoms_config["cache"]) == True and (resume == False): # Only cache parsed atoms, when we are not resuming (which could have changed the split_strategy, making the contents of the cache harder to reason about)
+                pickle_out = open(pickle_path,"wb")
+                pickle.dump(molecules_dict[disk_name], pickle_out)
+                pickle_out.close()
+    
+
+    if primary_molecules is None: # If we are not resuming, this is split correctly.
+        primary_molecules = molecules_dict[primary_atoms]
+    
 
     # Loop over tasks and pass output from each task as input to the next.
-    for task in tasks:
+    last_index = len(tasks) - 1
+    start_time_tasks = time.time()
+    for index, task in enumerate(tasks):
+        """ 
+        NOTE: For each iteration of the loop primary_molecules and required parts of molecules_dict must
+        be split correctly before starting.
+        """
+        minutes_elapsed = (time.time()-start_time_tasks)/60
+        print("Step ", str(index+1), " of ", str(len(tasks)), " - " + task["name"] + " - Time elapsed: ", str(round(minutes_elapsed, 2)), " minutes.")
+
+        # The molecules dict is not needed for all tasks, if none is listed in task["data"] it is simply never touched.
         jobs = get_jobs_fast(task, primary_molecules, molecules_dict) # dont cache jobs
 
-        primary_molecules = process_jobs_fast(jobs, num_processes=num_processes) # return as list of Data Frames, I need a dict
-        # Cache primary_molecules ? I can then skip whole tasks...
+        primary_molecules = process_jobs_fast(jobs, num_processes=num_processes, sort_by=sort_by) # return as list of Data Frames, I need a dict
+        
+        # Save result as csv
+        if task["save_result_to_disk"] == True:
+            print("Saving as csv result from task: ", task["name"])
+            save_path = save_dir + "/" + task["disk_name"] + ".csv"
+            combine_and_save_molecules(primary_molecules, save_path, sort_by=task["sort_by"])
+
+        # Cache result as pickle of DataFrames
+        if task["cache_result"] == True:
+            print("Cacheing as pickle result from task: ", task["name"])
+            cache_path = cache_dir + "/" + task["disk_name"] + ".pickle"
+            pickle_out = open(cache_path,"wb")
+            pickle.dump(primary_molecules, pickle_out)
+            pickle_out.close()
+
+        # Prepare Primary Molecules
+        time0 = time.time()
+        if index < last_index:
+            next_task = tasks[index+1]
+            if next_task["split_strategy"] != task["split_strategy"]:
+                atoms = combine_molecules(primary_molecules)
+                primary_molecules = split_df_into_molecules(atoms, next_task["split_strategy"], num_processes*molecules_per_process) 
+
+                # If the next task has any other data than the primary molecules it needs, we need to split those as well according to the required strategy.
+                if next_task["data"] is not None: 
+                    for molecules_dict_name in next_task["data"].values():
+                        atoms = combine_molecules(molecules_dict[molecules_dict_name])
+                        molecules_dict[molecules_dict_name] = split_df_into_molecules(atoms, next_task["split_strategy"], num_processes*molecules_per_process)
+                    
+        # Add molecules to molecules_dict for later use by another task
+        # This addresses the constraint that all needed molecules must be split correctly before the start of each iteration of this loop.
+        if task.get("add_to_molecules_dict", False) == True: 
+            molecules_to_add_to_molecules_dict = primary_molecules
+            
+            # We just split primary_molecules for the next task, 
+            # if this is not the format we want to cache the molecules, they must be split in the correct way.
+            if task["split_strategy_for_molecule_dict"] != next_task["split_strategy"]: 
+                atoms = combine_molecules(primary_molecules)
+                molecules_to_add_to_molecules_dict = split_df_into_molecules(atoms, task["split_strategy_for_molecule_dict"], num_processes*molecules_per_process)
+
+            molecules_dict[task["disk_name"]] = molecules_to_add_to_molecules_dict
+
 
     print("TASKS COMPLETED SUCCESSFULLY")
-
-    if return_molecules == True:
-        return (primary_molecules, molecules_dict)
 
     out_molecules = list(primary_molecules.values())
 
@@ -573,42 +491,3 @@ def pandas_chaining_mp_engine_continue(tasks, primary_molecules, molecules_dict,
         result = result.sort_values(by=sort_by)
 
     return result
-
-"""
-
-
-
-""" KLIP
-    # combine molecules
-    print("before combine molecules")
-    atoms = combine_molecules(primary_molecules)
-
-    print("after combine_molecules")
-
-    # split molecules according to strategy required by next task
-    if next_task["split_strategy"] == "ticker":
-        print("before resplitting on ticker")
-
-        # Write df to csv on disk 
-        temp_path = cache_dir + "/temp_" + task["disk_name"] + ".csv"
-        atoms.to_csv(temp_path) # Does it handle the index correctly?
-        
-        # Use old function to read it back...
-        disk_name = "temp_" + task["disk_name"] # This should be irrelevant as the file should not exist in the cache
-        
-        atoms_config = atoms_configs[next_task["atoms_key"]]
-        atoms_config["csv_path"] = temp_path
-        atoms_config["cache"] = False
-
-        primary_molecules = split_into_molecules(disk_name, atoms_config, split_strategy=next_task["split_strategy"], \
-            cache_dir=cache_dir)
-
-        os.remove(temp_path)
-        print("after resplitting on ticker")
-
-    else:
-        print("before split_df_into_molecules")
-        primary_molecules = split_df_into_molecules(atoms, next_task["split_strategy"], num_processes*molecules_per_process) 
-        print("before split_df_into_molecules")
-"""
-                

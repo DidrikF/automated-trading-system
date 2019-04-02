@@ -1,13 +1,25 @@
 import numpy as np
 import pytest
 import timeit
+import shutil
+import os
+import math
 import multiprocessing as mp
-from .engine import pandas_mp_engine, split_df_into_molecules
+from .engine import pandas_mp_engine, split_df_into_molecules, pandas_chaining_mp_engine
 import time
 import pandas as pd
-  
+from sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
+from sep_preparation import dividend_adjusting_prices_backwards, add_weekly_and_12m_stock_returns, add_equally_weighted_weekly_market_returns
+from sep_industry_features import add_indmom
+from sep_features import add_sep_features
+from sf1_features import add_sf1_features
+from sf1_industry_features import add_industry_sf1_features
+from feature_selection import selected_industry_sf1_features, selected_sep_features, selected_sf1_features
+from packages.helpers.helpers import get_calendardate_x_quarters_later
+
 
 # Experimentation, not used
+@pytest.mark.skip()
 def heavy_task(process_length=1000, nr_processes=10000):
     normal_draws = np.random.normal(0, 0.01, size=(process_length, nr_processes))
     index_of_barrier_touches = barrier_touch(normal_draws, barrier_width=0.2)
@@ -15,6 +27,7 @@ def heavy_task(process_length=1000, nr_processes=10000):
 
 
 # Experimentation, not used
+@pytest.mark.skip()
 def heavy_task_using_mp(process_length=1000, nr_processes=10000):
     normal_draws = np.random.normal(0, 0.01, size=(process_length, nr_processes))
     num_threads=8
@@ -35,7 +48,7 @@ def heavy_task_using_mp(process_length=1000, nr_processes=10000):
     return out
 
 
-
+@pytest.mark.skip()
 def barrier_touch(normal_draws, barrier_width=0.5):
     #Find index of the earliest barrier touch
     touches = {}
@@ -86,7 +99,7 @@ def test_pandas_mp_engine():
     assert time_standard/2 > time_mp
 
 
-
+@pytest.mark.skip()
 def test_split_df_into_molecules():
     sep = pd.read_csv("../../datasets/testing/sep.csv", parse_dates=["date"], index_col="date")
 
@@ -96,3 +109,4 @@ def test_split_df_into_molecules():
 
 
     assert False
+
