@@ -125,59 +125,58 @@ selected_sep_features = [
 ]
 
 
+if __name__ == "__main__":
+
+    # 2. Select features from SEP, SF1 etc.
+    selected_features = ["ticker", "date", "calendardate", "datekey"] + selected_sf1_features + selected_industry_sf1_features + selected_sep_features
+    dataset = dataset[selected_features]
 
 
-
-# 2. Select features from SEP, SF1 etc.
-selected_features = ["ticker", "date", "calendardate", "datekey"] + selected_sf1_features + selected_industry_sf1_features + selected_sep_features
-dataset = dataset[selected_features]
+    dataset.to_csv(save_path + "/dataset.csv", index=False)
 
 
-dataset.to_csv(save_path + "/dataset.csv", index=False)
+    # 3. Remove or amend row with missing/NAN values (the strategy must be consistent with that for SEP data)
+
+    # MORE EFFORT SHOULD GO INTO THIS STEP, BUT I KEEP IT SIMPLE FOR NOW, DROPPING ROWS WITH ONE OR MORE NAN VALUES
+
+    # Drop first two (one of calendardate) years
+    dataset.sort_values(by=["ticker", "calendardate"])
+
+    result = pd.DataFrame()
+
+    for ticker in list(dataset.ticker.unique()):
+        ticker_dataset = dataset.loc[dataset.ticker == ticker]
+
+        min_caldate = ticker_dataset.calendardate.min()            
+        calendardate_1y_after = get_calendardate_x_quarters_later(min_caldate, 4)
+
+        ticker_dataset = ticker_dataset[ticker_dataset.calendardate >= calendardate_1y_after]
+
+        result = result.append(ticker_dataset)
+
+    dataset = result
 
 
-# 3. Remove or amend row with missing/NAN values (the strategy must be consistent with that for SEP data)
-
-# MORE EFFORT SHOULD GO INTO THIS STEP, BUT I KEEP IT SIMPLE FOR NOW, DROPPING ROWS WITH ONE OR MORE NAN VALUES
-
-# Drop first two (one of calendardate) years
-dataset.sort_values(by=["ticker", "calendardate"])
-
-result = pd.DataFrame()
-
-for ticker in list(dataset.ticker.unique()):
-    ticker_dataset = dataset.loc[dataset.ticker == ticker]
-
-    min_caldate = ticker_dataset.calendardate.min()            
-    calendardate_1y_after = get_calendardate_x_quarters_later(min_caldate, 4)
-
-    ticker_dataset = ticker_dataset[ticker_dataset.calendardate >= calendardate_1y_after]
-
-    result = result.append(ticker_dataset)
-
-dataset = result
+    dataset.to_csv(save_path + "/dataset_dropped_first_year.csv", index=False)
 
 
-dataset.to_csv(save_path + "/dataset_dropped_first_year.csv", index=False)
+    dataset_no_nan = dataset.dropna(axis=0)
 
+    # 4. Write the almost ML ready dataset to disk
 
-dataset_no_nan = dataset.dropna(axis=0)
+    dataset_no_nan.to_csv(save_path + "/dataset_no_nan.csv")
 
-# 4. Write the almost ML ready dataset to disk
+    # 5. Print statistics:
+    time_elapsed = datetime.datetime.now() - start_time
 
-dataset_no_nan.to_csv(save_path + "/dataset_no_nan.csv")
+    print("Dataset length: ", len(dataset))
 
-# 5. Print statistics:
-time_elapsed = datetime.datetime.now() - start_time
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(dataset.isna().sum())
 
-print("Dataset length: ", len(dataset))
-
-with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-    print(dataset.isna().sum())
-
-print("Dataset no nan length: ", len(dataset_no_nan))
-print("Dropped: ", len(dataset) -  len(dataset_no_nan))
-print("Time elapsed: ", time_elapsed)
+    print("Dataset no nan length: ", len(dataset_no_nan))
+    print("Dropped: ", len(dataset) -  len(dataset_no_nan))
+    print("Time elapsed: ", time_elapsed)
 
 
 

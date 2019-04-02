@@ -2,3 +2,4 @@ datasets/
 logs/
 __pycache__/
 packages/multiprocessing/__pycache__/
+*.pyc

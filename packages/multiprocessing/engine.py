@@ -373,8 +373,6 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
                     split_strategy = new_first_task["split_strategy"] # Will change how we parse atoms
                     split_strategy_changed = True
                 break
-        print("Tasks changed to: ", tasks)
-        print("new tasks length: ", len(tasks))
     """
     elif type(resume) == int:
         # Resume from specific task
