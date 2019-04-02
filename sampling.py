@@ -83,6 +83,10 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
     This function assumes that all observations have a datekey. In other words: SEP dates before
     the first datekey in SF1 has been removed. This function also assumes that indexes are reset.
     """
+
+    # It could be that the dataframe is empty or that it is missing 
+    print(observations.head())
+
     observations["datekey"] = pd.to_datetime(observations["datekey"])
     sample_indexes = list()
 
@@ -265,3 +269,28 @@ def first_filing_based_sampling(index_filename, sep_df, testing):
         ncst1_to_drop = ncst1_samples.loc[ncst1_samples["data"] > pd.to_datetime("2009-05-27", format="%Y-%m-%d")]
         indexes_to_drop = list(ncst1_to_drop.index)
     """
+
+
+"""
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 119, in worker
+    result = (True, func(*args, **kwds))
+  File "/home/ubuntu/pycode/automated-trading-system/packages/multiprocessing/engine.py", line 272, in expandCall_fast
+    out = callback(**kwargs)
+  File "/home/ubuntu/pycode/automated-trading-system/sampling.py", line 127, in rebase_at_each_filing_sampling
+    distance_preceding = abs((desired_date - previous_date).total_seconds())
+TypeError: unsupported operand type(s) for -: 'Timestamp' and 'NoneType'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "final_dataset_generation.py", line 232, in <module>
+    molecules_per_process=2, resume=True)
+  File "/home/ubuntu/pycode/automated-trading-system/packages/multiprocessing/engine.py", line 430, in pandas_chaining_mp_engine
+    primary_molecules = process_jobs_fast(jobs, num_processes=num_processes, sort_by=sort_by) # return as list of Data Frames, I need a dict
+  File "/home/ubuntu/pycode/automated-trading-system/packages/multiprocessing/engine.py", line 255, in process_jobs_fast
+    for out_ in outputs:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 735, in next
+    raise value
+TypeError: unsupported operand type(s) for -: 'Timestamp' and 'NoneType'
+"""
