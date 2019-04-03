@@ -1,6 +1,11 @@
 import pytest
 import pandas as pd 
-
+import os
+from backtester import Backtester
+from algorithm import BuyAppleAlgorithm
+from broker import Broker
+from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
+from utils import EquityCommissionModel, EquitySlippageModel
 
 sep = None
 
@@ -9,7 +14,9 @@ def setup():
 
   sep = pd.read_csv("./datasets/sharadar/sep.csv")
 
-  if not os.isfile("./datasets/")
+  if not os.path.isfile("./datasets/"):
+    # set up dir
+    pass
 
   yield
 

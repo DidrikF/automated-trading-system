@@ -39,6 +39,8 @@ class SlippageModel(): # Too much un needed complexity..
 # VolumeShareSlippage
 
 
+class EquitySlippageModel():
+  pass
 
 
 

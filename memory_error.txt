@@ -721,3 +721,46 @@ KeyboardInterrupt
 (master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$
 (master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$
 (master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$ python final_dataset_generation.py
+resuming at task index:  3  with file:  sep_extended_divadj_ret_market.pickle
+Resplitting primary_molecules when resuming because they were cached in the wrong format, needed:  industry
+changing split strategy to :  industry
+Loading pickle: ./datasets/molecules_cache_live/sep.pickle
+Loading pickle: ./datasets/molecules_cache_live/sf1_art.pickle
+Loading pickle: ./datasets/molecules_cache_live/metadata.pickle
+Step  1  of  3  - Add industry momentum - Time elapsed:  0.0  minutes.
+2019-04-03 11:57:14.114361 100.0% 146/146 - add_indmom done after 7.85 minutes. Remaining 0.0 minutes..
+Cacheing as pickle result from task:  Add industry momentum
+Step  2  of  3  - Sample observations using rebase_at_each_filing_sampling - Time elapsed:  8.76  minutes.
+2019-04-03 12:00:00.067911 100.0% 14108/14108 - rebase_at_each_filing_sampling done after 1.83 minutes. Remaining 0.0 minutes..
+Cacheing as pickle result from task:  Sample observations using rebase_at_each_filing_sampling
+Traceback (most recent call last):
+  File "final_dataset_generation.py", line 232, in <module>
+    molecules_per_process=2, resume=True)
+  File "/home/ubuntu/pycode/automated-trading-system/packages/multiprocessing/engine.py", line 442, in pandas_chaining_mp_engine
+    if (task["add_to_molecules_dict"] == True) and (task["split_strategy"] != task["split_strategy_for_molecule_dict"]):
+KeyError: 'add_to_molecules_dict'
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$
+
+
+CANNOT ACCESS KEYS LIKE THIS, THEY ARE NOT DEFINED EVERYWHERE...

@@ -112,7 +112,7 @@ class Backtester():
                     if event is not None:
                         if event.type == 'DAILY_MARKET_DATA':
                             if self.handle_data is not None:
-                                self.handle_data()
+                                self.handle_data(self.context, self.time_context, self.perf)
 
                             # need this to add the feature data to the queue, so it can be "processed" (used to generate predictions)
                             # Contain features for multiple tickers
@@ -138,7 +138,7 @@ class Backtester():
                             self.event_queue.add(fill_events)
 
                         elif event.type == 'FILL':
-                            self.portfolio.handle_fill_event(event) # Don't know what this will do yet.
+                            self.portfolio.handle_fill_event(event) # Don't know what this will do yet. Dont know what it will return
 
         if self.analyze is not None:
             self.analyze()

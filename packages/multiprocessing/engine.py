@@ -439,7 +439,7 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
         if task["cache_result"] == True:
             print("Cacheing as pickle result from task: ", task["name"])
             molecules_to_cache = primary_molecules
-            if (task["add_to_molecules_dict"] == True) and (task["split_strategy"] != task["split_strategy_for_molecule_dict"]):
+            if (task.get("add_to_molecules_dict", False) == True) and (task["split_strategy"] != task["split_strategy_for_molecule_dict"]):
                 # In this case we want to cache in the format we are requiring in the molecules_dict. That way, this will be split
                 # correctly when resuming.
                 atoms = combine_molecules(primary_molecules)
