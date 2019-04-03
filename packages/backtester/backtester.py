@@ -37,10 +37,14 @@ class Backtester():
     def run(self):
         # Check configuration
 
+        """
+        The whole point of doing it in an event driven way is to make it easier to reason about
+        """
+
         while True: # This loop generates new "ticks" until the backtest is completed.
             if self.data_handler.continue_backtest() == True:
-                self.data_handler.next_tick()
-                market_data = self.data_handler.get_next() # Adds event I guess
+                self.event_queue.append(self.data_handler.next_tick())
+                # market_data = self.data_handler.get_next() # Adds event I guess
             else:
                 break
 

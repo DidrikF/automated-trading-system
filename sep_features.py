@@ -24,6 +24,13 @@ def add_sep_features(sep_sampled, sep, sf1_art):
     # sep_sampled and sep contains data for one ticker
     # sep contains basic and market wide features added in sep_preparation.py
 
+    sep_empty = True if (len(sep) == 0) else False
+
+    if sep_empty == True:
+        print("Sep was empty for some ticker in add_sep_features. Don't know why.")
+        return sep_sampled
+
+
     pd.options.mode.chained_assignment = None  # default='warn'
 
     date_index = pd.date_range(sep.index.min(), sep.index.max())
