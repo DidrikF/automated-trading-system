@@ -19,6 +19,10 @@ class Backtester():
     self.end = end
     # ..
 
+    def set_strategy(self):
+        """Set the strategy to be used to generate trading signals"""
+        
+
     def set_benchmark(self):
         """Set the benchmark asset."""
         # Interesting, how does this work?
@@ -43,7 +47,7 @@ class Backtester():
 
         while True: # This loop generates new "ticks" until the backtest is completed.
             if self.data_handler.continue_backtest() == True:
-                self.event_queue.append(self.data_handler.next_tick())
+                self.event_queue.add(self.data_handler.next_tick())
                 # market_data = self.data_handler.get_next() # Adds event I guess
             else:
                 break
@@ -58,11 +62,12 @@ class Backtester():
                         if event.type == 'DAILY_MARKET_DATA':
                             # need this to add the feature data to the queue, so it can be "processed" (used to generate predictions)
                             # event.date = event.date - realativedelta(days=1)
-                            self.feature_handler.get_features(event) # the function need access to the event queue
+                            feature_data_events = self.feature_handler.get_features(event) # the function need access to the event queue
+                            self.event_queue.add(feature_data_events)
 
                         elif event.type == "FEATURE_DATA":
                         
-                            strategy.calculate_signals(event)
+                            self.strategy.calculate_signals(event)
                             
                             port.update_timeindex(event) # WHAT?
 
