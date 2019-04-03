@@ -13,6 +13,16 @@ from utils import CommissionModel, SlippageModel
 class Backtester():
   def __init__(self, data_handler: DataHandler, feature_handler: DataHandler, start, end, output_path, \
       initialize_hook=None, handle_data_hook=None, analyze_hook=None):
+    """
+    data_handler: DataHandler for price data.
+    feature_handler: DataHandler for feature data informing the strategy.
+    start: start date of backtest.
+    end: end date of backtest.
+    output_path: path where perf object is stored.
+    initialize_hook: Called before the backtest starts. Can be used to setup any needed state
+    handle_data_hook: Called every tick of the backtest. Can be used to calculate and track data to add to perf data frame.
+    analyze_hook: Called at the end of the backtest. Can be used to output performance statistics.
+    """
 
     self.data_handler = data_handler
     self.feature_handler = feature_handler
@@ -94,7 +104,7 @@ class Backtester():
         """
 
         if self.initialize is not None:
-            self.initialize()
+            self.initialize(self.context, self.time_context, self.perf)
 
         while True: # This loop generates new "ticks" until the backtest is completed.
             if self.data_handler.continue_backtest() == True:
@@ -141,7 +151,7 @@ class Backtester():
                             self.portfolio.handle_fill_event(event) # Don't know what this will do yet. Dont know what it will return
 
         if self.analyze is not None:
-            self.analyze()
+            self.analyze(self.context, self.time_context, self.perf)
 
 
     def get_info(self): 

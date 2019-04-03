@@ -81,10 +81,16 @@ def add_sep_features(sep_sampled, sep, sf1_art):
 
     first_date = None
 
+    sf1_art_empty = True if (len(sf1_art == 0)) else False
+
     """ CALCULATE FEATURES ONLY FOR SAMPLES """
     for date, row in sep_sampled.iterrows():
         if first_date is None:
             first_date = date
+        
+        if sf1_art_empty == True:
+            print("No sf1_art data for ticker {} in add_sep_features".format(row["ticker"]))
+            break
 
         sf1_row = sf1_art.loc[sf1_art.datekey == row["datekey"]].iloc[-1]
         sharesbas = sf1_row["sharesbas"]
@@ -107,7 +113,8 @@ def add_sep_features(sep_sampled, sep, sf1_art):
         sep_past_1month = sep.loc[(sep.index <= date) & (sep.index >= date_1m_ago)]
 
         # Size: (mve or mvel1): ln(SEP[close]m-1 * SF1[sharefactor]t-1 * SF1[sharesbas]t-1)
-        sep_sampled.at[date, "mve"] = math.log(marketcap)
+        if marketcap != 0:
+            sep_sampled.at[date, "mve"] = math.log(marketcap)
 
         # Take Weekly Samples every monday
         if date >= (first_date + relativedelta(years=2)):
@@ -119,8 +126,9 @@ def add_sep_features(sep_sampled, sep, sf1_art):
             # Beta (beta): Cov(Ri, Rm)/Var(Rm), where Ri, Rm is weekly measurements and Rm is equial weighted market returns. 52 weeks to 3 years of data is used.        
             covariance = weekly_samples.cov().iloc[0][1]
             variance_market = weekly_samples["mom1w_ewa_market"].var()
-            beta = covariance / variance_market
-            sep_sampled.at[date, "beta"] = beta
+            if variance_market != 0:
+                beta = covariance / variance_market
+                sep_sampled.at[date, "beta"] = beta
             
             # Beta Squared (betasq): beta^2
             sep_sampled.at[date, "betasq"] = beta**2
@@ -156,7 +164,8 @@ def add_sep_features(sep_sampled, sep, sf1_art):
 
             
             # Dividend to price (dy): (sum(SEP[dividend]) the past year at t-1) / SF1[marketcap]t-1
-            sep_sampled.at[date, "dy"] = sep_past_year["dividends"].sum() / marketcap
+            if marketcap != 0:
+                sep_sampled.at[date, "dy"] = sep_past_year["dividends"].sum() / marketcap
 
             """
             if print_first_good_result_2 == True:
@@ -181,8 +190,9 @@ def add_sep_features(sep_sampled, sep, sf1_art):
             volume_2m_ago_to_1m_ago = sep_2m_ago_to_1m_ago["volume"].sum()
             volume_3m_ago_to_2m_ago = sep_3m_ago_to_2m_ago["volume"].sum()
             avg_monthly_volume = (volume_past_1m + volume_2m_ago_to_1m_ago + volume_3m_ago_to_2m_ago) / 3
-            turn = avg_monthly_volume / sharesbas
-            sep_sampled.at[date, "turn"] = turn
+            if sharesbas != 0:
+                turn = avg_monthly_volume / sharesbas
+                sep_sampled.at[date, "turn"] = turn
 
 
             """
@@ -199,9 +209,11 @@ def add_sep_features(sep_sampled, sep, sf1_art):
 
         if date >= (first_date + relativedelta(months=2)):
             # Dollar trading volume (dolvol): ln(sum(SEP[close]*SEP[volume]) for all days the past two months)
-            dolvol = math.log((sep_past_2months["close"]*sep_past_2months["volume"]).sum())
-            sep_sampled.at[date, "dolvol"] = dolvol
-            
+            sum_close_volume = (sep_past_2months["close"]*sep_past_2months["volume"]).sum()
+            if sum_close_volume != 0:
+                dolvol = math.log(sum_close_volume)
+                sep_sampled.at[date, "dolvol"] = dolvol
+                
             """
             if print_first_good_result_3 == True:
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None):
@@ -239,8 +251,8 @@ def add_sep_features(sep_sampled, sep, sf1_art):
             monthly_turnover = total_volume_past_month / avg_number_of_shares_outstanding
             deflator = 11000/12 # Liu selected deflator of 11000 for 12-month zerotrade in 2006, might not be optimal for todays market.
             number_of_trading_days_past_month = len(sep_past_1month)
-
-            sep_sampled.at[date, "zerotrade"] = (num_zero_trading_days_the_past_month + (1/monthly_turnover)/deflator) * 21/number_of_trading_days_past_month
+            if (number_of_trading_days_past_month != 0) and (monthly_turnover != 0):
+                sep_sampled.at[date, "zerotrade"] = (num_zero_trading_days_the_past_month + (1/monthly_turnover)/deflator) * 21/number_of_trading_days_past_month
             
             """
             if (print_first_good_result_3 == True) and (num_zero_trading_days_the_past_month > 0):

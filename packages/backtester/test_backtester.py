@@ -25,13 +25,28 @@ def setup():
 def test_backtester():
   global sep
 
-  backtester = Backtester()
+  def handle_data(context, time_context, perf):
+    print("HANDLE DATA HOOK RUNNING")
+
+
+  def initialize(context, time_context, perf):
+    print("INITIALIZE HOOK RUNNING")
+
+  def analyze(context, time_context, perf):
+    print("ANALYZE HOOK RUNNING")
+
+
+  data_handler = DailyBarsDataHander()
+  feature_handler = MLFeaturesDataHandler()
+
+
+  backtester = Backtester(data_handler=data_handler, feature_handler=feature_handler, )
 
   algorithm = BuyAppleAlgorithm()
 
-  slippage_model = FixedBasisPointSlippageModel()
+  slippage_model = EquitySlippageModel()
 
-  commission_model = IBCommissionModel()
+  commission_model = EquityCommissionModel()
 
   
   backtester.set_slippage_model(slippage_model)

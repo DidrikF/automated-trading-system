@@ -229,7 +229,7 @@ def get_jobs_fast(task, primary_molecules, molecules_dict):
                     print("Did not find molecule_dict_name: ", molecule_dict_name, " with job_key: ", job_key)
                     print("Keys of molecules_dict: ", molecules_dict.keys())
                     print("Keys of desired ({}) molecules_dict: {}".format(molecule_dict_name, molecules_dict[molecule_dict_name].keys()))
-                    
+
                     if molecule_dict_name == "sf1_art":
                         data_molecule = sf1_art_base
                     elif molecule_dict_name == "sf1_arq":
@@ -412,6 +412,7 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
                 pickle.dump(molecules_dict[disk_name], pickle_out)
                 pickle_out.close()
     
+    # Any data needed by future tasks as data in the molecules_dict, that are avialable in the cache, should also be loaded!!
 
     if primary_molecules is None: # If we are not resuming, this is split correctly.
         primary_molecules = molecules_dict[primary_atoms]
