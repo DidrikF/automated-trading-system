@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     write_to_disk = True
 
-    num_processes = 64
+    num_processes = 32
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     save_path = "./datasets/ml_ready_live/dataset_" + timestamp
     # read_path = "./datasets/ml/dataset_20190327-153153"

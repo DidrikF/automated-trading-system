@@ -154,8 +154,8 @@ class MLFeaturesDataHandler(DataHandler):
         self.store_path = store_path
         self.file_name = file_name
         full_store_path = self.store_path + '/' + self.file_name
-        if os.isfile(full_store_path):
-            data_file = open(full_path,'rb')
+        if os.path.isfile(full_store_path):
+            data_file = open(full_store_path,'rb')
             self.data = pickle.load(data_file)
             data_file.close()
         else:
@@ -163,6 +163,11 @@ class MLFeaturesDataHandler(DataHandler):
 
     def ingest(self):
         pass
+    def get_events(self):
+        # event.date = event.date - realativedelta(days=1)
+        # make sure to only give new data that was released the previous business day.
+        pass
+
     def get_data(self):
         pass
     def current(self):
