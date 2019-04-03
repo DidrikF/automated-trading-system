@@ -226,6 +226,10 @@ def get_jobs_fast(task, primary_molecules, molecules_dict):
                 try:
                     data_molecule = molecules_dict[molecule_dict_name][job_key]
                 except Exception as e:
+                    print("Did not find molecule_dict_name: ", molecule_dict_name, " with job_key: ", job_key)
+                    print("Keys of molecules_dict: ", molecules_dict.keys())
+                    print("Keys of desired ({}) molecules_dict: {}".format(molecule_dict_name, molecules_dict[molecule_dict_name].keys()))
+                    
                     if molecule_dict_name == "sf1_art":
                         data_molecule = sf1_art_base
                     elif molecule_dict_name == "sf1_arq":
