@@ -96,6 +96,18 @@ def test_rebase_at_each_filing_sampling():
     sep_sampled = pandas_mp_engine(callback=rebase_at_each_filing_sampling, atoms=sep_extended, data=None, \
         molecule_key='observations', split_strategy='ticker', num_processes=1, molecules_per_process=1, \
             days_of_distance=20)
+
+    print(sep_sampled.loc[sep_sampled.ticker == "AAPL"].head(20))
+
+@pytest.mark.skip()
+def test_rebase_at_each_filing_sampling_OLD():
+    global sep_extended
+    global sep_sampled
+
+
+    sep_sampled = pandas_mp_engine(callback=rebase_at_each_filing_sampling, atoms=sep_extended, data=None, \
+        molecule_key='observations', split_strategy='ticker', num_processes=1, molecules_per_process=1, \
+            days_of_distance=20)
     
     # Tests for AAPL
     first_9_apple_samples = [

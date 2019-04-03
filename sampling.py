@@ -74,6 +74,8 @@ def extend_sep_for_sampling(sep, sf1_art, metadata):
 
 def rebase_at_each_filing_sampling(observations, days_of_distance):
     """
+    NOTE: The sampling strategy should take calendardate into account, presently it does not.
+
     Sample dates such that the sampling is based of a monthly interval since last form 10 filing
     If there are less than 20 days since last sample when a new form 10 filing is available, 
     drop that sample and sample the current date (date of form 10 filing). This ensures overlap 
@@ -84,8 +86,99 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
     the first datekey in SF1 has been removed. This function also assumes that indexes are reset.
     """
 
-    # It could be that the dataframe is empty or that it is missing 
-    print(observations.head())
+    # It could be that the dataframe is empty or that it is missing, maybe?
+    # print(observations.head())
+
+    observations["datekey"] = pd.to_datetime(observations["datekey"])
+    sample_indexes = list()
+
+    # Variable initiation
+    base_date = observations.iloc[0]["datekey"]
+    first_date = observations.iloc[0]["date"]
+    desired_date = None
+    previous_date = None
+    last_sample_date = None
+    most_recent_filing = None
+
+    """
+    sample relative to cur_date and reset on every new filing.
+    """
+
+    for cur_date, row in observations.iterrows():
+        cur_datekey = row["datekey"]
+        # Initialize at the first iteration.
+        if cur_date == first_date:
+            base_date = cur_date
+            most_recent_filing = cur_datekey
+            sample_indexes.append(cur_date)
+            previous_date = cur_date
+            continue
+
+        # We have to have sampled once for the current ticker before we get this far
+        if cur_datekey != most_recent_filing: 
+            # New filing!
+            
+            # I need to drop the last sample if the overlap is too great. 
+            if len(sample_indexes) > 0:
+                last_sample_date = sample_indexes[-1]
+                if last_sample_date > (cur_datekey - relativedelta(days=days_of_distance)):
+                    # It is less than 20 days since last sample, so drop the old sample.
+                    sample_indexes.pop(-1)
+
+            # I want so sample immediately and base future samples of this sample
+            sample_indexes.append(cur_date)
+            base_date = cur_date 
+            desired_date = base_date + relativedelta(months=+1)
+            continue
+
+        if cur_date == desired_date: # We might not have data for the exact desired date, it could be a saturday...
+            sample_indexes.append(cur_date)
+            desired_date = desired_date + relativedelta(months=+1)
+        elif cur_date > desired_date:
+            """
+            # It could be that SEP data is available from a data much later than SF1. In this case cur_date does not get to be
+            # greater than desired_date before this code in this block runs. Therefore we need to take into account the case
+            # where previous_date is None. When previous_data is None, we want only to increment desired_date and not sample.
+            # We increment desired date
+            if previous_date is None: # This should only trigger the very first iteration if cur_date is greater than desired_date from the beginning.
+                sample_indexes.append(cur_date)
+                previous_date = cur_date
+                desired_date = cur_date + relativedelta(months=+1) # Shifts the base_date to the first sep date
+                continue
+            """
+
+            # We need to deside wether to sample the previous date or the current date.
+            distance_preceding = abs((desired_date - previous_date).total_seconds())
+            distance_cur = abs((desired_date - cur_date).total_seconds())
+            
+            if distance_preceding <= distance_cur:
+                sample_indexes.append(previous_date)
+            else:
+                sample_indexes.append(cur_date)
+                
+            desired_date = desired_date + relativedelta(months=+1)
+
+        previous_date = cur_date
+
+
+    drop_indexes = list(set(observations.index).difference(set(sample_indexes)))
+    samples = observations.drop(drop_indexes)
+
+    return samples
+
+def rebase_at_each_filing_sampling_OLD(observations, days_of_distance):
+    """
+    NOTE: The sampling strategy should take calendardate into account, presently it does not.
+
+    Sample dates such that the sampling is based of a monthly interval since last form 10 filing
+    If there are less than 20 days since last sample when a new form 10 filing is available, 
+    drop that sample and sample the current date (date of form 10 filing). This ensures overlap 
+    of no more than 10-11 (can be controlled by "days_of_distance") day for all samples and 
+    that samples are made as close to form 10 filings as possible.
+
+    This function assumes that all observations have a datekey. In other words: SEP dates before
+    the first datekey in SF1 has been removed. This function also assumes that indexes are reset.
+    """
 
     observations["datekey"] = pd.to_datetime(observations["datekey"])
     sample_indexes = list()
@@ -98,7 +191,7 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
 
     for cur_date, row in observations.iterrows():
         cur_datekey = row["datekey"]
-
+        
         if base_date == None and type(cur_datekey) == pd.datetime:
             base_date = cur_datekey
             # sample_indexes.append(cur_date) # Don't sample if datekey is not available
@@ -116,14 +209,15 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
                     sample_indexes.pop(-1)
 
             # I want so sample immediately and base future samples of this sample
-            base_date = cur_datekey
+            base_date = cur_datekey # This might still be long before sep data became available
             sample_indexes.append(cur_date)
             desired_date = base_date + relativedelta(months=+1)
             continue
 
+
         if cur_date < desired_date:
             previous_date = cur_date
-        elif cur_date == desired_date:
+        elif cur_date == desired_date: # We might not have data for the exact desired date, it could be a saturday...
             sample_indexes.append(cur_date)
             desired_date = desired_date + relativedelta(months=+1)
         elif cur_date > desired_date:
@@ -138,11 +232,12 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
                 
             desired_date = desired_date + relativedelta(months=+1)
 
-
     drop_indexes = list(set(observations.index).difference(set(sample_indexes)))
     samples = observations.drop(drop_indexes)
 
     return samples
+
+
 
 def remove_gaps_from_sampled_data(samples, allowed_gap_size):
     """

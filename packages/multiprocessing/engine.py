@@ -329,7 +329,7 @@ def combine_and_save_molecules(molecules, path, sort_by=None):
 
 def combine_molecules(molecules):
     molecules = list(molecules.values())
-    result = pd.concat(molecules)
+    result = pd.concat(molecules, sort=True)
     return result
 
 

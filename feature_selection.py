@@ -124,6 +124,12 @@ selected_sep_features = [
     "return_3m",
 ]
 
+"""
+Notes:
+1. You need to filter out samples that rely on very old financial statements (see the age column)
+
+"""
+
 
 if __name__ == "__main__":
 
