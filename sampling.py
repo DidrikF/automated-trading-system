@@ -15,9 +15,14 @@ def extend_sep_for_sampling(sep, sf1_art, metadata):
     """
 
     if len(metadata) == 0:
+        if len(sep) > 0:
+            print("No metadata for ticker: ", sep.iloc[0]["ticker"])
+        else:
+            print("No metadata for some unknown ticker (because sep was also empty) was given to extend_sep_for_sampling. Don't know why.")
+        
         sep = pd.DataFrame(data=None, columns=sep.columns, index=sep.index)
         sep = sep.dropna(axis=0)
-        print("No metadata for ticker: ", sep.iloc[0]["ticker"])
+        
         return sep
 
     if isinstance(metadata, pd.DataFrame):
@@ -88,13 +93,18 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
 
     # It could be that the dataframe is empty or that it is missing, maybe?
     # print(observations.head())
+    observations_empty = True if (len(observations) == 0) else False
+
+    if observations_empty == True:
+        print("got empty dataframe 'observations' in rebase_at_each_filing_sampling. Don't know why.")
+        return observations
 
     observations["datekey"] = pd.to_datetime(observations["datekey"])
     sample_indexes = list()
 
     # Variable initiation
-    base_date = observations.iloc[0]["datekey"]
-    first_date = observations.iloc[0]["date"]
+    first_date = observations.index[0]
+    base_date = None
     desired_date = None
     previous_date = None
     last_sample_date = None
@@ -111,8 +121,10 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
             base_date = cur_date
             most_recent_filing = cur_datekey
             sample_indexes.append(cur_date)
+            desired_date = base_date + relativedelta(months=1)
             previous_date = cur_date
             continue
+
 
         # We have to have sampled once for the current ticker before we get this far
         if cur_datekey != most_recent_filing: 
@@ -121,7 +133,7 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
             # I need to drop the last sample if the overlap is too great. 
             if len(sample_indexes) > 0:
                 last_sample_date = sample_indexes[-1]
-                if last_sample_date > (cur_datekey - relativedelta(days=days_of_distance)):
+                if last_sample_date > (cur_date - relativedelta(days=days_of_distance)):
                     # It is less than 20 days since last sample, so drop the old sample.
                     sample_indexes.pop(-1)
 
@@ -129,6 +141,7 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
             sample_indexes.append(cur_date)
             base_date = cur_date 
             desired_date = base_date + relativedelta(months=+1)
+            most_recent_filing = cur_datekey
             continue
 
         if cur_date == desired_date: # We might not have data for the exact desired date, it could be a saturday...

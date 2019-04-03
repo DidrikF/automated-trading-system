@@ -97,7 +97,69 @@ def test_rebase_at_each_filing_sampling():
         molecule_key='observations', split_strategy='ticker', num_processes=1, molecules_per_process=1, \
             days_of_distance=20)
 
-    print(sep_sampled.loc[sep_sampled.ticker == "AAPL"].head(20))
+    sep_sampled = sep_sampled.sort_values(by=["ticker", "date"])
+
+    sep_sampled.to_csv("./datasets/testing/sep_sampled_latest_implementation.csv")
+
+    sep_sampled_aapl = sep_sampled.loc[sep_sampled.ticker == "AAPL"]
+
+    assert sep_sampled_aapl.index[0] == pd.to_datetime("1997-12-31")
+    assert sep_sampled_aapl.index[1] == pd.to_datetime("1998-02-09")
+    assert sep_sampled_aapl.index[2] == pd.to_datetime("1998-03-09")
+    assert sep_sampled_aapl.index[3] == pd.to_datetime("1998-04-09")
+    assert sep_sampled_aapl.index[4] == pd.to_datetime("1998-05-11")
+    assert sep_sampled_aapl.index[5] == pd.to_datetime("1998-06-11")
+    assert sep_sampled_aapl.index[6] == pd.to_datetime("1998-07-10")
+    assert sep_sampled_aapl.index[7] == pd.to_datetime("1998-08-10")
+    assert sep_sampled_aapl.index[8] == pd.to_datetime("1998-09-10")
+
+    
+    """
+    AAPL
+    Date
+    1997-12-31
+    1998-02-09
+    1998-03-09
+    1998-04-09
+    1998-05-11
+    1998-06-11
+    1998-07-10
+    1998-08-10
+    1998-09-10
+    1998-10-09
+    1998-11-10
+    1998-12-23
+    1999-02-08
+    1999-03-08
+    1999-04-08
+    1999-05-11
+    1999-06-11
+    Datekey
+    1997-12-05
+    1998-02-09
+    1998-02-09
+    1998-02-09
+    1998-05-11
+    1998-05-11
+    1998-05-11
+    1998-08-10
+    1998-08-10
+    1998-08-10
+    1998-08-10
+    1998-12-23
+    1999-02-08
+    1999-02-08
+    1999-02-08
+    1999-05-11
+    1999-05-11
+    1999-05-11
+    1999-08-06
+    1999-08-06
+    1999-08-06
+    """
+
+
+
 
 @pytest.mark.skip()
 def test_rebase_at_each_filing_sampling_OLD():
