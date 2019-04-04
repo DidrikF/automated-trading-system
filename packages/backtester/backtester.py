@@ -1,57 +1,64 @@
 import pandas as pd
 import math
 
-from strategy import some_strat
-# import CommissionModel
-# import SlippageModel
+from strategy import Strategy
+from portfolio import Portfolio, Order
+from utils import CommissionModel, SlippageModel
+
+
 from event import EventQueue, Event
 from data_handler import DataHandler, DailyBarsDataHander, MLFeaturesDataHandler
 from broker import Broker
 from utils import CommissionModel, SlippageModel
+from portfolio import Portfolio
 
 # NOT SURE ABOUT THIS, WHERE TO PUT METHODS ETC
 class Backtester():
-  def __init__(self, data_handler: DataHandler, feature_handler: DataHandler, start, end, output_path, \
-      initialize_hook=None, handle_data_hook=None, analyze_hook=None):
-    """
-    data_handler: DataHandler for price data.
-    feature_handler: DataHandler for feature data informing the strategy.
-    start: start date of backtest.
-    end: end date of backtest.
-    output_path: path where perf object is stored.
-    initialize_hook: Called before the backtest starts. Can be used to setup any needed state
-    handle_data_hook: Called every tick of the backtest. Can be used to calculate and track data to add to perf data frame.
-    analyze_hook: Called at the end of the backtest. Can be used to output performance statistics.
-    """
+    def __init__(self, market_data_handler: DataHandler, feature_data_handler: DataHandler, start, end, output_path, \
+        initialize_hook=None, handle_data_hook=None, analyze_hook=None):
+        """
+        data_handler: DataHandler for price data.
+        feature_data: DataHandler for feature data informing the strategy.
+        start: start date of backtest.
+        end: end date of backtest.
+        output_path: path where perf object is stored.
+        initialize_hook: Called before the backtest starts. Can be used to setup any needed state
+        handle_data_hook: Called every tick of the backtest. Can be used to calculate and track data to add to perf data frame.
+        analyze_hook: Called at the end of the backtest. Can be used to output performance statistics.
+        """
 
-    self.data_handler = data_handler
-    self.feature_handler = feature_handler
-    self.start = start
-    self.end = end
-    self.output_path = output_path
+        self.market_data = market_data_handler
+        self.feature_data = feature_data_handler
 
-    # How to best make these available in the hooks?
-    self.perf = pd.DataFrame(index=data_handler.get_index()) # This is where performance metrics will be stored
-    self.time_context = pd.DataFrame(index=data_handler.get_index()) # To store time data between calls to handle_data
-    self.context = {} # To store anything between subsequent calls to handle_data
+        # self.market_data = {} # Add data as it becomes available, to avoid look-ahead bias, do it another way
 
-    self.initialize = initialize_hook
-    self.handle_data = handle_data_hook
-    self.analyze = analyze_hook
+        self.start = start
+        self.end = end
+        self.output_path = output_path
 
-    self._event_queue = EventQueue()
-    # Need to be set via setter methods
-    self._portfolio = None
-    self._slippage_model = None
-    self._commission_model = None
-    self._strategy = None
-    self._broker = None
-    # ..
+        # How to best make these available in the hooks?
+        start_end_index = pd.date_range(self.start, self.end)
+        self.perf = pd.DataFrame(index=start_end_index) # This is where performance metrics will be stored
+        self.time_context = pd.DataFrame(index=start_end_index) # To store time data between calls to handle_data
+        self.context = {} # To store anything between subsequent calls to handle_data
 
-    def set_strategy(self):
-        """Set the strategy to be used to generate trading signals"""
+        self.initialize = initialize_hook
+        self.handle_data = handle_data_hook
+        self.analyze = analyze_hook
 
-    def set_portfolio(self):
+        self._event_queue = EventQueue()
+        # Need to be set via setter methods
+        self.portfolio = None
+        # self._commission_model = None
+        # self._slippage_model = None
+        # self._strategy = None
+        self.broker = None
+
+        self._benchmark = None # Not implemented, not sure...
+        # ..
+
+
+    def set_portfolio(self, portfolio_cls, **kwargs):
         """
         Set the portfolio instance to use during the backtest. The portfolio object is responsible for
         taking in signals from the strategy and use these recommendations in the context of the portfolio's
@@ -63,27 +70,14 @@ class Backtester():
 
         Taxes?
         """
+        if not issubclass(portfolio_cls, Portfolio):
+            raise TypeError("Must be subclass of Portfolio")
 
-    def set_benchmark(self):
-        """
-        Set the benchmark asset/strategy.
-        I could formulate a benchmark I am interested in tracking as a strategy object...
-        """
-
-    def set_commission(self, commission_model: CommissionModel):
-        """
-        Set commission model to use.
-        The commission model is responsible for modeling the costs associated with executing orders. 
-        """
+        self.portfolio = portfolio_cls(market_data=self.market_data, **kwargs)
+        
 
 
-    def set_slippage(self, slippage_model: SlippageModel):
-        """
-        Set slippage model to use. The slippage model is responsible for modeling the effect your order has on the stock price.
-        Generally the stock price will move against you when submitting an order to the market.
-        """
-
-    def set_broker(self, broker: Broker):
+    def set_broker(self, broker_cls, **kwargs):
         """
         Set broker instance that will execute orders. Orders come from a portfolio object and contain information like: ticker, 
         amount, side, stop-loss and take-profit. 
@@ -95,6 +89,18 @@ class Backtester():
         Multiple consecutive orders are filled so fast that any random fluctuation the market may have exibited over the few seconds (or even milliseconds)
         needed to complete the trades are averaged out to an insignificant effect and ignored in the backtest.
         """
+        if not issubclass(broker_cls, Broker):
+            raise TypeError("Must be subclass of Broker")
+
+        self.broker = broker_cls(self.market_data, **kwargs)
+   
+    
+    def set_benchmark(self):
+        """
+        Set the benchmark asset/strategy.
+        I could formulate a benchmark I am interested in tracking as a strategy object...
+        """
+        pass
 
     def run(self):
         # Check configuration
@@ -104,55 +110,64 @@ class Backtester():
         """
 
         if self.initialize is not None:
-            self.initialize(self.context, self.time_context, self.perf)
+            self.initialize(self) # self.context, self.time_context, self.perf
 
         while True: # This loop generates new "ticks" until the backtest is completed.
-            if self.data_handler.continue_backtest() == True:
-                market_data_event = self.data_handler.next_tick()
-                self.event_queue.add(market_data_event)
-            else:
+            try:
+                market_data_event = self.market_data.next_tick() # THIS MUST ONLY BE CALLED HERE!
+            except IndexError as e:
+                print(e)
                 break
+            else:
+                self._event_queue.add(market_data_event)
+            
 
-            while True: # This is executed until all events for the tick has been processed
+            # This is executed until all events for the tick has been processed
+            while True: 
                 try:
-                    event = self.event_queue.get(False)
+                    event = self._event_queue.get()
                 except: # queue is empty
                     break
                 else:
                     if event is not None:
                         if event.type == 'DAILY_MARKET_DATA':
+                            
                             if self.handle_data is not None:
-                                self.handle_data(self.context, self.time_context, self.perf)
+                                self.handle_data(self) # self.context, self.time_context, self.perf
 
                             # need this to add the feature data to the queue, so it can be "processed" (used to generate predictions)
-                            # Contain features for multiple tickers
-                            feature_data_event = self.feature_handler.get_events(event) # the function need access to the event queue
+                            feature_data_event = self.feature_data.current(event.date) # the function need access to the event queue
                             
-                            self.event_queue.add(feature_data_event) # The next iteration of the loop, the event queue is not empty.
+                            self._event_queue.add(feature_data_event) # The next iteration of the loop, the event queue is not empty.
 
 
                         elif event.type == "FEATURE_DATA":
                             # Contain signals for multiple tickers
-                            signal_event = self.strategy.calculate_signals(event) # Returns many signals
-                            
-                            self.event_queue.add(signal_event)
+                            signals_event = self.portfolio.generate_signals(event) 
+                            # Returns many signals 
+                            # # I make the signals available here if I want to do something with them in multiple places
+                            self._event_queue.add(signals_event) # Process in bunches
 
-                        elif event.type == 'SIGNAL':
-                            order_events = self.portfolio.generate_orders(signal_events)
-                            self.event_queue.add(order_events)
+                        elif event.type == 'SIGNALS': 
+                            # Maybe not have this type of event, just create signals and make order no FEATURE_DATA events
+                            # It comes down to if I want to do more with it than just 
+                            orders_event = self.portfolio.generate_orders_from_signals(event) # Process in bunches
+                            self._event_queue.add(orders_event)
 
-                        elif event.type == 'ORDER':
+                        elif event.type == 'ORDERS':
                             # Order events contain only one event, one order is executed at a time! Or not?
                             # I need the order to be executed in sequence sometimes (when selling to make fund available for a buy for example)
-                            fill_events, order_events = self.broker.execute_order(event)
-                            self.event_queue.add(fill_events)
+                            fills_event = self.broker.process_orders(self.portfolio, event)
+                            self._event_queue.add(fills_event)
 
-                        elif event.type == 'FILL':
+
+                        elif event.type == 'FILLS':
                             self.portfolio.handle_fill_event(event) # Don't know what this will do yet. Dont know what it will return
 
         if self.analyze is not None:
-            self.analyze(self.context, self.time_context, self.perf)
+            self.analyze(self) # self.context, self.time_context, self.perf
 
+        return self.perf
 
     def get_info(self): 
         """Get initial setting of the backtest."""

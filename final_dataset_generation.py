@@ -111,7 +111,7 @@ if __name__ == "__main__":
                 "cache": True,
             },
             "sf1_art": {
-                "disk_name": "sf1",
+                "disk_name": "sf1_art",
                 "csv_path": "./datasets/sharadar/SHARADAR_SF1_ART.csv",
                 # "csv_path": "./datasets/testing/sf1_art.csv",
                 "parse_dates": ["calendardate", "datekey"],

@@ -1,0 +1,803 @@
+top - 10:47:58 up 53 min,  2 users,  load average: 0.00, 14.95, 63.72
+Tasks: 624 total,   1 running, 617 sleeping,   0 stopped,   6 zombie
+%Cpu(s):  0.0 us,  0.0 sy,  0.0 ni,100.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+KiB Mem : 19370288+total,   661684 free, 19271612+used,   325060 buff/cache
+KiB Swap:        0 total,        0 free,        0 used.   227440 avail Mem
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
+    1 root      20   0   37940   3508   1528 S   0.0  0.0   0:02.95 systemd
+    2 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kthreadd
+    3 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/0
+    4 root      20   0       0      0      0 S   0.0  0.0   0:00.05 kworker/0:0
+    5 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/0:0H
+    6 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/u128:0
+    7 root      20   0       0      0      0 S   0.0  0.0   0:00.05 kworker/u129:0
+    8 root      20   0       0      0      0 S   0.0  0.0   0:00.47 rcu_sched
+    9 root      20   0       0      0      0 S   0.0  0.0   0:00.00 rcu_bh
+   10 root      rt   0       0      0      0 S   0.0  0.0   0:00.65 migration/0
+   11 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/0
+   12 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/1
+   13 root      rt   0       0      0      0 S   0.0  0.0   0:00.01 migration/1
+   14 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/1
+   16 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/1:0H
+   17 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/2
+   18 root      rt   0       0      0      0 S   0.0  0.0   0:00.66 migration/2
+   19 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/2
+   21 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/2:0H
+   22 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/3
+   23 root      rt   0       0      0      0 S   0.0  0.0   0:00.65 migration/3
+   24 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/3
+   26 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/3:0H
+   27 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/4
+   28 root      rt   0       0      0      0 S   0.0  0.0   0:00.65 migration/4
+   29 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/4
+   31 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/4:0H
+   32 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/5
+ubuntu@ip-172-31-34-36:~$
+ubuntu@ip-172-31-34-36:~$
+ubuntu@ip-172-31-34-36:~$
+ubuntu@ip-172-31-34-36:~$
+ubuntu@ip-172-31-34-36:~$ cd pycode/
+ubuntu@ip-172-31-34-36:~/pycode$ cd automated-trading-system/
+ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$ cd dataset
+-bash: cd: dataset: No such file or directory
+ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$ cd datasets
+ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system/datasets$ cd ml_ready_live/
+ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system/datasets/ml_ready_live$ ls
+dataset_20190402-143452  dataset_20190402-150837  dataset_20190403-095618  dataset_20190403-095951  dataset_20190403-100754  dataset_20190403-102403  dataset_20190403-102430
+ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system/datasets/ml_ready_live$ cd dataset_20190403-1024
+dataset_20190403-102403/ dataset_20190403-102430/
+ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system/datasets/ml_ready_live$ cd dataset_20190403-102430/
+ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system/datasets/ml_ready_live/dataset_20190403-102430$ ls
+ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system/datasets/ml_ready_live/dataset_20190403-102430$ cd ..
+ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system/datasets/ml_ready_live$ Connection reset by 34.245.15.97 port 22
+
+C:\cmder
+λ ssh -i ~/Dropbox/compute_instance.pem ubuntu@ec2-34-245-15-97.eu-west-1.compute.amazonaws.com
+Welcome to Ubuntu 16.04.5 LTS (GNU/Linux 4.4.0-1079-aws x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  Get cloud support with Ubuntu Advantage Cloud Guest:
+    http://www.ubuntu.com/business/services/cloud
+
+28 packages can be updated.
+0 updates are security updates.
+top - 11:26:29 up  1:32,  3 users,  load average: 0.00, 0.00, 5.25
+top - 11:26:32 up  1:32,  3 users,  load average: 0.00, 0.00, 5.25
+top - 11:26:47 up  1:32,  3 users,  load average: 0.00, 0.00, 5.17
+top - 11:27:01 up  1:32,  3 users,  load average: 0.00, 0.00, 5.08
+top - 11:27:28 up  1:33,  3 users,  load average: 0.00, 0.00, 4.92
+%Cpu(s):  0.0 us,  0.0 sy,  0.0 ni,100.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+KiB Mem : 19370288+total,   638292 free, 19273664+used,   327956 buff/cache
+KiB Mem : 19370288+total,   638436 free, 19273649+used,   327948 buff/cache
+KiB Swap:        0 total,        0 free,        0 used.   205696 avail Mem
+
+ 5397 ubuntu    20   0   41192   4180   3048 R   0.3  0.0   0:00.12 top
+    1 root      20   0   37940   3508   1528 S   0.0  0.0   0:02.95 systemd
+    2 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kthreadd
+    3 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/0
+    4 root      20   0       0      0      0 S   0.0  0.0   0:00.06 kworker/0:0
+    5 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/0:0H
+    6 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/u128:0
+    8 root      20   0       0      0      0 S   0.0  0.0   0:00.50 rcu_sched
+    9 root      20   0       0      0      0 S   0.0  0.0   0:00.00 rcu_bh
+   10 root      rt   0       0      0      0 S   0.0  0.0   0:00.65 migration/0
+   11 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/0
+   12 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/1
+   13 root      rt   0       0      0      0 S   0.0  0.0   0:00.01 migration/1
+   14 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/1
+   16 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/1:0H
+   17 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/2
+   18 root      rt   0       0      0      0 S   0.0  0.0   0:00.66 migration/2
+   19 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/2
+   21 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/2:0H
+   22 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/3
+top - 11:27:40 up  1:33,  3 users,  load average: 0.00, 0.00, 4.87
+   24 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/3
+   26 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/3:0H
+   27 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/4
+   28 root      rt   0       0      0      0 S   0.0  0.0   0:00.65 migration/4
+
+   31 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/4:0H
+ 5397 ubuntu    20   0   41192   4180   3048 R   0.3  0.0   0:00.22 top
+    1 root      20   0   37940   3508   1528 S   0.0  0.0   0:02.95 systemd
+    2 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kthreadd
+    3 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/0
+    4 root      20   0       0      0      0 S   0.0  0.0   0:00.06 kworker/0:0
+    5 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/0:0H
+top - 11:28:58 up  1:34,  3 users,  load average: 0.00, 0.00, 4.46
+top - 11:29:04 up  1:34,  3 users,  load average: 0.00, 0.00, 4.44
+%Cpu(s):  0.0 us,  0.0 sy,  0.0 ni,100.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+KiB Mem : 19370288+total,   637776 free, 19273651+used,   328584 buff/cache
+KiB Mem : 19370288+total,   637796 free, 19273648+used,   328600 buff/cache
+KiB Swap:        0 total,        0 free,        0 used.   205356 avail Mem
+
+ 5401 ubuntu    20   0   41076   4200   3132 R   0.7  0.0   0:00.02 top
+ 5401 ubuntu    20   0   41076   4200   3132 R   0.3  0.0   0:00.04 top
+    1 root      20   0   37940   3508   1528 S   0.0  0.0   0:02.95 systemd
+    2 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kthreadd
+    3 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/0
+    4 root      20   0       0      0      0 S   0.0  0.0   0:00.06 kworker/0:0
+    5 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/0:0H
+    6 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/u128:0
+    8 root      20   0       0      0      0 S   0.0  0.0   0:00.50 rcu_sched
+    9 root      20   0       0      0      0 S   0.0  0.0   0:00.00 rcu_bh
+   10 root      rt   0       0      0      0 S   0.0  0.0   0:00.65 migration/0
+   11 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/0
+   12 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/1
+   13 root      rt   0       0      0      0 S   0.0  0.0   0:00.01 migration/1
+   14 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/1
+   16 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/1:0H
+   17 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/2
+   18 root      rt   0       0      0      0 S   0.0  0.0   0:00.66 migration/2
+   19 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/2
+   21 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/2:0H
+   22 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/3
+top - 11:30:45 up 1 min,  1 user,  load average: 0.29, 0.13, 0.05
+top - 11:30:48 up 1 min,  1 user,  load average: 0.27, 0.13, 0.05
+Tasks: 546 total,   1 running, 545 sleeping,   0 stopped,   0 zombie
+KiB Mem : 19370288+total, 19254676+free,   764736 used,   391372 buff/cache
+KiB Mem : 19370288+total, 19254720+free,   764196 used,   391480 buff/cache
+KiB Swap:        0 total,        0 free,        0 used. 19216748+avail Mem
+
+ 2122 ubuntu    20   0   40924   4188   3124 R   0.3  0.0   0:00.01 top
+ 2122 ubuntu    20   0   40924   4188   3124 R   0.3  0.0   0:00.02 top
+    2 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kthreadd                                                                                                                                                                 9m
+    3 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/0
+    4 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/0:0
+    5 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/0:0H
+    6 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/u128:0
+    7 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/u129:0
+    8 root      20   0       0      0      0 S   0.0  0.0   0:00.01 rcu_sched
+    9 root      20   0       0      0      0 S   0.0  0.0   0:00.00 rcu_bh
+   10 root      rt   0       0      0      0 S   0.0  0.0   0:00.64 migration/0
+   11 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/0
+   12 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/1
+   13 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 migration/1
+   14 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/1
+   15 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/1:0
+   16 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/1:0H
+   17 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/2
+   18 root      rt   0       0      0      0 S   0.0  0.0   0:00.64 migration/2
+   19 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/2
+   20 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/2:0
+   21 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/2:0H
+   22 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/3
+   23 root      rt   0       0      0      0 S   0.0  0.0   0:00.64 migration/3
+   24 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/3
+   25 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/3:0
+   26 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/3:0H
+   27 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/4
+   28 root      rt   0       0      0      0 S   0.0  0.0   0:00.64 migration/4
+   29 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/4
+   30 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/4:0
+   31 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/4:0H
+   32 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/5
+   33 root      rt   0       0      0      0 S   0.0  0.0   0:00.64 migration/5
+   34 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/5
+   35 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/5:0
+   36 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/5:0H
+   37 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/6
+   38 root      rt   0       0      0      0 S   0.0  0.0   0:00.64 migration/6
+   39 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/6
+   40 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/6:0
+   41 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/6:0H
+   42 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/7
+   43 root      rt   0       0      0      0 S   0.0  0.0   0:00.64 migration/7
+   44 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/7
+   45 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/7:0
+   46 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/7:0H
+   47 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/8
+   48 root      rt   0       0      0      0 S   0.0  0.0   0:00.64 migration/8
+   49 root      20   0       0      0      0 S   0.0  0.0   0:00.00 ksoftirqd/8
+   50 root      20   0       0      0      0 S   0.0  0.0   0:00.00 kworker/8:0
+   51 root       0 -20       0      0      0 S   0.0  0.0   0:00.00 kworker/8:0H
+   52 root      rt   0       0      0      0 S   0.0  0.0   0:00.00 watchdog/9
+   53 root      rt   0       0      0      0 S   0.0  0.0   0:00.64 migration/9
+ubuntu@ip-172-31-34-36:~$ conda activate master
+(master) ubuntu@ip-172-31-34-36:~$ cd pycode/automated-trading-system/
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$ git pull
+Already up-to-date.
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$ python final_dataset_generation.py
+resuming at task index:  3  with file:  sep_extended_divadj_ret_market.pickle
+Resplitting primary_molecules when resuming because they were cached in the wrong format, needed:  industry
+Resplitting primary_molecules when resuming because they were cached in the wrong format, needed:  industry
+changing split strategy to :  industry
+Loading pickle: ./datasets/molecules_cache_live/sep.pickle
+Loading pickle: ./datasets/molecules_cache_live/sf1_art.pickle
+Loading pickle: ./datasets/molecules_cache_live/metadata.pickle
+Step  1  of  3  - Add industry momentum - Time elapsed:  0.0  minutes.
+Exception in thread Thread-1:05% 3/146 - add_indmom done after 0.51 minutes. Remaining 24.52 minutes.
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/threading.py", line 916, in _bootstrap_inner
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/threading.py", line 864, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 405, in _handle_workers
+    pool._maintain_pool()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 246, in _maintain_pool
+    self._repopulate_pool()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 239, in _repopulate_pool
+    w.start()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 105, in start
+    self._popen = self._Popen(self)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/context.py", line 277, in _Popen
+    return Popen(process_obj)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/popen_fork.py", line 19, in __init__
+    self._launch(process_obj)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/popen_fork.py", line 66, in _launch
+    self.pid = os.fork()
+OSError: [Errno 12] Cannot allocate memory
+
+Exception in thread Thread-3:.51% 119/146 - add_indmom done after 5.83 minutes. Remaining 1.32 minutes.
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/threading.py", line 916, in _bootstrap_inner
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/threading.py", line 864, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 463, in _handle_results
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/connection.py", line 250, in recv
+    buf = self._recv_bytes()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/connection.py", line 411, in _recv_bytes
+    return self._recv(size)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/connection.py", line 379, in _recv
+    chunk = read(handle, remaining)
+MemoryError
+
+OSError: [Errno 12] Cannot allocate memory^CProcess ForkPoolWorker-57:
+Process ForkPoolWorker-63:
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 720, in next
+Process ForkPoolWorker-41:
+Process ForkPoolWorker-33:
+Process ForkPoolWorker-29:
+Process ForkPoolWorker-42:
+Process ForkPoolWorker-14:
+Process ForkPoolWorker-60:
+Process ForkPoolWorker-26:
+Process ForkPoolWorker-23:
+Process ForkPoolWorker-5:
+Process ForkPoolWorker-31:
+Process ForkPoolWorker-51:
+Process ForkPoolWorker-50:
+Process ForkPoolWorker-64:
+Process ForkPoolWorker-22:
+Process ForkPoolWorker-39:
+Process ForkPoolWorker-8:
+Process ForkPoolWorker-59:
+Process ForkPoolWorker-47:
+Process ForkPoolWorker-15:
+Process ForkPoolWorker-37:
+Process ForkPoolWorker-61:
+Process ForkPoolWorker-44:
+Process ForkPoolWorker-13:
+Process ForkPoolWorker-24:
+Process ForkPoolWorker-7:
+Process ForkPoolWorker-52:
+Process ForkPoolWorker-46:
+Process ForkPoolWorker-27:
+    item = self._items.popleft()
+IndexError: pop from an empty deque
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "final_dataset_generation.py", line 232, in <module>
+Process ForkPoolWorker-28:
+Process ForkPoolWorker-45:
+Process ForkPoolWorker-20:
+Process ForkPoolWorker-36:
+    molecules_per_process=2, resume=True)
+  File "/home/ubuntu/pycode/automated-trading-system/packages/multiprocessing/engine.py", line 430, in pandas_chaining_mp_engine
+Process ForkPoolWorker-16:
+Process ForkPoolWorker-12:
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+KeyboardInterrupt
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Process ForkPoolWorker-55:
+Process ForkPoolWorker-1:
+Process ForkPoolWorker-48:
+Process ForkPoolWorker-32:
+Traceback (most recent call last):
+Process ForkPoolWorker-53:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 125, in worker
+    put((job, i, result))
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 346, in put
+    with self._wlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Process ForkPoolWorker-38:
+Traceback (most recent call last):
+Process ForkPoolWorker-19:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+Process ForkPoolWorker-3:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+Process ForkPoolWorker-40:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 335, in get
+    res = self._reader.recv_bytes()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/connection.py", line 216, in recv_bytes
+    buf = self._recv_bytes(maxlength)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/connection.py", line 407, in _recv_bytes
+    buf = self._recv(4)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/connection.py", line 379, in _recv
+    chunk = read(handle, remaining)
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+Process ForkPoolWorker-56:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 125, in worker
+    put((job, i, result))
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 346, in put
+    with self._wlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 125, in worker
+    put((job, i, result))
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 346, in put
+    with self._wlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Process ForkPoolWorker-4:
+Process ForkPoolWorker-11:
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Process ForkPoolWorker-9:
+Process ForkPoolWorker-58:
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Process ForkPoolWorker-6:
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+    primary_molecules = process_jobs_fast(jobs, num_processes=num_processes, sort_by=sort_by) # return as list of Data Frames, I need a dict
+  File "/home/ubuntu/pycode/automated-trading-system/packages/multiprocessing/engine.py", line 255, in process_jobs_fast
+    for out_ in outputs:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 724, in next
+    self._cond.wait(timeout)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/threading.py", line 295, in wait
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 125, in worker
+    put((job, i, result))
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 346, in put
+    with self._wlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+    waiter.acquire()
+KeyboardInterrupt
+Process ForkPoolWorker-54:
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 125, in worker
+    put((job, i, result))
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 346, in put
+    with self._wlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Process ForkPoolWorker-35:
+Process ForkPoolWorker-49:
+Process ForkPoolWorker-62:
+Process ForkPoolWorker-34:
+Process ForkPoolWorker-25:
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 125, in worker
+    put((job, i, result))
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 346, in put
+    with self._wlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 125, in worker
+    put((job, i, result))
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 346, in put
+    with self._wlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/util.py", line 262, in _run_finalizers
+    finalizer()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/util.py", line 186, in __call__
+    res = self._callback(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 573, in _terminate_pool
+    assert result_handler.is_alive() or len(cache) == 0
+AssertionError
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+KeyboardInterrupt
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 125, in worker
+    put((job, i, result))
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 108, in worker
+    task = get()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 346, in put
+    with self._wlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 334, in get
+    with self._rlock:
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/pool.py", line 125, in worker
+    put((job, i, result))
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/queues.py", line 346, in put
+    with self._wlock:
+KeyboardInterrupt
+KeyboardInterrupt
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/synchronize.py", line 95, in __enter__
+    return self._semlock.__enter__()
+KeyboardInterrupt
+^CError in atexit._run_exitfuncs:
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/envs/master/lib/python3.6/multiprocessing/popen_fork.py", line 28, in poll
+    pid, sts = os.waitpid(self.pid, flag)
+KeyboardInterrupt
+^C
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$ python final_dataset_generation.py
+resuming at task index:  3  with file:  sep_extended_divadj_ret_market.pickle
+Resplitting primary_molecules when resuming because they were cached in the wrong format, needed:  industry
+changing split strategy to :  industry
+Loading pickle: ./datasets/molecules_cache_live/sep.pickle
+Loading pickle: ./datasets/molecules_cache_live/sf1_art.pickle
+Loading pickle: ./datasets/molecules_cache_live/metadata.pickle
+Step  1  of  3  - Add industry momentum - Time elapsed:  0.0  minutes.
+2019-04-03 11:57:14.114361 100.0% 146/146 - add_indmom done after 7.85 minutes. Remaining 0.0 minutes..
+Cacheing as pickle result from task:  Add industry momentum
+Step  2  of  3  - Sample observations using rebase_at_each_filing_sampling - Time elapsed:  8.76  minutes.
+2019-04-03 12:00:00.067911 100.0% 14108/14108 - rebase_at_each_filing_sampling done after 1.83 minutes. Remaining 0.0 minutes..
+Cacheing as pickle result from task:  Sample observations using rebase_at_each_filing_sampling
+Traceback (most recent call last):
+  File "final_dataset_generation.py", line 232, in <module>
+    molecules_per_process=2, resume=True)
+  File "/home/ubuntu/pycode/automated-trading-system/packages/multiprocessing/engine.py", line 442, in pandas_chaining_mp_engine
+    if (task["add_to_molecules_dict"] == True) and (task["split_strategy"] != task["split_strategy_for_molecule_dict"]):
+KeyError: 'add_to_molecules_dict'
+(master) ubuntu@ip-172-31-34-36:~/pycode/automated-trading-system$
+
+
+CANNOT ACCESS KEYS LIKE THIS, THEY ARE NOT DEFINED EVERYWHERE...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+No sf1_art data for ticker HOOV in add_sep_featuressep_features done after 0.39 minutes. Remaining 2.23 minutes.
+No sf1_art data for ticker HOGS in add_sep_features
+No sf1_art data for ticker HOKU in add_sep_features
+No sf1_art data for ticker HONE in add_sep_features
+No sf1_art data for ticker HNDI in add_sep_featuresep_features done after 0.39 minutes. Remaining 2.23 minutes.
+No sf1_art data for ticker HPAC1 in add_sep_features
+No sf1_art data for ticker HNNA in add_sep_features
+No sf1_art data for ticker HMNF in add_sep_featuressep_features done after 0.39 minutes. Remaining 2.23 minutes.
+No sf1_art data for ticker HPAC in add_sep_featuressep_features done after 0.39 minutes. Remaining 2.22 minutes.
+No sf1_art data for ticker HOTJ in add_sep_features
+No sf1_art data for ticker HMN in add_sep_features_sep_features done after 0.39 minutes. Remaining 2.22 minutes.
+No sf1_art data for ticker HMSY in add_sep_features
+No sf1_art data for ticker HOLI in add_sep_features
+No sf1_art data for ticker HPFC in add_sep_featuressep_features done after 0.39 minutes. Remaining 2.22 minutes.
+No sf1_art data for ticker HNR in add_sep_features
+No sf1_art data for ticker HPBC in add_sep_features
+No sf1_art data for ticker HNZ in add_sep_features
+No sf1_art data for ticker HPLA in add_sep_features
+No sf1_art data for ticker HPH in add_sep_features_sep_features done after 0.39 minutes. Remaining 2.22 minutes.
+No sf1_art data for ticker HOMZQ in add_sep_features
+No sf1_art data for ticker HOST in add_sep_featuressep_features done after 0.39 minutes. Remaining 2.22 minutes.
+No sf1_art data for ticker HNT in add_sep_features
+No sf1_art data for ticker HPGP in add_sep_features
