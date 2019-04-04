@@ -148,15 +148,15 @@ def test_backtester():
 
     print(performance.head())
 
-    """
-    Prioritet i ordre boka
-
-    Reinvestere dividends er av liten konsekvens uansett
-
-    Skatt fra utbytte 25%
-
-    Ikke skatt ved kjøp og salg
 
 
-    """
+"""
+Prioritet i ordre boka
+
+Reinvestere dividends er av liten konsekvens uansett
+
+Skatt fra utbytte 25 prosent
+
+Ikke skatt ved kjøp og salg
+"""
 

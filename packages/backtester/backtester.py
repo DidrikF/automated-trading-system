@@ -4,6 +4,7 @@ import math
 from strategy import Strategy
 from portfolio import Portfolio, Order
 from utils import CommissionModel, SlippageModel
+import logger
 
 
 from event import EventQueue, Event
@@ -11,6 +12,19 @@ from data_handler import DataHandler, DailyBarsDataHander, MLFeaturesDataHandler
 from broker import Broker
 from utils import CommissionModel, SlippageModel
 from portfolio import Portfolio
+from error import MarketDataNotAvailableError, BalanceTooLow
+
+logr = logger.getLogger(__name__)
+
+logFormatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
+
+fileHandler = logging.FileHandler("./logs/backtest.log")
+fileHandler.setFormatter(logFormatter)
+logger.addHandler(fileHandler)
+
+consoleHandler = logging.StreamHandler()
+consoleHandler.setFormatter(logFormatter)
+logger.addHandler(consoleHandler)
 
 # NOT SURE ABOUT THIS, WHERE TO PUT METHODS ETC
 class Backtester():
@@ -54,7 +68,7 @@ class Backtester():
         # self._strategy = None
         self.broker = None
 
-        self._benchmark = None # Not implemented, not sure...
+        # self._benchmark = None # Not implemented, not sure...
         # ..
 
 
@@ -157,11 +171,14 @@ class Backtester():
                         elif event.type == 'ORDERS':
                             # Order events contain only one event, one order is executed at a time! Or not?
                             # I need the order to be executed in sequence sometimes (when selling to make fund available for a buy for example)
+                            
+                            # I think it is best to charge the portfolio etc here, and update the portfolio regarding the details of the fill, though fill events.
                             fills_event = self.broker.process_orders(self.portfolio, event)
                             self._event_queue.add(fills_event)
 
 
                         elif event.type == 'FILLS':
+                            # Here the portfolios state with regards to active positions and return calculation can be handeled
                             self.portfolio.handle_fill_event(event) # Don't know what this will do yet. Dont know what it will return
 
         if self.analyze is not None:

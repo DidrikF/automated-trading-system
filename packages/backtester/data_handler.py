@@ -6,6 +6,7 @@ from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 
 from event import Event
+from errors import MarketDataNotAvailableError
 
 """
 Due to memory not being an issue, I think it is most effective have data in memory
@@ -156,12 +157,19 @@ class DailyBarsDataHander(DataHandler):
         """
         pass
 
-    def current(self, ticker): # require a notion of time
+    def current(self): # require a notion of time
         """
-        Returns the current value of the given assets for the given fields at the current simulation time. 
-        Current values are the as-traded price and are usually not adjusted for events like splits or dividends.
+        Returns the market data for the current tick.
         """
         pass
+
+    def current_for_ticker(self, ticker):
+        try:
+            data = self.ticker_data[ticker].loc[self.cur_date]
+        except:
+            raise 
+        else:
+
 
     def continue_backtest(self):
         """Checks if there are more ticks to be processed"""

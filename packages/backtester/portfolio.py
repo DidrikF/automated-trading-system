@@ -139,6 +139,7 @@ class Order(): # what is best, have long arg list or a class hierarchy
         self.stop_loss = stop_loss
         self.take_profit = take_profit
         self.time_out = time_out
+        self.type = "MARKET ORDER"
 
     @classmethod
     def order_value(cls, ticker, value):
