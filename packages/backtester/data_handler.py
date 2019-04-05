@@ -65,13 +65,15 @@ class DailyBarsDataHander(DataHandler):
         # data = self.time_data.loc[(self.time_data.index >= self.start) & (self.time_data.index <= self.end)]
         # self.date_index_to_iterate = data.index.get_level_values(0)
         # date_index_to_iterate = date_index[self.start:(self.end + relativedelta(days=1))]
+        # print(self.time_data)
+
+        print(type(self.time_data))
 
         dates = self.time_data.index.get_level_values(0).drop_duplicates(keep='first').to_frame()
         self.date_index_to_iterate  = dates.loc[(dates.index >= self.start) & (dates.index <= self.end)].index
 
         self.tick = self._next_tick_generator()
 
-        
         
         full_path_ticker_data = self.store_path + "/" + self.file_name_ticker_data + ".pickle"
         if os.path.isfile(full_path_ticker_data) == True:
@@ -84,8 +86,8 @@ class DailyBarsDataHander(DataHandler):
 
     def ingest(self, parse_type="time"):
         """
-        Parse data into desired format for backtesting, save it and set it as self.data on
-        this instance of DataHandler.
+        Parse data into desired format for backtesting, save it and make set it on the time_data
+        or ticker_data attributes.
         """
         print("ingest called")
         source_df = pd.read_csv(self.source_path, parse_dates=["date"], low_memory=False)
@@ -102,7 +104,7 @@ class DailyBarsDataHander(DataHandler):
                     # drop duplicates probably
 
             self.time_data = pd.concat(self.time_data)
-            self.time_data = self.time_data.sort_index
+            self.time_data = self.time_data.sort_index()
 
             full_store_path = self.store_path + '/' + self.file_name_time_data + ".pickle"
             outfile = open(full_store_path, 'wb')
@@ -122,7 +124,7 @@ class DailyBarsDataHander(DataHandler):
                     # drop duplicates probably
 
             self.ticker_data = pd.concat(self.ticker_data)
-            self.ticker_data = self.ticker_data.sort_index
+            self.ticker_data = self.ticker_data.sort_index()
 
             full_store_path = self.store_path + '/' + self.file_name_ticker_data + ".pickle"
             outfile = open(full_store_path, 'wb')
@@ -194,8 +196,10 @@ class DailyBarsDataHander(DataHandler):
         pass
 
     def current_for_ticker(self, ticker):
+        print("IN CURRENT FOR TICKER")
+        print(self.ticker_data)
         try:
-            data = self.ticker_data[ticker].loc[self.cur_date] # may need to update, df style
+            data = self.ticker_data[ticker][self.cur_date] # may need to update, df style
         except Exception as e:
             raise MarketDataNotAvailableError("No market data for ticker {} on date {}".format(ticker, self.cur_date))
         else:

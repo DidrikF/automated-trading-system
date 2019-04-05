@@ -109,7 +109,11 @@ class Backtester():
 
     def run(self):
         # Check configuration
-
+        print("time data")
+        print(self.market_data.time_data.head())
+        print("ticker data")
+        print(self.market_data.ticker_data.head())
+        return
         """
         The whole point of doing it in an event driven way is to make it easier to reason about
         """

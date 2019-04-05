@@ -4,7 +4,6 @@ import os
 import shutil
 
 
-
 from backtester import Backtester
 from strategy import BuyAppleStrategy
 from portfolio import Portfolio
@@ -12,6 +11,7 @@ from broker import Broker
 from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
 from utils import EquityCommissionModel, EquitySlippageModel
 from visualization.visualization import plot_data
+from errors import MarketDataNotAvailableError
 
 @pytest.fixture(scope='module', autouse=True)
 def setup():
@@ -26,7 +26,6 @@ Notes:
 
 
 
-@pytest.mark.skip()
 def test_daily_bars_data_handler():
     try:
         shutil.rmtree(base_test_dir)
@@ -49,7 +48,7 @@ def test_daily_bars_data_handler():
     print(next(data_handler.tick))
     print(next(data_handler.tick))
 
-
+    data_handler.current_for_ticker("AAPL")["close"]
 
     """
     i = 0
@@ -93,7 +92,7 @@ def test_ml_feature_data_handler():
 
     # Not implemented yet
 
-
+@pytest.mark.skip()
 def test_backtester():
     start_date = pd.to_datetime("2010-01-01")
     end_date = pd.to_datetime("2010-12-31")
@@ -117,7 +116,10 @@ def test_backtester():
     def handle_data(bt): # perf, port, md, cur_date
         portfolio_value = bt.portfolio.get_value()
         bt.perf.at[bt.market_data.cur_date, "portfolio_value"] = portfolio_value
-        bt.perf.at[bt.market_data.cur_date, "AAPL"] = bt.market_data.current_for_ticker("AAPL")["close"] # Shuold succeed allways
+        try:
+            bt.perf.at[bt.market_data.cur_date, "AAPL"] = bt.market_data.current_for_ticker("AAPL")["close"] # Shuold succeed allways
+        except MarketDataNotAvailableError as e:
+            print(e)
 
 
     def initialize(bt):
@@ -163,6 +165,56 @@ def test_backtester():
     # broker = Broker(slippage_model, commission_model)
 
     performance = backtester.run()
+
+
+"""
+NOTES:
+This section outlines how I intend to proceed towards a completed system.
+
+Many features remain to be implemented.
+
+
+1. Visualization and performance reporting
+    - This work will prepare many visualizations for the report
+    - This work will also substitute testing work
+    - It will be awesome to look at.
+
+    - I want to illustrate all aspects of the system, LIVE.
+    - This requrie some clever linking do Dash, but once this is done it will be easy to extend
+    - I can also implement a loop slowdown parameter, so make it more visible to
+    the user of the system what is going on.
+
+    Wanted on the screen: 
+        - Piechart of portfolio allocation
+        - Line chart of portfolio value
+        - Line chart of portfolio return (on different periods)
+        - Candlestick chart, where you can select stock
+        - Table of executed orders -> with accocated signal, fill, commission, 
+          slippage, open, execution price, and stock information (one mega master table),
+          portfolio balance
+
+        - Table of top 10 signals for each day
+        - Table of non executed orders
+        
+
+
+2. Order handling:
+    - Every tick of market data should be used to check whether stop-loss, take-profit or timeout is triggered.
+    - On the time out date, the trades should be eliminated at the open, before any other trades are executed.
+
+
+
+3. Performance tracking
+    - I need a way to calculate portfolio return and take into account slippage, and the 
+    actual execution price.
+
+
+4. Need to have a clever way to donduct some high level tests.
+
+
+
+"""
+
 
 
 
