@@ -4,27 +4,18 @@ import math
 from strategy import Strategy
 from portfolio import Portfolio, Order
 from utils import CommissionModel, SlippageModel
-import logger
-
+import logging
+import time
 
 from event import EventQueue, Event
 from data_handler import DataHandler, DailyBarsDataHander, MLFeaturesDataHandler
 from broker import Broker
-from utils import CommissionModel, SlippageModel
+from utils import CommissionModel, SlippageModel, report_progress
 from portfolio import Portfolio
-from error import MarketDataNotAvailableError, BalanceTooLow
+from errors import MarketDataNotAvailableError, BalanceTooLowError
+from visualization.visualization import plot_data
+from logger import Logger
 
-logr = logger.getLogger(__name__)
-
-logFormatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
-
-fileHandler = logging.FileHandler("./logs/backtest.log")
-fileHandler.setFormatter(logFormatter)
-logger.addHandler(fileHandler)
-
-consoleHandler = logging.StreamHandler()
-consoleHandler.setFormatter(logFormatter)
-logger.addHandler(consoleHandler)
 
 # NOT SURE ABOUT THIS, WHERE TO PUT METHODS ETC
 class Backtester():
@@ -51,7 +42,7 @@ class Backtester():
         self.output_path = output_path
 
         # How to best make these available in the hooks?
-        start_end_index = pd.date_range(self.start, self.end)
+        start_end_index = self.market_data.date_index_to_iterate
         self.perf = pd.DataFrame(index=start_end_index) # This is where performance metrics will be stored
         self.time_context = pd.DataFrame(index=start_end_index) # To store time data between calls to handle_data
         self.context = {} # To store anything between subsequent calls to handle_data
@@ -126,10 +117,11 @@ class Backtester():
         if self.initialize is not None:
             self.initialize(self) # self.context, self.time_context, self.perf
 
+        time0 = time.time()
         while True: # This loop generates new "ticks" until the backtest is completed.
             try:
-                market_data_event = self.market_data.next_tick() # THIS MUST ONLY BE CALLED HERE!
-            except IndexError as e:
+                market_data_event = next(self.market_data.tick) # THIS MUST ONLY BE CALLED HERE!
+            except Exception as e: # What error does the generator give?
                 print(e)
                 break
             else:
@@ -146,9 +138,6 @@ class Backtester():
                     if event is not None:
                         if event.type == 'DAILY_MARKET_DATA':
                             
-                            if self.handle_data is not None:
-                                self.handle_data(self) # self.context, self.time_context, self.perf
-
                             # need this to add the feature data to the queue, so it can be "processed" (used to generate predictions)
                             feature_data_event = self.feature_data.current(event.date) # the function need access to the event queue
                             
@@ -181,6 +170,12 @@ class Backtester():
                             # Here the portfolios state with regards to active positions and return calculation can be handeled
                             self.portfolio.handle_fill_event(event) # Don't know what this will do yet. Dont know what it will return
 
+            if self.handle_data is not None:
+                # Called at the end of every trading day
+                self.handle_data(self) # self.context, self.time_context, self.perf
+
+            report_progress(self.market_data.cur_date, self.start, self.end, time0, "Backtest")
+
         if self.analyze is not None:
             self.analyze(self) # self.context, self.time_context, self.perf
 
@@ -194,4 +189,14 @@ class Backtester():
     
 
 
+
+
+
+def Performance():
+    def __init__(self, index):
+        self.data = pd.DataFrame(index=index)
+
+    def record_price(self, ticker):
+        # ETC...
+        pass
         

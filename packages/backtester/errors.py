@@ -1,6 +1,6 @@
 
-class MarketDataNotAvailableError(Exception)
-   def __init__(self, msg): 
+class MarketDataNotAvailableError(Exception):
+    def __init__(self, msg): 
         self.msg = msg 
   
     # __str__ is to print() the value 
@@ -8,7 +8,7 @@ class MarketDataNotAvailableError(Exception)
         return(repr(self.msg)) 
 
 
-class BalanceTooLow(Exception): 
+class BalanceTooLowError(Exception): 
     # Constructor or Initializer 
     def __init__(self, msg): 
         self.msg = msg 
@@ -16,3 +16,13 @@ class BalanceTooLow(Exception):
     # __str__ is to print() the value 
     def __str__(self): 
         return(repr(self.msg)) 
+
+
+
+class OrderProcessingError(Exception):
+    def __init__(self, msg): 
+        self.msg = msg 
+
+    # __str__ is to print() the value 
+    def __str__(self): 
+        return(repr(self.msg))

@@ -1,11 +1,31 @@
 from abc import ABC, abstractmethod
+import pandas as pd
+import time
+import datetime as dt
+import sys
 
 
-def show_progress():
+def report_progress(cur_date: pd.datetime, start_date: pd.datetime, end_date: pd.datetime, time0, task):
     """
     Print progression statistics for the backtest to stdout.
     """
-    pass
+
+    total_days = end_date - start_date
+    days_completed = cur_date - start_date
+
+    ratio_of_jobs_completed = float(days_completed.days/total_days.days)
+    minutes_elapsed = (time.time()-time0)/60
+    minutes_remaining = minutes_elapsed*(1/ratio_of_jobs_completed - 1)
+    time_stamp = str(dt.datetime.fromtimestamp(time.time()))
+    msg = time_stamp + " " + str(round(ratio_of_jobs_completed*100, 2)) + "% " + " ratio of days completed " + str(days_completed.days) + "/" + str(total_days.days) + \
+        " - " + task + " done after " + str(round(minutes_elapsed, 2)) + " minutes. Remaining " + \
+            str(round(minutes_remaining, 2)) + ' minutes.'
+    
+    if cur_date < end_date: 
+        sys.stderr.write(msg + '\r') # override previous line
+    else: 
+        sys.stderr.write(msg + '\n')
+    return
 
 
 
@@ -32,7 +52,7 @@ class EquityCommissionModel(CommissionModel):
     def __init__(self):
         pass
     def calculate(self, order):
-        return 0.0
+        return 10.0
 
 
 
@@ -43,7 +63,7 @@ class EquitySlippageModel(SlippageModel):
     def __init__(self):
         pass
     def calculate(self, order):
-        return 0.0
+        return 1.0
 
 
 

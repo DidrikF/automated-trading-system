@@ -1,9 +1,9 @@
 import math
 
 from helpers import sign
-from strategy import Strategy
+from strategy import Strategy, Signal
 from event import Event
-
+from errors import MarketDataNotAvailableError, BalanceTooLowError
 
 class Portfolio():
     def __init__(self, market_data, balance: float, strategy: Strategy):
@@ -13,23 +13,22 @@ class Portfolio():
 
 
         self.order_history = []
-        self.portfolio = {}
+        self.portfolio = {} # ticker -> position is the wording used in the project
         self.order_id_seed = 0
         self.signals = []
-        self.fills = []
+        self.blotter = []
 
         self.max_position_size = None
 
         """
         self.portfolio = {
-            "AAPL": {
-                order: Order,
-                original_signal: Signal,
-                signals: [signal_1, signal_2], # use to get most updated signal
-                fill_object: FillObject,
+            "AAPL": { NO
+                "fills": [Fill, Fill],
+                "position": 12400, # net number of stocks (int), sign gives direction
             },
             "MSFT": {
-                ...
+                "fills": [Fill, Fill],
+                "position": 12400, # net number of stocks (int), sign gives direction
             }
             ...
         }
@@ -40,18 +39,21 @@ class Portfolio():
 
 
     def generate_orders_from_signals(self, signals_event):
+        """
+        Need some serious work...
+        """
         signals = signals_event.data
         orders = []
         for signal in signals:
             ticker = signal.ticker
             amount = sign(signal.direction) * signal.certainty * self.max_position_size
-            orders.append(Order(order_id=self.get_order_id(), ticker=ticker, amount=amount))
+            orders.append(Order(order_id=self.get_order_id(), ticker=ticker, amount=amount, signal=signal))
 
         return Event(event_type="ORDERS", data=orders)
 
 
     def simple_order(self, ticker, amount):
-        order = Order(order_id=self.get_order_id(), ticker=ticker, amount=amount) 
+        order = Order(order_id=self.get_order_id(), ticker=ticker, amount=amount, signal=Signal.from_nothing()) 
         return order
 
 
@@ -65,12 +67,72 @@ class Portfolio():
         The fill objects are important for tracking portfolio performance, value, etc.
         """
         # I NEED TO READ MORE ABOUT THIS
-        self.fills.extend(fills_event.data)
+
+        fills = fills_event.data
+        for fill in fills:
+            if fill.ticker not in self.portfolio:
+                self.portfolio[fill.ticker] = {
+                    "fills": [fill],
+                    "amount": fill.amount,
+                }
+            else:
+                self.portfolio[fill.ticker]["fills"].append(fill)
+                self.portfolio[fill.ticker]["amount"] += fill.amount
+
+
+        self.blotter.extend(fills)
+
+
+    def get_value(self):
+        """
+        Calculates are returns portfolio value at the end of the current day.
+        """
+        value = 0
+        for ticker, position in self.portfolio.items():
+            try:
+                daily_data = self.market_data.current_for_ticker(ticker)
+            except MarketDataNotAvailableError:
+                return None
+            price = daily_data["close"]
+
+            value += price * position["amount"]
+
+        return value
+
+    def calculate_daily_return(self):
+        """
+        Somewhat complicated, becuase I need to take into account the fill price, not the open for both sells and buys.
+        """
+    
+    def calculate_return_over_period(self):
+        """
+        Complicated.
+        Get back to this later
+        """
+
+    def charge(self, amount):
+        """
+        Amount must be a positive value to deduct from the portfolios balance.
+        """
+        if self.balance >= amount:
+            self.balance -= amount
+        else:
+            raise BalanceTooLowError("Cannot charge portfolio because balance is {} and wanted to charge {}".format(self.balance, amount))
+
+
+    def charge_commission(self, commission):
+        """
+        Charge the portfolio the commission.
+        To avoid senarios where the portfolios balance is too low to even exit its current positions.
+        """
+        self.balance -= commission
 
     def get_order_id(self): # now we can only have orders from one portfolio, maybe introduce a portfolio id
         self.order_id_seed += 1
         order_id = self.order_id_seed
         return order_id
+
+
 
 
     def set_max_position_size(self, max_size):
@@ -83,9 +145,6 @@ class Portfolio():
         value exceeding one of these limits, raise a TradingControlException.
         """
         self.max_position_size = max_size
-
-
-
 
 
 
@@ -131,11 +190,12 @@ class Order(): # what is best, have long arg list or a class hierarchy
     Returns:	
     order_id – The unique identifier for this order, or None if no order was placed.
     """
-    def __init__(self, order_id, ticker, amount, stop_loss=None, take_profit=None, time_out=None):
+    def __init__(self, order_id, ticker, amount, signal, stop_loss=None, take_profit=None, time_out=None):
         self.id = order_id
         self.ticker = ticker
         self.amount = amount
         self.direction = sign(amount)
+        self.signal = signal
         self.stop_loss = stop_loss
         self.take_profit = take_profit
         self.time_out = time_out

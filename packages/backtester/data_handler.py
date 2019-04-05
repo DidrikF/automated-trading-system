@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 
 from event import Event
 from errors import MarketDataNotAvailableError
+from logger import Logger
 
 """
 Due to memory not being an issue, I think it is most effective have data in memory
@@ -60,7 +61,18 @@ class DailyBarsDataHander(DataHandler):
             data_file.close()
         else:
             self.ingest(parse_type="time")
+        
+        # data = self.time_data.loc[(self.time_data.index >= self.start) & (self.time_data.index <= self.end)]
+        # self.date_index_to_iterate = data.index.get_level_values(0)
+        # date_index_to_iterate = date_index[self.start:(self.end + relativedelta(days=1))]
 
+        dates = self.time_data.index.get_level_values(0).drop_duplicates(keep='first').to_frame()
+        self.date_index_to_iterate  = dates.loc[(dates.index >= self.start) & (dates.index <= self.end)].index
+
+        self.tick = self._next_tick_generator()
+
+        
+        
         full_path_ticker_data = self.store_path + "/" + self.file_name_ticker_data + ".pickle"
         if os.path.isfile(full_path_ticker_data) == True:
             data_file = open(full_path_ticker_data, 'rb')
@@ -68,6 +80,7 @@ class DailyBarsDataHander(DataHandler):
             data_file.close()
         else:
             self.ingest(parse_type="ticker")
+
 
     def ingest(self, parse_type="time"):
         """
@@ -88,6 +101,9 @@ class DailyBarsDataHander(DataHandler):
                     print("duplicate data for one or more tickers on date: ", date)
                     # drop duplicates probably
 
+            self.time_data = pd.concat(self.time_data)
+            self.time_data = self.time_data.sort_index
+
             full_store_path = self.store_path + '/' + self.file_name_time_data + ".pickle"
             outfile = open(full_store_path, 'wb')
             pickle.dump(self.time_data, outfile)
@@ -105,19 +121,34 @@ class DailyBarsDataHander(DataHandler):
                     print("duplicate data for ticker ", ticker, " on one or more dates")
                     # drop duplicates probably
 
+            self.ticker_data = pd.concat(self.ticker_data)
+            self.ticker_data = self.ticker_data.sort_index
+
             full_store_path = self.store_path + '/' + self.file_name_ticker_data + ".pickle"
             outfile = open(full_store_path, 'wb')
             pickle.dump(self.ticker_data, outfile)
             outfile.close()
 
     
+    
+    def _next_tick_generator(self):
+
+        for date in self.date_index_to_iterate:
+            self.cur_date = date
+            tick_data = self.time_data.loc[date]
+            
+            yield Event(event_type="DAILY_MARKET_DATA", data=tick_data, date=date)
+
+    
     # The final method, update_bars, is the second abstract method from DataHandler. 
     # It simply generates a MarketEvent that gets added to the queue as it appends the latest bars 
     # to the latest_symbol_data:
-    def next_tick(self):
+    def next_tick_old(self):
         """
         Pushes the latest bar to the latest_symbol_data structure
         for all symbols in the symbol list.
+
+        OBS: may be more stable to maintain the index we are looking up and then get the date from that...
         """
         while True:
             if self.cur_date > self.end:
@@ -135,6 +166,11 @@ class DailyBarsDataHander(DataHandler):
         
         return Event(event_type="DAILY_MARKET_DATA", data=daily_data, date=self.cur_date)
 
+    def current_tick(self): # Should not be possible to fail...
+        """
+        Returns the market data for the current tick.
+        """
+        return self.get_data_for_date(self.cur_date)
 
 
     def get_data_for_date(self, date: pd.datetime):
@@ -146,7 +182,7 @@ class DailyBarsDataHander(DataHandler):
             return daily_data
 
 
-    def get_data(self, ticker, start, end):
+    def get_ticker_data_for_range(self, ticker, start, end):
         """
         For the given asset or iterable of assets, returns true if all of the following are true: 1) the asset is alive for the session of the current simulation time
 
@@ -157,19 +193,13 @@ class DailyBarsDataHander(DataHandler):
         """
         pass
 
-    def current(self): # require a notion of time
-        """
-        Returns the market data for the current tick.
-        """
-        pass
-
     def current_for_ticker(self, ticker):
         try:
-            data = self.ticker_data[ticker].loc[self.cur_date]
-        except:
-            raise 
+            data = self.ticker_data[ticker].loc[self.cur_date] # may need to update, df style
+        except Exception as e:
+            raise MarketDataNotAvailableError("No market data for ticker {} on date {}".format(ticker, self.cur_date))
         else:
-
+            return data
 
     def continue_backtest(self):
         """Checks if there are more ticks to be processed"""
@@ -177,6 +207,8 @@ class DailyBarsDataHander(DataHandler):
             return True
         else:
             return False
+
+
 
     def can_trade_ticker(self, ticker, date):
         """ Checks if the there is price data beyond the $date for the $ticker """

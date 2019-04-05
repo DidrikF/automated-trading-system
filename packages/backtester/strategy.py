@@ -32,3 +32,7 @@ class Signal():
         self.ticker = ticker
         self.direction = direction
         self.certainty = certainty
+
+    @classmethod
+    def from_nothing(cls):
+        return cls("NONE", "NONE", "NONE")

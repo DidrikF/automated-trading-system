@@ -3,13 +3,15 @@ import pandas as pd
 import os
 import shutil
 
+
+
 from backtester import Backtester
 from strategy import BuyAppleStrategy
 from portfolio import Portfolio
 from broker import Broker
 from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
 from utils import EquityCommissionModel, EquitySlippageModel
-
+from visualization.visualization import plot_data
 
 @pytest.fixture(scope='module', autouse=True)
 def setup():
@@ -21,6 +23,7 @@ def setup():
 Notes:
   - Maybe not have different event object, just Event with a type and data property...
 """
+
 
 
 @pytest.mark.skip()
@@ -39,18 +42,26 @@ def test_daily_bars_data_handler():
         end=pd.to_datetime("2014-12-31")
     )
 
+    # data_handler.time_data = data_handler.time_data.sort_index(ascending=True)
+    # print(data_handler.time_data.iloc[1])
+    # print(data_handler.time_data.head())
+    print(next(data_handler.tick))
+    print(next(data_handler.tick))
+    print(next(data_handler.tick))
 
+
+
+    """
     i = 0
     for date, df in data_handler.time_data.items():
         assert isinstance(date, pd.datetime)
         
-        """
         if i >4: break
         print(date)
         print(df.head())
         i += 1
-        """
 
+    """
     i = 0
     for ticker, df in data_handler.ticker_data.items():
         assert len(df.ticker.unique()) == 1
@@ -64,7 +75,7 @@ def test_daily_bars_data_handler():
     assert os.path.isfile("./test_bundles/time_data.pickle")
     assert os.path.isfile("./test_bundles/ticker_data.pickle")
 
-
+    assert False
 
     
 @pytest.mark.skip()
@@ -83,16 +94,18 @@ def test_ml_feature_data_handler():
     # Not implemented yet
 
 
-
 def test_backtester():
+    start_date = pd.to_datetime("2010-01-01")
+    end_date = pd.to_datetime("2010-12-31")
+
 
     market_data_handler = DailyBarsDataHander( 
         source_path="../../datasets/testing/sep.csv",
         store_path="./test_bundles",
         file_name_time_data="time_data",
         file_name_ticker_data="ticker_data",
-        start=pd.to_datetime("2010-01-01"),
-        end=pd.to_datetime("2014-12-31")
+        start=start_date,
+        end=end_date
     )
 
     feature_data_handler = MLFeaturesDataHandler(
@@ -101,22 +114,27 @@ def test_backtester():
         file_name="feature_data",
     )
 
-    def handle_data(backtester):
-        print("HANDLE DATA HOOK RUNNING")
+    def handle_data(bt): # perf, port, md, cur_date
+        portfolio_value = bt.portfolio.get_value()
+        bt.perf.at[bt.market_data.cur_date, "portfolio_value"] = portfolio_value
+        bt.perf.at[bt.market_data.cur_date, "AAPL"] = bt.market_data.current_for_ticker("AAPL")["close"] # Shuold succeed allways
 
 
-    def initialize(backtester):
-        print("INITIALIZE HOOK RUNNING")
+    def initialize(bt):
+        pass
 
-    def analyze(backtester):
-        print("ANALYZE HOOK RUNNING")
+
+    def analyze(bt):
+        print(bt.perf.head())
+        plot_data(bt.perf.index, bt.perf["portfolio_value"], xlabel="Time", ylabel="Value ($)", title="Portfolio Value")
+
 
 
     backtester = Backtester(
         market_data_handler=market_data_handler, 
         feature_data_handler=feature_data_handler, 
-        start=pd.to_datetime("2010-01-01"), 
-        end=pd.to_datetime("2015-01-01"),
+        start=start_date,  # REDUNDANT
+        end=end_date, # REDUNDANT
         output_path="./performance/perf_test.csv",
         initialize_hook=initialize,
         handle_data_hook=handle_data,
@@ -146,7 +164,6 @@ def test_backtester():
 
     performance = backtester.run()
 
-    print(performance.head())
 
 
 
@@ -160,3 +177,13 @@ Skatt fra utbytte 25 prosent
 Ikke skatt ved kjøp og salg
 """
 
+"""
+Errors when running backtest
+dont know what it is exacly
+look into how market data is handled
+why is there so many dates that are being queried for that does not have data for apple? non-business days should be skipped.
+    - You have allready forseen this
+
+also maybe use the length of the index of perf for example when reporting progress
+    - perf then need to have its index come from the actual dates in the source dataset.
+"""

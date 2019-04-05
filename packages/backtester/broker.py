@@ -1,6 +1,7 @@
 from utils import CommissionModel, SlippageModel
 from event import Event
-from backtester import logr
+from logger import Logger
+from errors import OrderProcessingError, MarketDataNotAvailableError, BalanceTooLowError
 
 
 class Broker():
@@ -27,7 +28,7 @@ class Broker():
             try:
                 fill_object = self._process_order(portfolio, order)
             except OrderProcessingError as e:
-                logr.warning("Failed processing order with error: {}".format(e))
+                Logger.logr.warning("Failed processing order with error: {}".format(e))
                 # Try later of disgard?
                 # Default behavior for now will be to disregard the order
                 # Should I inform the portfolio?
@@ -40,14 +41,14 @@ class Broker():
     def _process_order(self, portfolio, order):
         # Do checks on volume vs amount and other checks. Or maybe most of this is done by the portfolio object
         validation_errors = self.validate_order(order)
-        if validation_errors is not None :
-            logr.warning("Order failed validation with validation errors: {}".format(validation_errors))
+        if len(validation_errors) != 0:
+            Logger.logr.warning("Order failed validation with validation errors: {}".format(validation_errors))
             raise OrderProcessingError("Cannot complete order, with validation errors: {}".format(validation_errors))
         
         try:
-            stock_price = self.market_data.ticker_current(order.ticker)["open"]
+            stock_price = self.market_data.current_for_ticker(order.ticker)["open"]
         except MarketDataNotAvailableError as e:
-            logr.warning("When processing an order; market data was not available for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
+            Logger.logr.warning("When processing an order; market data was not available for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
             raise OrderProcessingError("Cannot complete order, with error: {}".format(e))
         
         cost = order.amount * stock_price
@@ -57,18 +58,18 @@ class Broker():
         # Charge portfolio etc. and if successfull, "complete" the order by appending to active_orders
 
         try:
-            portfolio.charge(amount)
+            portfolio.charge(cost)
             portfolio.charge_commission(commission)
         except BalanceTooLowError as e:
-            logr.warning("Balance too low! Balance: {}, wanted to charge {} for the stock and {} in commission".format(portfolio.balance, cost, commission))
+            Logger.logr.warning("Balance too low! Balance: {}, wanted to charge {} for the stock and {} in commission".format(portfolio.balance, cost, commission))
             raise OrderProcessingError("Cannot complete order, with error: {}".format(e))
 
         fill = Fill(
             order=order,
             date=self.market_data.cur_date,
-            price=stock_price-slippage
-            commission=commission
-            slippage=slippage
+            price=stock_price-slippage,
+            commission=commission,
+            slippage=slippage,
         )
         
         self.blotter.append(fill)
@@ -77,8 +78,14 @@ class Broker():
 
     def validate_order(self, order):
         # IMPLEMENT VALIDATION LOGIC!
-        
-        return None 
+        # Maybe this is expressed through the order cancellation policy
+        validation_errors = []
+
+        return validation_errors
+
+
+
+
 
     def get_order(self, order_id):
         """
@@ -94,8 +101,9 @@ class Broker():
 
     def cancel_order(self):
         """
-        Cancel an open order.
-        Cancel order by ID!
+        Cancel an open order by ID.
+        
+        Currently orders are either completed "immediatly" or digarded. So this will never be used.
         """
 
     def set_cancel_policy(self):
@@ -136,16 +144,23 @@ class Broker():
         self._slippage_model = slippage_model
 
 
+    def store_state(self):
+        pass
+
+
 class Fill():
     def __init__(self, order, date, price, commission, slippage):
         self.order_id = order.id
         self.ticker = order.ticker
-        self.order = order
+        self.direction = order.direction # Strictly unnecessary, but makes this information easily accessable.
+        self.amount = order.amount
+
         self.date = date
         self.price = price # slippage subtracted
         self.commission = commission
         self.slippage = slippage
 
+        self.order = order
 
 class OrderCancellationPolicy(): 
     pass
