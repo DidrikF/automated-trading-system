@@ -67,7 +67,7 @@ class DailyBarsDataHander(DataHandler):
         # date_index_to_iterate = date_index[self.start:(self.end + relativedelta(days=1))]
         # print(self.time_data)
 
-        print(type(self.time_data))
+        # print(type(self.time_data))
 
         dates = self.time_data.index.get_level_values(0).drop_duplicates(keep='first').to_frame()
         self.date_index_to_iterate  = dates.loc[(dates.index >= self.start) & (dates.index <= self.end)].index
@@ -177,33 +177,26 @@ class DailyBarsDataHander(DataHandler):
 
     def get_data_for_date(self, date: pd.datetime):
         try:
-            daily_data = self.time_data[date]
+            daily_data = self.time_data.loc[date] # I thnk .loc
         except:
             raise KeyError("No daily data for date {}".format(date))
         else:
             return daily_data
 
-
-    def get_ticker_data_for_range(self, ticker, start, end):
-        """
-        For the given asset or iterable of assets, returns true if all of the following are true: 1) the asset is alive for the session of the current simulation time
-
-        (if current simulation time is not a market minute, we use the next session)
-        (if we are in minute mode) the asset’s exchange is open at the
-        current simulation time or at the simulation calendar’s next market minute
-        there is a known last price for the asset.
-        """
-        pass
-
     def current_for_ticker(self, ticker):
-        print("IN CURRENT FOR TICKER")
-        print(self.ticker_data)
         try:
-            data = self.ticker_data[ticker][self.cur_date] # may need to update, df style
+            data = self.ticker_data.loc[ticker, self.cur_date] # may need to update, df style
         except Exception as e:
             raise MarketDataNotAvailableError("No market data for ticker {} on date {}".format(ticker, self.cur_date))
         else:
             return data
+
+    def last_for_ticker(self, ticker):
+        """
+        Returns the most recent SEP row for the ticker.
+        """
+        # Need to implement
+        return math.nan
 
     def continue_backtest(self):
         """Checks if there are more ticks to be processed"""
@@ -211,6 +204,22 @@ class DailyBarsDataHander(DataHandler):
             return True
         else:
             return False
+
+
+    
+    def get_ticker_data(self, ticker):
+        """
+        Return data for ticker
+        """
+        
+        try:
+            data = self.ticker_data.loc[ticker][self.start:self.end]
+        except Exception as e:
+            return pd.DataFrame(columns=self.ticker_data.iloc[[0]].columns)
+            # print(e)
+            # raise MarketDataNotAvailableError("No market data for ticker {} from {} to {}".format(ticker, start, end))
+        else:
+            return data
 
 
 

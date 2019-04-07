@@ -25,7 +25,7 @@ Notes:
 """
 
 
-
+@pytest.mark.skip()
 def test_daily_bars_data_handler():
     try:
         shutil.rmtree(base_test_dir)
@@ -92,7 +92,6 @@ def test_ml_feature_data_handler():
 
     # Not implemented yet
 
-@pytest.mark.skip()
 def test_backtester():
     start_date = pd.to_datetime("2010-01-01")
     end_date = pd.to_datetime("2010-12-31")
@@ -116,11 +115,8 @@ def test_backtester():
     def handle_data(bt): # perf, port, md, cur_date
         portfolio_value = bt.portfolio.get_value()
         bt.perf.at[bt.market_data.cur_date, "portfolio_value"] = portfolio_value
-        try:
-            bt.perf.at[bt.market_data.cur_date, "AAPL"] = bt.market_data.current_for_ticker("AAPL")["close"] # Shuold succeed allways
-        except MarketDataNotAvailableError as e:
-            print(e)
-
+        
+        bt.perf.at[bt.market_data.cur_date, "AAPL"] = bt.market_data.current_for_ticker("AAPL")["close"] # Shuold succeed allways
 
     def initialize(bt):
         pass

@@ -1,11 +1,13 @@
 import pandas as pd
 import math
+import datetime
 
 from strategy import Strategy
 from portfolio import Portfolio, Order
 from utils import CommissionModel, SlippageModel
 import logging
 import time
+import pickle
 
 from event import EventQueue, Event
 from data_handler import DataHandler, DailyBarsDataHander, MLFeaturesDataHandler
@@ -20,7 +22,7 @@ from logger import Logger
 # NOT SURE ABOUT THIS, WHERE TO PUT METHODS ETC
 class Backtester():
     def __init__(self, market_data_handler: DataHandler, feature_data_handler: DataHandler, start, end, output_path, \
-        initialize_hook=None, handle_data_hook=None, analyze_hook=None):
+        initialize_hook=None, handle_data_hook=None, analyze_hook=None, sleep_time=None):
         """
         data_handler: DataHandler for price data.
         feature_data: DataHandler for feature data informing the strategy.
@@ -43,25 +45,26 @@ class Backtester():
 
         # How to best make these available in the hooks?
         start_end_index = self.market_data.date_index_to_iterate
+
+        # Since I am the only user, I can store both system default metrics and "user specified" metrics here
         self.perf = pd.DataFrame(index=start_end_index) # This is where performance metrics will be stored
-        self.time_context = pd.DataFrame(index=start_end_index) # To store time data between calls to handle_data
-        self.context = {} # To store anything between subsequent calls to handle_data
+        self.stats = {}
+        # OBS: Not used atm, might just drop these and store all in perf. And whatever that might had gone into context, is handled by the portfolio and strategy
+        # self.time_context = pd.DataFrame(index=start_end_index) # To store time data between calls to handle_data
+        # self.context = {} # To store anything between subsequent calls to handle_data
 
         self.initialize = initialize_hook
         self.handle_data = handle_data_hook
         self.analyze = analyze_hook
+        self.sleep_time = sleep_time
 
         self._event_queue = EventQueue()
         # Need to be set via setter methods
         self.portfolio = None
-        # self._commission_model = None
-        # self._slippage_model = None
-        # self._strategy = None
         self.broker = None
 
         # self._benchmark = None # Not implemented, not sure...
         # ..
-
 
     def set_portfolio(self, portfolio_cls, **kwargs):
         """
@@ -109,11 +112,7 @@ class Backtester():
 
     def run(self):
         # Check configuration
-        print("time data")
-        print(self.market_data.time_data.head())
-        print("ticker data")
-        print(self.market_data.ticker_data.head())
-        return
+        
         """
         The whole point of doing it in an event driven way is to make it easier to reason about
         """
@@ -140,13 +139,13 @@ class Backtester():
                     break
                 else:
                     if event is not None:
+                        # maybe I should account for returned events may be None, and should not be added to the event_queue
                         if event.type == 'DAILY_MARKET_DATA':
                             
                             # need this to add the feature data to the queue, so it can be "processed" (used to generate predictions)
                             feature_data_event = self.feature_data.current(event.date) # the function need access to the event queue
                             
                             self._event_queue.add(feature_data_event) # The next iteration of the loop, the event queue is not empty.
-
 
                         elif event.type == "FEATURE_DATA":
                             # Contain signals for multiple tickers
@@ -166,22 +165,54 @@ class Backtester():
                             # I need the order to be executed in sequence sometimes (when selling to make fund available for a buy for example)
                             
                             # I think it is best to charge the portfolio etc here, and update the portfolio regarding the details of the fill, though fill events.
-                            fills_event = self.broker.process_orders(self.portfolio, event)
+                            fills_event, cancelled_orders_event = self.broker.process_orders(self.portfolio, event)
+                            
                             self._event_queue.add(fills_event)
-
+                            
+                            if cancelled_orders_event is not None:
+                                self._event_queue.add(cancelled_orders_event)
 
                         elif event.type == 'FILLS':
                             # Here the portfolios state with regards to active positions and return calculation can be handeled
                             self.portfolio.handle_fill_event(event) # Don't know what this will do yet. Dont know what it will return
 
+                        elif event.type == 'CANCELLED_ORDERS':
+                            self.portfolio.handle_cancelled_orders(event)
+
+                        """
+                        elif event.type == 'POSITION_LIQUIDATIONS':
+                            # This happens at the end of the trading day. Funds that become available as the result of a position being
+                            # liquidated is first available to use the next day.
+                            self.portfolio.handle_position_liquidations_event(event)
+                        """
+
+                # Here the day is over:
+                position_liquidations_event = self.broker.manage_active_positions()
+
+                if position_liquidations_event is not None:
+                    self.portfolio.handle_position_liquidations_event(event)
+
             if self.handle_data is not None:
                 # Called at the end of every trading day
                 self.handle_data(self) # self.context, self.time_context, self.perf
+            
 
+            self.capture_daily_state()
+            
             report_progress(self.market_data.cur_date, self.start, self.end, time0, "Backtest")
+            
+            if self.sleep_time is not None:
+                time.sleep(self.sleep_time)
+
+
+
+        self.calculate_statistics()
+
 
         if self.analyze is not None:
             self.analyze(self) # self.context, self.time_context, self.perf
+
+
 
         return self.perf
 
@@ -192,7 +223,91 @@ class Backtester():
         print("etc.")
     
 
+    def capture_daily_state(self):
+        """
+        Calculate various backtest statistics. These calculations are split into their 
+        own function, but the work is sentralized here.
+        """
+        
+        self.portfolio.capture_portfolio_state()
+        self.broker.capture_active_positions_state()
+        
 
+
+    def calculate_statistics(self):
+        self.stats["total_commission"] = None
+        self.stats["total_slippage"] = None
+        self.stats["sharpe_ratio"] = None
+        
+
+        # self.perf.at[self.market_data.cur_date, "max_trades_per_month"] = None
+        # self.perf.at[self.market_data.cur_date, "min_trades_per_month"] = None      
+
+    def save_state_to_disk_and_return(self):
+        """
+        This will save a snapshot of all relevant state of the backtest and save it 
+        to disk as a pickle. This way the backtest can be replayed and all results
+        are available for later inspection.
+        
+        The output can be used to generate a dashboard for the backtest.
+        
+        What to save:
+
+        From backtester:
+        - perf
+        - stats
+        
+        From Portfolio:
+        - order history
+        - Portfolio history (Need to record all changes...)
+        - portfolio blotter  -> contains order -> contains signal
+        - portfolio signlas -> all signals generated -> with reference to feature data, so it can be retreved
+        - portfolio order history -> all orders generated and send to the broker -> can be used with the blotter to see what orders was not filled
+
+        From broker:
+        - cancelled_orders
+        - Active positions history
+
+        """
+
+
+        backtest_state = {
+            "timestamp": time.time(),
+            "settings": {
+                "start": self.start,
+                "end": self.end,
+                "output_path": self.output_path
+            },
+            "perf": self.perf,
+            "stats": self.stats,
+            "portfolio": {
+                "commissions_charged": self.portfolio.commissions_charged,
+                "slippage_suffered": self.portfolio.slippage_suffered,
+                "order_history": self.portfolio.order_history_to_df(),
+                "portfolio_history": self.portfolio.portfolio_history_to_df(),
+                "cancelled_orders": self.portfolio.cancelled_orders_to_df(),
+                "signals": self.portfolio.signals_to_df(),
+                "blotter": self.portfolio.blotter_to_df(),
+                "portfolio_value": self.portfolio.portfolio_value,
+            },
+            "broker": {
+                "cancelled_orders": self.broker.cancelled_orders_to_df(), # completely redundant as far as I understand
+
+                # Need to implement recording active positions history.
+                # "active_positions_history": self.broker.active_positions_to_df(), # this is somewhat redundant, because the portfolio expresses the active positions, It would be nice to know of the match though
+                "blotter": self.broker.blotter_to_df(), # Also redundant I guess, but also nice to know that is correct
+            }
+        }
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        pickle_path = self.output_path + "/backtest_state_" + timestamp + ".pickle"
+
+        pickle_out = open(pickle_path,"wb")
+        pickle.dump(backtest_state, pickle_out)
+        pickle_out.close()
+
+        return backtest_state
+
+        
 
 
 
