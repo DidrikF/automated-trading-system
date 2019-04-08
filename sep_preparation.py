@@ -77,6 +77,7 @@ def add_weekly_and_12m_stock_returns(sep):
     pd.options.mode.chained_assignment = None  # default='warn'
     # Reindex, forward fill and shift
     date_index = pd.date_range(sep.index.min(), sep.index.max()) # [0], [1]
+    
     sep_filled = sep.reindex(date_index)
     sep_filled["adj_close"] = sep_filled["adj_close"].fillna(method="ffill")
     sep_filled_1w_behind = sep_filled.shift(periods=7)

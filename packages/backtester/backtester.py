@@ -237,7 +237,7 @@ class Backtester():
     def calculate_statistics(self):
         self.stats["total_commission"] = None
         self.stats["total_slippage"] = None
-        self.stats["sharpe_ratio"] = None
+        self.stats["sharpe_ratio"] = None # https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551
         
 
         # self.perf.at[self.market_data.cur_date, "max_trades_per_month"] = None

@@ -53,7 +53,7 @@ class EquityCommissionModel(CommissionModel):
         pass
     def calculate(self, order):
         return 10.0
-
+        # https://www.interactivebrokers.co.uk/en/index.php?f=39753&p=stocks2
 
 
 class EquitySlippageModel(SlippageModel):
@@ -64,6 +64,7 @@ class EquitySlippageModel(SlippageModel):
         pass
     def calculate(self, order):
         return 1.0
+        # https://arxiv.org/pdf/1103.2214.pdf
 
 
 
@@ -74,6 +75,9 @@ class Transaction():
     """
     The transaction being processed. A single order may generate multiple transactions if there isn’t enough 
     volume in a given bar to fill the full amount requested in the order.
+    
+    An assumption I make is that the whole order is filled or not at all. Multiple transactions will not occure
+    and this class therefore becomes redundant and unnecessary.
     """
     pass
 

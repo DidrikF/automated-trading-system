@@ -3,3 +3,6 @@ logs/
 __pycache__/
 packages/multiprocessing/__pycache__/
 *.pyc
+packages/backtester/test_bundles/
+packages/backtester/backtests/
+packages/backtester/logs/

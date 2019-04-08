@@ -319,7 +319,7 @@ class Portfolio():
         # 10 * 10 = 100 (-)
         # 10 * -10 = (+)
         # Conclusion: Sign must be inverted when multiplying slippage and amount
-        dollar_slippage = (fill.slippage + fill.amount) * -1
+        dollar_slippage = (fill.slippage * fill.amount) * -1
         return dollar_slippage
 
     def capture_portfolio_state(self):
