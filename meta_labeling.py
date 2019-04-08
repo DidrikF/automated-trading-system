@@ -1,3 +1,9 @@
+"""
+Meta labeling requires the primary model to have produced predictions on side first. These predictions
+are use when running triple barrier search with asymmetric barrieres for labeling the dataset for
+training of the secondary model (informing the sizing decision).
+"""
+
 import pandas as pd    
 
 

@@ -5,7 +5,7 @@ This scripts applies the Triple Barrier Method to label samples.
 
 
 import pandas as pd
-
+from packages.multiprocessing.engine import pandas_mp_engine
 
 
 
@@ -85,3 +85,22 @@ def getEvents(close, tEvents, ptSl, trgt, minRet, numThreads, t1=False):
 
     # 1) get target
     trgt = trgt.loc[tEvents]
+    trgt = trgt[trgt>minRet] # minRet
+    
+    # 2) Get t1 (max holding period)
+
+    if t1 is False:
+        t1 = pd.Series(pd.NaT, index=tEvents)
+        
+    # 3) form events objects, apply stop loss on t1
+
+    side_ = pd.Series(1.0, index=trgt.index)
+    events = pd.concat({'t1': t1, 'trgt': trgt, 'side': side_}, axis=1).dropna(subset=["trgt"])
+
+    df0 = pandas_mp_engine(func=apply_ptsl_on_t1, pdObj=('molecule', events.index), numThreads=numThreads, \
+        close=close, events=events, ptSl=[ptSl, ptSl])
+
+    events["t1"] = df0.dropna(how='all').min(axis=1) # pd.min ignores nan
+    events = events.drop("side", axis=1)
+
+    return events

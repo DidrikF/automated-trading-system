@@ -456,19 +456,25 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
             pickle.dump(molecules_to_cache, pickle_out)
             pickle_out.close()
 
-        # Prepare Primary Molecules
-        time0 = time.time()
+
+        # Prepare Primary Molecules for next iteration
         if index < last_index:
             next_task = tasks[index+1]
             if next_task["split_strategy"] != task["split_strategy"]:
                 atoms = combine_molecules(primary_molecules)
                 primary_molecules = split_df_into_molecules(atoms, next_task["split_strategy"], num_processes*molecules_per_process) 
 
-                # If the next task has any other data than the primary molecules it needs, we need to split those as well according to the required strategy.
-                if next_task["data"] is not None: 
-                    for molecules_dict_name in next_task["data"].values():
-                        atoms = combine_molecules(molecules_dict[molecules_dict_name])
-                        molecules_dict[molecules_dict_name] = split_df_into_molecules(atoms, next_task["split_strategy"], num_processes*molecules_per_process)
+        
+        # Prepare data molecule for the next iteration
+        if index < last_index:
+            next_task = tasks[index+1]
+            # If the next task has any other data than the primary molecules it needs, we need to split those as well according to the required strategy.
+            # Now things will split even though it is not strictly needed. I Should have a key on the molecules_dicts what split strategy is the current one.
+            if next_task["data"] is not None: 
+                for molecules_dict_name in next_task["data"].values():
+                    print("Splitting data molecules just in case the require split strategy is different from the current one.")
+                    atoms = combine_molecules(molecules_dict[molecules_dict_name])
+                    molecules_dict[molecules_dict_name] = split_df_into_molecules(atoms, next_task["split_strategy"], num_processes*molecules_per_process)
                     
         # Add molecules to molecules_dict for later use by another task
         # This addresses the constraint that all needed molecules must be split correctly before the start of each iteration of this loop.
@@ -477,7 +483,7 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
             
             # We just split primary_molecules for the next task, 
             # if this is not the format we want to cache the molecules, they must be split in the correct way.
-            if task["split_strategy_for_molecule_dict"] != next_task["split_strategy"]: 
+            if task["split_strategy_for_molecule_dict"] != next_task["split_strategy"]:
                 atoms = combine_molecules(primary_molecules)
                 molecules_to_add_to_molecules_dict = split_df_into_molecules(atoms, task["split_strategy_for_molecule_dict"], num_processes*molecules_per_process)
 
