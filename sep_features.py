@@ -81,7 +81,7 @@ def add_sep_features(sep_sampled, sep, sf1_art):
 
     first_date = None
 
-    sf1_art_empty = True if (len(sf1_art == 0)) else False
+    sf1_art_empty = True if (len(sf1_art) == 0) else False
 
     """ CALCULATE FEATURES ONLY FOR SAMPLES """
     for date, row in sep_sampled.iterrows():

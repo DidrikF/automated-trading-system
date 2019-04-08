@@ -1,6 +1,7 @@
 """
 This scripts applies the Triple Barrier Method to label samples.
 
+Code is from Advances in Financial Machine Learning by Marco Lopez de Prado - Chapter 3
 """
 
 
@@ -102,5 +103,105 @@ def getEvents(close, tEvents, ptSl, trgt, minRet, numThreads, t1=False):
 
     events["t1"] = df0.dropna(how='all').min(axis=1) # pd.min ignores nan
     events = events.drop("side", axis=1)
+
+    return events
+
+
+# Adding vertical barriers:
+# Don't know where it is best to add this code
+
+t1 = close.index. searchsorted(tEvents + pd.Timedelta(days=numDays))
+t1 = t1[t1<close.shape[0]]
+t1 = pd.Series(close.index[t1], index=tEvents[:t1.shape[0]]) # NaNs at end
+
+
+def getBins(events, close):
+    # 1) Prices aligned with events
+    events_ = events.dropna(subset=["t1"])
+    px = events_.index.union(events_["t1"].values).drop_duplicates()
+    px = close.reindexed(px, method="bfill")
+
+    # 2) create out object
+    out = pd.DataFrame(index=events_.index)
+    out["ret"] = px.loc[events_["t1"].values].values / px.loc[events_index] - 1
+    out["bin"] = np.sign(out["ret"])
+
+    return out
+
+
+
+
+
+
+# Metalabaling functions:
+
+def get_events_metalabaling(close, tEvents, ptSl, trgt, minRet, numThreads, t1=False, side=None):
+    # 1) get target
+    trgt = trgt.loc[tEvents]
+    trgt = trgt[trgt>minRet] # minRet
+
+    # 2) Get t1 (max holding period)
+    if t1 is False:
+        t1 = pd.Series(pd.NaT, index=tEvents)
+
+    # 3) form events object, apply stop loss on t1
+    if side is None: 
+        side_, ptSl = pd.Series(1.0, index=trgt.index), [ ptSl[0], ptSl[0] ]
+    else:
+        side_, ptSl_ = side.loc[trgt.index], ptSl[:2]
+    
+    events = pd.concat({"t1": t1: "trgt": trgt, "side": side_}, axis=1).dropna(subset=["trgt"])
+    df0 = pandas_mp_engine(callback=apply_ptsl_on_t1, pdObj=("molecule", events.index), numThreads=numThreads, \
+        close=inst["close"], events=events, ptSl=ptSl_)
+
+    events["t1"] = df0.dropna(how="all").min(axis=1) # pd.min ignores nan
+    if side is None: 
+        events = events.drop("side", axis=1)
+
+    return events
+
+
+def getBins(events, close):
+    """
+    Compute event's outcome (include side information, if provided).
+    events in a DataFrame where: 
+    events.index is event's start time
+    events["t1"] is event's endtime
+    events["trgt"] is event's target
+    events["side"] (optional) implies the algo's position side
+
+    Case 1: ("side" not in events): bin (-1, 1) <- label by price action
+    Case 2: ("side" in events): bin(0, 1) <- label by pnl (meta-labeling)
+    """
+
+    # 1) prices aligned with events
+    events_ = events.dropna(subset=["t1"])
+    px = events_.index.union(events_["t1"].values).drop_duplicates()
+    px = close.reindex(px, method="bfill")
+
+    # 2) create out object
+    out = pd.DataFrame(index=events_.index)
+    out["ret"] = px.loc[events_["t1"].values].values / px.loc[events_.index] -1
+
+    if "side" in events_:
+        out["ret"] *= events_["side"] # meta-labeling
+        out["bin"] = np.sign(out["ret"])
+        
+    if "side" in events_:
+        out.loc[out["ret"] <= 0, "bin"] = 0 # Meta-labeling
+
+    return out
+
+
+
+
+def drop_labels(events, min_pct=0.05):
+    # Apply weights, drop labels with insufficient examples
+    while True:
+        df0 = events["bin"].value_counts(normalize=True)
+        if df0.min() > min_pct or df0.shape[0] < 3:
+            break
+        print("droppe label", df0.argmin(), df0.min())
+        events = events[events["bin"] != df0.argmin()]
 
     return events

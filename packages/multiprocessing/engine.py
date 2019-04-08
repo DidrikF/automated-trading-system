@@ -492,6 +492,9 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
 
     print("TASKS COMPLETED SUCCESSFULLY")
 
+    result = combine_molecules(primary_molecules)
+
+    """
     out_molecules = list(primary_molecules.values())
 
     if isinstance(out_molecules[0], pd.DataFrame):
@@ -503,7 +506,9 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
     
     for i in out_molecules:
         result = result.append(i)
-    
+    """
+
+
     if sort_by is not None:
         result = result.sort_values(by=sort_by)
 
