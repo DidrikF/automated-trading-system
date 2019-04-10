@@ -23,7 +23,7 @@ from sep_industry_features import add_indmom
 from sep_features import add_sep_features
 from sf1_features import add_sf1_features
 from sf1_industry_features import add_industry_sf1_features
-from feature_selection import selected_industry_sf1_features, selected_sep_features, selected_sf1_features
+# from feature_selection import selected_industry_sf1_features, selected_sep_features, selected_sf1_features
 from labeling import get_first_barrier_touches_complete
 
 
