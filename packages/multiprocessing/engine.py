@@ -337,6 +337,24 @@ def combine_molecules(molecules):
     result = pd.concat(molecules, sort=True)
     return result
 
+"""
+I want to update the engine so that less steps are involved and the complexity are reduced.
+I need to find a better way of saving state and resuming.
+I think if I add a few more keys for the molecule_dict and maybe the tasks list I can make the whole process
+easier to understand and code.
+"""
+"""
+def pandas_chaining_mp_engine_2(tasks, primary_atoms, atoms_configs, num_processes, cache_dir, sava_dir, sort_by=None, molecules_per_process=5, resume_on_task=-1):
+    if resume_on_task > -1:
+        task_to_resume_on = tasks[resume_on_task]
+        for argument_key, molecules_dict_key in task_to_resume_on["data"].items():
+
+
+    molecules_dict = {} # this is the state of the engine
+
+    for task in tasks:
+
+"""
 
 def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strategy, num_processes, cache_dir, \
     save_dir, sort_by=None, molecules_per_process=5, resume=False):
@@ -432,6 +450,8 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
 
         # The molecules dict is not needed for all tasks, if none is listed in task["data"] it is simply never touched.
         jobs = get_jobs_fast(task, primary_molecules, molecules_dict) # dont cache jobs
+
+        print(primary_molecules["AAPL"].columns)
 
         primary_molecules = process_jobs_fast(jobs, num_processes=num_processes, sort_by=sort_by) # return as list of Data Frames, I need a dict
         
