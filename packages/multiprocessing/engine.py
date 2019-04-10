@@ -47,6 +47,7 @@ def get_jobs(atoms, data, callback, molecule_key, split_strategy, num_processes,
                 
             jobs.append(job)
 
+
     elif split_strategy == 'date':
         lowest_date = atoms.index.min()
         highest_date = atoms.index.max()
@@ -58,7 +59,7 @@ def get_jobs(atoms, data, callback, molecule_key, split_strategy, num_processes,
             date0 = date_index[parts[i-1]]
             date1 = date_index[parts[i] - 1]
             job = {
-                molecule_key: atoms.loc[(atoms.index >= date0) & (atoms.index < date1)],
+                molecule_key: atoms.loc[(atoms.index >= date0) & (atoms.index <= date1)],
                 'callback': callback
             }
             job.update(kwargs)

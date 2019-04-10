@@ -14,6 +14,7 @@ import pandas as pd
 
 
 from packages.multiprocessing.engine import pandas_chaining_mp_engine
+from packages.helpers.helpers import get_calendardate_x_quarters_later
 
 
 from sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
@@ -23,7 +24,8 @@ from sep_features import add_sep_features
 from sf1_features import add_sf1_features
 from sf1_industry_features import add_industry_sf1_features
 from feature_selection import selected_industry_sf1_features, selected_sep_features, selected_sf1_features
-from packages.helpers.helpers import get_calendardate_x_quarters_later
+from labeling import get_first_barrier_touches_complete
+
 
 # update imports and functions to new engine
 
@@ -210,7 +212,7 @@ if __name__ == "__main__":
                 "disk_name": "sep_sampled",
             },
             { # Sorted values
-                "name": "Add sep features, final step of SEP pipeline",
+                "name": "Add sep features",
                 "callback": add_sep_features, # adj_close keyerror
                 "molecule_key": "sep_sampled",
                 "data": {
@@ -220,8 +222,24 @@ if __name__ == "__main__":
                 "kwargs": {},
                 "split_strategy": "ticker",
                 "save_result_to_disk": False,
-                "cache_result": False,
+                "cache_result": True,
                 "disk_name": "sep_featured",
+            },
+            { # Sorted values
+                "name": "Label the samples according to the triple barrier method, final step of SEP pipeline",
+                "callback": get_first_barrier_touches_complete, # adj_close keyerror
+                "molecule_key": "sep_featured",
+                "data": {
+                    "sep": "sep", # I need to get the updated sep df
+                },
+                "kwargs": {
+                    "ptSl": [0.8, -0.8],
+                    "min_ret": None,
+                },
+                "split_strategy": "ticker",
+                "save_result_to_disk": False,
+                "cache_result": False,
+                "disk_name": "sep_labeled",
             }
         ]
 
@@ -233,7 +251,7 @@ if __name__ == "__main__":
 
         
         if write_to_disk == True:
-            sep_featured.to_csv(save_path + "/sep_featured.csv")
+            sep_featured.to_csv(save_path + "/sep_featured_labeled.csv")
 
     """
     I think I need to simulate the pipeline in a testing script using the old engine, one function at a time, like I have tested it.

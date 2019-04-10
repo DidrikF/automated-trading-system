@@ -44,7 +44,6 @@ def setup():
     yield
     # Will be executed after the last test in the module
 
-@pytest.mark.skip()
 def test_sep_featured():
     num_processes = 1
     save_path = "./testing_datasets"
@@ -85,6 +84,8 @@ def test_sep_featured():
             num_processes=num_processes, molecules_per_process=1)
 
     sep_prepared_plus_indmom.sort_values(by=["ticker", "date"], inplace=True)
+
+    sep_prepared_plus_indmom.to_csv("./datasets/testing/sep_prepared.csv")
     
     sep_sampled = pandas_mp_engine(callback=rebase_at_each_filing_sampling, atoms=sep_prepared_plus_indmom, data=None, \
         molecule_key='observations', split_strategy='ticker', num_processes=num_processes, molecules_per_process=1, \
@@ -347,7 +348,7 @@ def testing_sep_featured_fast():
     assert len(errors) == 0
 
 
-
+@pytest.mark.skip()
 def testing_sf1_featured():
     save_path = "./testing_datasets"
 

@@ -1,3 +1,7 @@
+import pandas as pd
+import sys
+
+# The order sets the order of columns in the final dataset
 selected_sf1_features = [
     "roaq", 
     "chtx",
@@ -133,21 +137,49 @@ Notes:
 
 if __name__ == "__main__":
 
+    # 1. Combine sep_featured and sf1_featured
+    sep_featured = pd.read_csv("./datasets/ml_ready_live/sep_featured_done.csv", parse_dates=["date", "datekey"])
+    
+    sf1_featured = pd.read_csv("./datasets/ml_ready_live/sf1_featured.csv", parse_dates=["calendardate", "datekey"])
+
+    sf1_featured = sf1_featured.drop_duplicates(subset=["ticker", "datekey"], keep="last")
+
+    # sf1_featured_duplicates = sf1_featured[sf1_featured.duplicated(subset=["ticker", "datekey"])]
+    # print(sf1_featured_duplicates)
+
+    print(sep_featured.columns)
+    print(sf1_featured.columns)
+
+    print("sep_featured shape: ", sep_featured.shape)
+    print("sf1_featured shape: ", sf1_featured.shape)
+
+    dataset = sep_featured.merge(sf1_featured, on=["datekey", "ticker"], suffixes=("", "_sf1")) # Only the rows with matching datekey and ticker will be kept
+
+    datekey_ticker = sep_featured[["ticker", "datekey"]]
+
     # 2. Select features from SEP, SF1 etc.
     selected_features = ["ticker", "date", "calendardate", "datekey"] + selected_sf1_features + selected_industry_sf1_features + selected_sep_features
+    
     dataset = dataset[selected_features]
+    
+    print("Length of selected features: ", len(selected_features))
+    print("Length of columns in dataset: ", len(dataset.columns))
+    print("dataset shape: ", dataset.shape)
+    print(dataset.head())
 
-
-    dataset.to_csv(save_path + "/dataset.csv", index=False)
-
-
-    # 3. Remove or amend row with missing/NAN values (the strategy must be consistent with that for SEP data)
-
-    # MORE EFFORT SHOULD GO INTO THIS STEP, BUT I KEEP IT SIMPLE FOR NOW, DROPPING ROWS WITH ONE OR MORE NAN VALUES
 
     # Drop first two (one of calendardate) years
     dataset.sort_values(by=["ticker", "calendardate"])
 
+    dataset.to_csv("./datasets/ml_ready_live/dataset_with_nans.csv", index=False)
+
+
+    # 3. Remove or amend row with missing/NAN values (the strategy must be consistent with that for SEP data)
+
+    """
+    Here is the start of some code to do some more complicated things to amend presence of NaNs.
+
+    # MORE EFFORT SHOULD GO INTO THIS STEP, BUT I KEEP IT SIMPLE FOR NOW, DROPPING ROWS WITH ONE OR MORE NAN VALUES
     result = pd.DataFrame()
 
     for ticker in list(dataset.ticker.unique()):
@@ -162,27 +194,27 @@ if __name__ == "__main__":
 
     dataset = result
 
-
     dataset.to_csv(save_path + "/dataset_dropped_first_year.csv", index=False)
+    """
 
 
-    dataset_no_nan = dataset.dropna(axis=0)
+    dataset_no_nans = dataset.dropna(axis=0) # takes a long time
 
     # 4. Write the almost ML ready dataset to disk
+    dataset_no_nans.to_csv("./datasets/ml_ready_live/dataset_without_nans.csv", index=False)
 
-    dataset_no_nan.to_csv(save_path + "/dataset_no_nan.csv")
 
-    # 5. Print statistics:
-    time_elapsed = datetime.datetime.now() - start_time
-
-    print("Dataset length: ", len(dataset))
-
+    """
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         print(dataset.isna().sum())
 
-    print("Dataset no nan length: ", len(dataset_no_nan))
-    print("Dropped: ", len(dataset) -  len(dataset_no_nan))
-    print("Time elapsed: ", time_elapsed)
+    """
+
+    print("Dataset length: ", len(dataset))
+    print("Dataset no nan length: ", len(dataset_no_nans))
+    print("Dropped: ", len(dataset) -  len(dataset_no_nans))
+
+    print("COMPLETED!")
 
 
 

@@ -36,6 +36,8 @@ def add_sep_features(sep_sampled, sep, sf1_art):
     date_index = pd.date_range(sep.index.min(), sep.index.max())
     sep_filled = sep.reindex(date_index)
     sep_filled["adj_close"] = sep_filled["adj_close"].fillna(method="ffill")
+    
+    sep_filled["close"] = sep_filled["close"].fillna(method="ffill")
 
     # Maybe i can to a combination or reindex, resample and shift to calculate features
 
@@ -70,6 +72,15 @@ def add_sep_features(sep_sampled, sep, sf1_art):
     sep_filled["chmom"] = sep_filled["mom6m"] - sep_filled["mom12m_to_7m"]
 
 
+    # EWMSTD for use in labeling
+    sampled_return = sep_filled.resample("M").apply(lambda arr: arr[-1])[["mom1m"]]
+    ewmstd = {"ewmstd": sampled_return["mom1m"].ewm(span=24).std()}
+    ewmstd = pd.DataFrame(data=ewmstd, index=sampled_return.index)
+    
+    indexes_1m_ahead = sep.index.searchsorted(sep.index + pd.Timedelta(days=30))
+    indexes_1m_ahead = indexes_1m_ahead[indexes_1m_ahead>0] - 1
+
+    dates_1m_ahead = pd.Series(sep.index[indexes_1m_ahead], index=sep.index)
 
     def custom_resample(array_like):
         return array_like[0]
@@ -111,6 +122,19 @@ def add_sep_features(sep_sampled, sep, sf1_art):
         sep_past_year = sep.loc[(sep.index <= date) & (sep.index >= date_1y_ago)]
         sep_past_2months = sep.loc[(sep.index <= date) & (sep.index >= date_2m_ago)]
         sep_past_1month = sep.loc[(sep.index <= date) & (sep.index >= date_1m_ago)]
+
+        
+        # Add ewmstd to sep_sampled (get most recent value from ewmstd)
+        ewmstd_selected = ewmstd.loc[ewmstd.index < date]
+        if not ewmstd_selected.empty:
+            # print(ewmstd_selected.iloc[-1]["ewmstd"])
+            sep_sampled.at[date, "ewmstd_2y_monthly"] = ewmstd_selected.iloc[-1]["ewmstd"]
+            # break
+            # sep_sampled.at[date, "ewmstd_2y_monthly"] = ewmstd_selected.iloc[-1]
+
+        # Add 1m timeout to sep_sampled
+        sep_sampled.at[date, "timeout"] = dates_1m_ahead.loc[date]
+
 
         # Size: (mve or mvel1): ln(SEP[close]m-1 * SF1[sharefactor]t-1 * SF1[sharesbas]t-1)
         if marketcap != 0:

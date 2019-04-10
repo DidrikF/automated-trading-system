@@ -61,6 +61,7 @@ def test_dividend_adjusting_prices_backwards():
     assert total_return_from_adjusted_close == pytest.approx(total_return)
 
 
+@pytest.mark.skip()
 def test_dividend_adjusting_prices_forwards():
     """
     Note that when dividend adjusting close prices as described here:
@@ -94,7 +95,6 @@ def test_dividend_adjusting_prices_forwards():
 
     assert total_return_from_adjusted_close == pytest.approx(total_return)
 
-
 def test_add_weekly_and_12m_stock_returns():
     global sep
 
@@ -105,6 +105,7 @@ def test_add_weekly_and_12m_stock_returns():
 
     sep.sort_values(by=["ticker", "date"], ascending=True, inplace=True)
     sep_aapl = sep.loc[sep["ticker"] == "AAPL"]
+
 
     # assert ((sep_aapl.loc["1998-01-07"]["close"] / sep_aapl.loc["1997-12-31"]["close"]) - 1) == pytest.approx(sep_aapl.loc["1998-01-07"]["mom1w"]) # sep_extended does not contain the dates
     assert ((sep_aapl.loc["1999-03-10"]["adj_close"] / sep_aapl.loc["1999-03-3"]["adj_close"]) - 1) == \
@@ -123,6 +124,7 @@ def test_add_weekly_and_12m_stock_returns():
 
     assert sep_aapl.loc["2001-01-30"]["mom12m_actual"] == pytest.approx(return_12m)
 
+
 def test_add_equally_weighted_weekly_market_returns():
     global sep
 
@@ -134,6 +136,8 @@ def test_add_equally_weighted_weekly_market_returns():
 
     # sep = sep.sort_values(by=["ticker", "date"], ascending=True)
     sep_aapl = sep.loc[sep["ticker"] == "AAPL"]
+
+    print(sep_aapl["2003-04"])
 
     # assert sep.loc[sep.index == "1998-01-07", "mom1w"].mean() == pytest.approx(sep_aapl.loc["1998-01-07"]["ewmm"])
     assert sep.loc[sep.index == "2000-01-07", "mom1w"].mean() == pytest.approx(sep_aapl.loc["2000-01-07"]["mom1w_ewa_market"])
