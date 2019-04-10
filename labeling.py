@@ -296,6 +296,8 @@ def get_primary_labels(events, sep):
 # How will this change when side is not allways long?
 def get_first_barrier_touches_complete(sep_featured: pd.DataFrame, sep: pd.DataFrame, ptSl: tuple, min_ret):
     
+    print(sep_featured.head())
+
     ewmstd = sep_featured[["ewmstd_2y_monthly"]]
 
     # I only consider the case there there is a timeout
