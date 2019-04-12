@@ -88,7 +88,7 @@ class Broker():
             Logger.logr.warning("When processing an order; market data was not available for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
             raise OrderProcessingError("Cannot complete order, with error: {}".format(e))
     
-    
+
         if order.direction == 1:
             slippage = self.slippage_model.calculate(order)
             fill_price = stock_price + slippage
@@ -235,7 +235,7 @@ class Broker():
                         continue
 
                 # if noe of the above has triggered we check if the timeout has been reached, and give the PositionLiquidation a price equal to the closing price
-                if self.market_data.cur_date >= order.timeout:
+                if self.market_data.cur_date >= order.time_out:
                     # Calculate and charge commission
                     commission = self.commission_model.calculate(order=order, fill_price=ticker_data["close"]) # Do I need to change the signature?
                     portfolio.charge_commission(commission)

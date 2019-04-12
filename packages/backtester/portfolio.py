@@ -828,8 +828,12 @@ class RandomLongShortStrategy():
                 continue
             
                 
-            take_profit = ticker_data["open"] + (signal.ewmstd * signal.ptSl[0])
-            stop_loss = ticker_data["open"] - (signal.ewmstd * signal.ptSl[1]) # may not use the ptSl settings behind the signal
+            take_profit = ticker_data["open"]* (1 + (signal.ewmstd * signal.ptSl[0]))
+            stop_loss = ticker_data["open"] * (1 + (signal.ewmstd * signal.ptSl[1])) # may not use the ptSl settings behind the signal
+            print("price: ", ticker_data["open"])
+            print("take_profit: ", take_profit)
+            print("stop_loss: ", stop_loss)
+            
             time_out = cur_date + relativedelta(months=1)
             # order_id, ticker, amount, date, signal, stop_loss=None, take_profit=None, time_out=None
             orders.append(Order(order_id=self.get_order_id(), ticker=signal.ticker, amount=amount, date=portfolio.market_data.cur_date, signal=signal, \

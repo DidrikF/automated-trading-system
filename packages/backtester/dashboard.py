@@ -107,15 +107,15 @@ if __name__ == "__main__":
             name="Balance",
         ),go.Scatter(
             x=backtest["portfolio"]["portfolio_value"].index,
-            y=backtest["portfolio"]["portfolio_value"]["market_value"],
-            name="Market Value Shares"
-        ),go.Scatter(
-            x=backtest["portfolio"]["portfolio_value"].index,
             y=backtest["portfolio"]["portfolio_value"]["margin_account"],
-            name="Market Value Shares"
+            name="Margin Account"
         ),go.Scatter(
             x=backtest["portfolio"]["portfolio_value"].index,
-            y=backtest["portfolio"]["portfolio_value"]["market_value"]+backtest["portfolio"]["portfolio_value"]["balance"],
+            y=backtest["portfolio"]["portfolio_value"]["market_value"],
+            name="Market Value"
+        ),go.Scatter(
+            x=backtest["portfolio"]["portfolio_value"].index,
+            y=backtest["portfolio"]["portfolio_value"]["market_value"]+backtest["portfolio"]["portfolio_value"]["balance"]+backtest["portfolio"]["portfolio_value"]["margin_account"],
             name="Total Portfolio Value"
         )],
         layout=go.Layout(
@@ -212,7 +212,7 @@ if __name__ == "__main__":
             dash_table.DataTable(
                 id='signals-table',
                 columns=[{"name": i, "id": i} for i in backtest["portfolio"]["signals"].columns],
-                data=backtest["portfolio"]["signals"].to_dict("rows"),
+                data=backtest["portfolio"]["signals"].to_dict("rows"), # Why no signal id?
             ),
 
         ]
@@ -256,12 +256,38 @@ if __name__ == "__main__":
         except:
             portfolio = pd.DataFrame(columns=["date", "ticker", "amount", "close", "value"])
 
-        trace = go.Bar(
+        """
+        close
+        short_position
+        long_position
+        net_position
+        short_value
+        long_value
+        net_value
+        """
+
+        short_trace = go.Bar(
             x=portfolio["ticker"],
-            y=portfolio["amount"],
+            y=portfolio["short_position"],
+            name="Short Position",
+            marker=go.bar.Marker(color="rgb(237, 79, 35)")
         )
 
-        data = [trace]
+        long_trace = go.Bar(
+            x=portfolio["ticker"],
+            y=portfolio["long_position"],
+            name="Long Position",
+            marker=go.bar.Marker(color="rgb(90, 198, 17)")
+        )
+
+        net_trace = go.Bar(
+            x=portfolio["ticker"],
+            y=portfolio["net_position"],
+            name="Net Position",
+            marker=go.bar.Marker(color="rgb(46, 108, 232)")
+        )
+
+        data = [short_trace, long_trace, net_trace]
         
         layout=go.Layout(
             title='Portfolio Share Allocation ' + str(date),
@@ -283,12 +309,29 @@ if __name__ == "__main__":
         except:
             portfolio = pd.DataFrame(columns=["date", "ticker", "amount", "close", "value"])
 
-        trace = go.Bar(
+
+        short_trace = go.Bar(
             x=portfolio["ticker"],
-            y=portfolio["value"],
+            y=portfolio["short_value"],
+            name="Short Value",
+            marker=go.bar.Marker(color="rgb(237, 79, 35)")
         )
 
-        data = [trace]
+        long_trace = go.Bar(
+            x=portfolio["ticker"],
+            y=portfolio["long_value"],
+            name="Long Value",
+            marker=go.bar.Marker(color="rgb(90, 198, 17)")
+        )
+
+        net_trace = go.Bar(
+            x=portfolio["ticker"],
+            y=portfolio["net_value"],
+            name="Net Value",
+            marker=go.bar.Marker(color="rgb(46, 108, 232)")
+        )
+
+        data = [short_trace, long_trace, net_trace]
         
         layout=go.Layout(
             title='Portfolio Value Allocation ' + str(date),
