@@ -279,7 +279,8 @@ class Portfolio():
     def charge_commission(self, commission):
         """
         Charge the portfolio the commission.
-        To avoid senarios where the portfolios balance is too low to even exit its current positions.
+        To avoid senarios where the portfolios balance is too low to even exit its current positions, this will not
+        cause errors
         """
         self.total_commission += commission
 
@@ -488,9 +489,9 @@ class Portfolio():
 
         positions["Cash"] = {
             "close": math.nan,
-            "short_amount": math.nan,
-            "long_amount": math.nan,
-            "net_amount": math.nan,
+            "short_position": math.nan,
+            "long_position": math.nan,
+            "net_position": math.nan,
             "short_value": math.nan,
             "long_value": self.balance,
             "net_value": self.balance,
@@ -498,9 +499,9 @@ class Portfolio():
 
         positions["Margin Account"] = {
             "close": math.nan,
-            "short_amount": math.nan,
-            "long_amount": math.nan,
-            "net_amount": math.nan,
+            "short_position": math.nan,
+            "long_position": math.nan,
+            "net_position": math.nan,
             "short_value": math.nan,
             "long_value": self.margin_account,
             "net_value": self.margin_account,
@@ -576,15 +577,15 @@ class Portfolio():
                 port_df.at[index, "date"] = date
                 port_df.at[index, "ticker"] = ticker
                 port_df.at[index, "close"] = position["close"]
-                port_df.at[index, "short_amount"] = position["short_amount"]
-                port_df.at[index, "long_amount"] = position["long_amount"]
-                port_df.at[index, "net_amount"] = position["net_amount"]
+                port_df.at[index, "short_position"] = position["short_position"]
+                port_df.at[index, "long_position"] = position["long_position"]
+                port_df.at[index, "net_position"] = position["net_position"]
                 port_df.at[index, "short_value"] = position["short_value"]
                 port_df.at[index, "long_value"] = position["long_value"]
                 port_df.at[index, "net_value"] = position["net_value"]
 
 
-            df = df.append(port_df)
+            df = df.append(port_df, sort=True)
 
         df = df.set_index(["date", "ticker"])
         df = df.sort_index()
@@ -634,13 +635,13 @@ class Portfolio():
         return df
 
     def signals_to_df(self):
-        df = pd.DataFrame(columns=["signal_id", "ticker", "direction", "certainty", "ewastd", "upper_barrier", "lower_barrier", "vertical_barrier", "feature_data_index", "feature_data_date"])
+        df = pd.DataFrame(columns=["signal_id", "ticker", "direction", "certainty", "ewmstd", "upper_barrier", "lower_barrier", "vertical_barrier", "feature_data_index", "feature_data_date"])
         for index, signal in enumerate(self.signals):
             df.at[index, "signal_id"] = signal.signal_id
             df.at[index, "ticker"] = signal.ticker
             df.at[index, "direction"] = signal.direction
             df.at[index, "certainty"] = signal.certainty
-            df.at[index, "ewastd"] = signal.ewastd
+            df.at[index, "ewmstd"] = signal.ewmstd
             df.at[index, "ptSl_0"] = signal.ptSl[0]
             df.at[index, "ptSl_1"] = signal.ptSl[1]          
             # df.at[index, "upper_barrier"] = signal.barriers[0] # I guess I dont know this before the order is generated
@@ -821,7 +822,7 @@ class RandomLongShortStrategy():
 
             max_dollar_size = self.max_position_size_percentage * portfolio.calculate_value()
             max_nr_stocks_of_ticker = math.floor(max_dollar_size / ticker_data["open"])
-            amount = sign(signal.direction) * signal.certainty * max_nr_stocks_of_ticker
+            amount = int(sign(signal.direction) * signal.certainty * max_nr_stocks_of_ticker)
             
             if amount == 0:
                 continue

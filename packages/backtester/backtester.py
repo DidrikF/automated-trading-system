@@ -310,7 +310,7 @@ class Backtester():
             },
             "broker": {
                 "cancelled_orders": self.broker.cancelled_orders_to_df(), # completely redundant as far as I understand
-                "active_positions_history": self.broker.active_positions_to_df(), # this is the fills that are active at any one time, the fills combines makes up the portfolio, this is somewhat different from portfolio.portfolio
+                "active_positions_history": self.broker.active_positions_history_to_df(), # this is the fills that are active at any one time, the fills combines makes up the portfolio, this is somewhat different from portfolio.portfolio
                 "blotter": self.broker.blotter_to_df(), # Also redundant I guess, but also nice to know that is correct
             }
         }

@@ -99,6 +99,7 @@ if __name__ == "__main__":
         )
     )
 
+
     portfolio_value_figure = go.Figure(
         data=[go.Scatter(
             x=backtest["portfolio"]["portfolio_value"].index,
@@ -107,6 +108,10 @@ if __name__ == "__main__":
         ),go.Scatter(
             x=backtest["portfolio"]["portfolio_value"].index,
             y=backtest["portfolio"]["portfolio_value"]["market_value"],
+            name="Market Value Shares"
+        ),go.Scatter(
+            x=backtest["portfolio"]["portfolio_value"].index,
+            y=backtest["portfolio"]["portfolio_value"]["margin_account"],
             name="Market Value Shares"
         ),go.Scatter(
             x=backtest["portfolio"]["portfolio_value"].index,

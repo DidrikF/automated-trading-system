@@ -87,10 +87,8 @@ class Broker():
         except MarketDataNotAvailableError as e:
             Logger.logr.warning("When processing an order; market data was not available for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
             raise OrderProcessingError("Cannot complete order, with error: {}".format(e))
-        
-        if order.direction == 0:
-            print(order)
-
+    
+    
         if order.direction == 1:
             slippage = self.slippage_model.calculate(order)
             fill_price = stock_price + slippage
@@ -159,7 +157,7 @@ class Broker():
     def manage_active_positions(self, portfolio: Portfolio):
         """
         Active positions are represented by fill objects (contains associated order) where the resulting position have not yet been
-        liquidated. Every day the active positions must be checked to see if a stop-loss, take-profit or timeout would trigger.
+        liquidated. Every day the active positions must be checked to see if a stop-loss, take-profit or timeout would trigger an exit.
         
         Also as the price of the stocks in the portfolio changes the margin account size must be updated so meet the requirements
         for the short positions.

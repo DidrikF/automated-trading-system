@@ -111,8 +111,9 @@ if __name__ == "__main__":
 
     performance = backtester.run()
 
-
+    """
     for portfolio in backtester.portfolio.portfolio_history:
         print(portfolio)
+    """
 
     backtest_state = backtester.save_state_to_disk_and_return()
