@@ -11,5 +11,5 @@ venv/
 datasets/
 !datasets/testing/
 logs/
-automated_trading_system/backtester/test_bundles/
-automated_trading_system/backtester/backtests/
+test_bundles/
+backtests/

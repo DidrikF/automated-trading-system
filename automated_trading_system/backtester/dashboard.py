@@ -10,13 +10,15 @@ import plotly.graph_objs as go
 from dash.dependencies import Input, Output
 
 from automated_trading_system.backtester.data_handler import DailyBarsDataHander, MLFeaturesDataHandler
-
-DATA_SET = "../../datasets/testing/sep.csv"
-SAVE_LOCATION = "./test_bundles"
+from automated_trading_system.config.settings import Settings
 
 if __name__ == "__main__":
+    settings = Settings(env="TEST", root="../../")
 
-    list_of_files = glob.glob('./backtests/*')  # * means all if need specific format then *.csv
+    data_set = settings.get_data_set()
+    save_location = settings.get_save_location()
+
+    list_of_files = glob.glob(save_location + '/*')  # * means all if need specific format then *.csv
     latest_file = max(list_of_files, key=os.path.getctime)
 
     # Load data:
@@ -29,8 +31,8 @@ if __name__ == "__main__":
     end_date = backtest["settings"]["end"]
 
     market_data = DailyBarsDataHander(
-        source_path=DATA_SET,
-        store_path=SAVE_LOCATION,
+        source_path=data_set,
+        store_path=save_location,
         file_name_time_data="time_data",
         file_name_ticker_data="ticker_data",
         start=start_date,
@@ -38,8 +40,8 @@ if __name__ == "__main__":
     )
 
     feature_data = MLFeaturesDataHandler(
-        source_path=DATA_SET,
-        store_path=SAVE_LOCATION,
+        source_path=data_set,
+        store_path=save_location,
         file_name="feature_data",
     )
 
