@@ -2,7 +2,7 @@
 datasets/*
 !datasets/testing/
 logs/
-*/__pycache__/
+__pycache__/
 packages/multiprocessing/__pycache__/
 *.pyc
 packages/backtester/test_bundles/
