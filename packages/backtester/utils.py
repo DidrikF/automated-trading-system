@@ -48,12 +48,32 @@ class EquityCommissionModel(CommissionModel):
     The commission model are responsible for accepting order/transaction pairs and 
     calculating how much commission should be charged to an algorithm’s account 
     on each transaction.
+    
+    Link: https://www.interactivebrokers.co.uk/en/index.php?f=39753&p=stocks2
     """
     def __init__(self):
-        pass
-    def calculate(self, order):
-        return 10.0
-        # https://www.interactivebrokers.co.uk/en/index.php?f=39753&p=stocks2
+        # Commission
+        self.minimum_per_order = 0.35
+        self.per_share = 0.0035 # To make it simple, i wont trade over 300 000 shares in a month anyway, which is required to get lower price on Interactive Brokers
+        self.maximum_in_percent_of_order_value = 0.01
+
+        # Other fees
+        self.us_clearing_fee_per_share = 0.00020
+        
+        self.us_transaction_fees_per_dollar = 0.000175
+        self.nyse_pass_through_fees_per_commission = 0.000175
+        self.finra_pass_through_fees_per_commission = 0.00056
+        self.finra_trading_activity_fee_per_share = 0.000119
+
+    def calculate(self, order, fill_price):
+        commission = min(max(self.minimum_per_order, self.per_share*abs(order.amount)), self.maximum_in_percent_of_order_value*abs(order.amount)*fill_price)
+
+        us_trasaction_fees = self.us_transaction_fees_per_dollar * abs(order.amount) * fill_price
+        nyse_pass_through_fees = self.nyse_pass_through_fees_per_commission * commission
+        finra_pass_through_fees = self.finra_pass_through_fees_per_commission * commission
+        finra_trading_activity_fee = self.finra_trading_activity_fee_per_share * abs(order.amount)
+
+        return commission + us_trasaction_fees + nyse_pass_through_fees + finra_pass_through_fees + finra_trading_activity_fee
 
 
 class EquitySlippageModel(SlippageModel):
@@ -63,8 +83,14 @@ class EquitySlippageModel(SlippageModel):
     def __init__(self):
         pass
     def calculate(self, order):
-        return 1.0
         # https://arxiv.org/pdf/1103.2214.pdf
+        
+        # ewmstd = order.signal.ewmsdt # Can this be used? have some percentage basis point slippage? 
+        
+        # When exiting a short, the slippage should be biased towards positive values
+        # When exiting a long, the slippage should be biased towards negative values
+
+        return 0
 
 
 

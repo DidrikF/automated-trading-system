@@ -18,17 +18,17 @@ import shutil
 import threading
 from queue import Queue
 import time
+from dateutil.relativedelta import *
 
 
 from backtester import Backtester
-from strategy import BuyAppleStrategy
-from portfolio import Portfolio
+# from strategy import BuyAppleStrategy, RandomLongShortStrategy
+from portfolio import Portfolio, RandomLongShortStrategy
 from broker import Broker
 from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
 from utils import EquityCommissionModel, EquitySlippageModel
 from visualization.visualization import plot_data
 from errors import MarketDataNotAvailableError
-
 
 if __name__ == "__main__":
     start_date = pd.to_datetime("2010-01-01")
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     )
 
     def handle_data(bt): # perf, port, md, cur_date
-        portfolio_value = bt.portfolio.get_value()
+        portfolio_value = bt.portfolio.calculate_value()
         bt.perf.at[bt.market_data.cur_date, "portfolio_value"] = portfolio_value
         
         bt.perf.at[bt.market_data.cur_date, "AAPL"] = bt.market_data.current_for_ticker("AAPL")["close"] # Shuold succeed allways
@@ -78,10 +78,18 @@ if __name__ == "__main__":
         )
 
 
-    strategy = BuyAppleStrategy(desc="Buy some apple every day!")
-    backtester.set_portfolio(Portfolio, balance=100000, strategy=strategy)
+    # strategy = BuyAppleStrategy(desc="Buy some apple every day!")
+    strategy = RandomLongShortStrategy(desc="Buy or sell randomly stocks from provided list.", tickers=["AAPL", "MSFT", "GOOGL", "AMZN", "BRK.A", "FB", "JPM", "BAC", "JNJ", "XOM"], amount=2)
+    strategy.set_order_restrictions(
+        max_position_size= 0.10, 
+        max_positions= 30, 
+        min_positions= 5, 
+        max_orders_per_day= 2, 
+        max_orders_per_month= 30, 
+        max_hold_period= relativedelta(months=1),
+    )
 
-    backtester.portfolio.set_max_position_size(10)
+    backtester.set_portfolio(Portfolio, balance=100000, strategy=strategy)
 
     """
     backtester.set_constraints( # and then the backtester configures whatever other objects that need this information?
@@ -91,7 +99,13 @@ if __name__ == "__main__":
 
     slippage_model = EquitySlippageModel()
     commission_model = EquityCommissionModel()
-    backtester.set_broker(Broker, slippage_model=slippage_model, commission_model=commission_model)
+    backtester.set_broker(Broker,
+        slippage_model=slippage_model,
+        commission_model=commission_model,
+        annual_margin_interest_rate=0.06,
+        initial_margin_requirement=0.50,
+        maintenance_margin_requirement=0.30
+    )
     
     # Run this in thread?
 

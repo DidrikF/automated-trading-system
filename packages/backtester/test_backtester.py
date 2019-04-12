@@ -5,7 +5,7 @@ import shutil
 
 
 from backtester import Backtester
-from strategy import BuyAppleStrategy
+# from strategy import BuyAppleStrategy
 from portfolio import Portfolio
 from broker import Broker
 from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
