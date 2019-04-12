@@ -66,7 +66,8 @@ selected_sf1_features = [
     "chpay_lagact",
     "chint_laginvcap",
     "chinvt_lagact",
-    "pchppne", "pchlt",
+    "pchppne", 
+    "pchlt",
     "pchint",
     "chdebtnc_ppne",
     "chdebtc_sale",
@@ -122,23 +123,44 @@ selected_sep_features = [
     "std_dolvol",
     "std_turn",
     "zerotrade",
+
     # Labels
     "return_1m",
     "return_2m",
     "return_3m",
+
+    "timeout",
+    "ewmstd_2y_monthly",
+    "return_tbm",
+    "primary_label_tbm",
+    "take_profit_barrier",
+    "stop_loss_barrier",
 ]
 
 """
 Notes:
 1. You need to filter out samples that rely on very old financial statements (see the age column)
-
 """
+def amend_nans_and_drop_rows(sep_featured: pd.DataFrame):
+    # 1. Drop all without 24 months of sep history... (then IPO becomes insignificant)
+
+    # 2. Drop all without a lable (allready done...)
+
+    # 2. Drop colums with too many missing values
+
+    # 3. Add the industry/size average to missing rows
+    # Make df with these values from the combined dataset....
+
+    # 4. Drop remaining rows with nans
+
+    pass
+
 
 
 if __name__ == "__main__":
 
     # 1. Combine sep_featured and sf1_featured
-    sep_featured = pd.read_csv("./datasets/ml_ready_live/sep_featured_done.csv", parse_dates=["date", "datekey"])
+    sep_featured = pd.read_csv("./datasets/ml_ready_live/sep_featured_labeled.csv", parse_dates=["date", "datekey"])
     
     sf1_featured = pd.read_csv("./datasets/ml_ready_live/sf1_featured.csv", parse_dates=["calendardate", "datekey"])
 
@@ -155,6 +177,12 @@ if __name__ == "__main__":
 
     dataset = sep_featured.merge(sf1_featured, on=["datekey", "ticker"], suffixes=("", "_sf1")) # Only the rows with matching datekey and ticker will be kept
 
+    print("merged dataset shape: ", dataset.shape)
+
+    dataset = dataset.dropna(axis=0, subset=["primary_label_tbm"])
+
+    print("Shape after dropping rows with missing labal: ", dataset.shape)
+
     datekey_ticker = sep_featured[["ticker", "datekey"]]
 
     # 2. Select features from SEP, SF1 etc.
@@ -162,11 +190,11 @@ if __name__ == "__main__":
     
     dataset = dataset[selected_features]
     
+
     print("Length of selected features: ", len(selected_features))
     print("Length of columns in dataset: ", len(dataset.columns))
     print("dataset shape: ", dataset.shape)
     print(dataset.head())
-
 
     # Drop first two (one of calendardate) years
     dataset.sort_values(by=["ticker", "calendardate"])
@@ -198,10 +226,10 @@ if __name__ == "__main__":
     """
 
 
-    dataset_no_nans = dataset.dropna(axis=0) # takes a long time
+    # dataset_no_nans = dataset.dropna(axis=0) # takes a long time
 
     # 4. Write the almost ML ready dataset to disk
-    dataset_no_nans.to_csv("./datasets/ml_ready_live/dataset_without_nans.csv", index=False)
+    # dataset_no_nans.to_csv("./datasets/ml_ready_live/dataset_without_nans.csv", index=False)
 
 
     """
@@ -209,11 +237,11 @@ if __name__ == "__main__":
         print(dataset.isna().sum())
 
     """
-
+    """
     print("Dataset length: ", len(dataset))
     print("Dataset no nan length: ", len(dataset_no_nans))
     print("Dropped: ", len(dataset) -  len(dataset_no_nans))
-
+    """
     print("COMPLETED!")
 
 

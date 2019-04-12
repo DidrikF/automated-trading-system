@@ -451,8 +451,6 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
         # The molecules dict is not needed for all tasks, if none is listed in task["data"] it is simply never touched.
         jobs = get_jobs_fast(task, primary_molecules, molecules_dict) # dont cache jobs
 
-        print(primary_molecules["AAPL"].columns)
-
         primary_molecules = process_jobs_fast(jobs, num_processes=num_processes, sort_by=sort_by) # return as list of Data Frames, I need a dict
         
         # Save result as csv

@@ -226,7 +226,7 @@ if __name__ == "__main__":
                 "disk_name": "sep_featured",
             },
             { # Sorted values
-                "name": "Label the samples according to the triple barrier method, final step of SEP pipeline",
+                "name": "Label the samples according to the triple barrier method",
                 "callback": get_first_barrier_touches_complete, # adj_close keyerror
                 "molecule_key": "sep_featured",
                 "data": {
@@ -238,8 +238,19 @@ if __name__ == "__main__":
                 },
                 "split_strategy": "ticker",
                 "save_result_to_disk": False,
-                "cache_result": False,
+                "cache_result": True,
                 "disk_name": "sep_labeled",
+            },
+            { # Sorted values
+                "name": "Amend NaNs and drop rows that lack too much information",
+                "callback": amend_nans_and_drop_rows, # adj_close keyerror
+                "molecule_key": "sep_featured",
+                "data": None,
+                "kwargs": {},
+                "split_strategy": "ticker",
+                "save_result_to_disk": False,
+                "cache_result": False,
+                "disk_name": "completed_dataset",
             }
         ]
 
