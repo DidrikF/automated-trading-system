@@ -1,0 +1,8 @@
+pandas
+matplotlib
+dash
+plotly
+numpy
+sklearn
+pytest
+tabulate

@@ -4,7 +4,7 @@ from sampling import (extend_sep_for_sampling,
 import pandas as pd
 import pytest
 
-from packages.multiprocessing.engine import pandas_chaining_mp_engine
+from automated_trading_system.multiprocessing.engine import pandas_chaining_mp_engine
 
 
 

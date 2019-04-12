@@ -9,8 +9,8 @@ from collections import namedtuple
 import pickle
 import datetime
 
-from packages.dataset_builder.dataset import Dataset, merge_datasets_simple
-from packages.helpers.helpers import print_exception_info
+from automated_trading_system.dataset_builder.dataset import Dataset, merge_datasets_simple
+from automated_trading_system.helpers.helpers import print_exception_info
 
 # from tqdm import tqdm
 

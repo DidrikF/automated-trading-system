@@ -1,10 +1,10 @@
 import sys
-from packages.dataset_builder.dataset import Dataset
-from packages.logger.logger import Logger
-from packages.helpers.helpers import print_exception_info
+from automated_trading_system.dataset_builder.dataset import Dataset
+from automated_trading_system.logger.logger import Logger
+from automated_trading_system.helpers.helpers import print_exception_info
 
-from packages.dataset_builder.feature_builders import book_to_market, book_value, cash_holdings
-from packages.helpers.custom_exceptions import FeatureError
+from automated_trading_system.dataset_builder.feature_builders import book_to_market, book_value, cash_holdings
+from automated_trading_system.helpers.custom_exceptions import FeatureError
 import pandas as pd
 from os import listdir
 from os.path import isfile, join

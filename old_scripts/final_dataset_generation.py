@@ -12,15 +12,15 @@ The most recent row from sep_featured.csv, and the most recent SF1 row based on 
 import datetime
 import os
 import pandas as pd
-from packages.multiprocessing.engine import pandas_mp_engine
+from automated_trading_system.multiprocessing.engine import pandas_mp_engine
 from sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
 from sep_preparation import dividend_adjusting_prices_backwards, add_weekly_and_12m_stock_returns, add_equally_weighted_weekly_market_returns
-from sep_industry_features import add_indmom
+from automated_trading_system.sep_industry_features import add_indmom
 from sep_features import add_sep_features
 from sf1_features import add_sf1_features
 from sf1_industry_features import add_industry_sf1_features
 from feature_selection import selected_industry_sf1_features, selected_sep_features, selected_sf1_features
-from packages.helpers.helpers import get_calendardate_x_quarters_later
+from automated_trading_system.helpers.helpers import get_calendardate_x_quarters_later
 
 
 if __name__ == "__main__":
