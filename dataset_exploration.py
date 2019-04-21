@@ -187,7 +187,6 @@ if __name__ == "__main__":
     Notes:
     sf1_arq contains 12887 tickers.
     Datekey is unique for all tickers in sf1_art!!!
-    """
 
     dataset = pd.read_csv("./datasets/ml_ready_live/dataset_with_nans.csv", parse_dates=["date", "datekey", "timeout", "calendardate"], index_col="date")
     sf1_art = pd.read_csv("./datasets/sharadar/SHARADAR_SF1_ART")
@@ -196,6 +195,13 @@ if __name__ == "__main__":
         print(dataset.isnull().sum())
     
     print("dataset shape: ", dataset.shape)
+    """
+
+    sep = pd.read_csv("./datasets/sharadar/SEP_PURGED.csv", parse_dates=["date"])
+
+
+    print(sep.loc[(sep.ticker=="TXU") & (sep.date==pd.to_datetime("2007-02-26"))])
+
 
 
 

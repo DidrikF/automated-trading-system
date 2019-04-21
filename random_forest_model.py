@@ -16,3 +16,10 @@ The model is tested on data from the end of the validation set and to the end of
 This makes it so that more and more data is available for training and validation and less and less is available for testing
 
 """
+
+n_estimators = 100 # Nr of trees
+criterion = "gini" # function to measure quality of split (impurity measure)
+max_depth = 5 # depth of each tree
+min_samples_split = 2 # minimum number of samples required to split an internal node
+min_samples_leaf = 5 # The minimum number of samples required to be at a leaf node, may cause smoothing in regression models
+min_weight_fraction_leaf = 0 # Not relevant unless samples are weighted unequally 
