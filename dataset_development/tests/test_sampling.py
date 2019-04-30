@@ -1,10 +1,11 @@
-from sampling import (extend_sep_for_sampling, 
-    first_filing_based_sampling, 
-    rebase_at_each_filing_sampling)
 import pandas as pd
 import pytest
-from packages.dataset_builder.dataset import Dataset
-from packages.multiprocessing.engine import pandas_mp_engine
+
+from ..sampling import (extend_sep_for_sampling, 
+    first_filing_based_sampling, 
+    rebase_at_each_filing_sampling)
+from ..dataset import Dataset
+from ..multiprocessing.engine import pandas_mp_engine
 
 """
 Test datasets:
@@ -29,20 +30,20 @@ def setup():
     # Will be executed before the first test in the module
     global sep, sf1_art, sf1_arq, metadata
     global sep_extended, sep_sampled
-    sep = pd.read_csv("./datasets/testing/sep.csv", parse_dates=["date"], index_col="date", low_memory=False)
-    sf1_art = pd.read_csv("./datasets/testing/sf1_art.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate", low_memory=False)
-    sf1_arq = pd.read_csv("./datasets/testing/sf1_arq.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate", low_memory=False)
-    metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", low_memory=False)
+    sep = pd.read_csv("../datasets/testing/sep.csv", parse_dates=["date"], index_col="date", low_memory=False)
+    sf1_art = pd.read_csv("../datasets/testing/sf1_art.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate", low_memory=False)
+    sf1_arq = pd.read_csv("../datasets/testing/sf1_arq.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate", low_memory=False)
+    metadata = pd.read_csv("../datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", low_memory=False)
     
     yield
     
     # Will be executed after the last test in the module
     if isinstance(sep_extended, pd.DataFrame):
         sep_extended.sort_values(by=["ticker", "date"], inplace=True)
-        sep_extended.to_csv("./datasets/testing/sep_extended.csv")
+        sep_extended.to_csv("../datasets/testing/sep_extended.csv")
     if isinstance(sep_sampled, pd.DataFrame):
         sep_sampled.sort_values(by=["ticker", "date"], inplace=True)
-        sep_sampled.to_csv("./datasets/testing/sep_sampled.csv")
+        sep_sampled.to_csv("../datasets/testing/sep_sampled.csv")
 
 
 def test_extend_sep_for_sampling():
@@ -99,7 +100,7 @@ def test_rebase_at_each_filing_sampling():
 
     sep_sampled = sep_sampled.sort_values(by=["ticker", "date"])
 
-    sep_sampled.to_csv("./datasets/testing/sep_sampled_latest_implementation.csv")
+    sep_sampled.to_csv("../datasets/testing/sep_sampled_latest_implementation.csv")
 
     sep_sampled_aapl = sep_sampled.loc[sep_sampled.ticker == "AAPL"]
 

@@ -3,11 +3,9 @@ import pytest
 import numpy as np
 import math
 
-from packages.dataset_builder.dataset import Dataset
-from sf1_features import add_sf1_features
-from packages.multiprocessing.engine import pandas_mp_engine
-from packages.helpers.helpers import forward_fill_gaps, get_most_up_to_date_10q_filing, get_most_up_to_date_10k_filing, \
-    get_calendardate_x_quarters_ago
+from ..sf1_features import add_sf1_features
+from ..multiprocessing.engine import pandas_mp_engine
+from ..helpers.helpers import forward_fill_gaps, get_most_up_to_date_10q_filing, get_most_up_to_date_10k_filing
 
 
 """
@@ -63,16 +61,16 @@ features = ["roaq", "chtx", "rsup", "sue", "cinvest", "nincr", "roavol", "cashpr
 @pytest.fixture(scope='module', autouse=True)
 def setup():
     # Will be executed before the first test in the module
-    global sf1_art_featured, sf1_art_filled, sf1_arq_filled, sf1_art, sf1_arq, metadata, sf1_art_aapl, sf1_arq_aapl
+    global sf1_art_featured, sf1_art, sf1_arq, metadata, sf1_art_aapl, sf1_arq_aapl
 
     # lacking_sf1_art and lacking_sf1_arq are missing reports for 2000-03-31 - 2000-09-30
     # and for all of 2007.
 
-    sf1_art = pd.read_csv("./datasets/testing/lacking_sf1_art.csv", parse_dates=["calendardate", "datekey", "reportperiod"],\
+    sf1_art = pd.read_csv("../datasets/testing/lacking_sf1_art.csv", parse_dates=["calendardate", "datekey", "reportperiod"],\
         index_col="calendardate", low_memory=False)
-    sf1_arq = pd.read_csv("./datasets/testing/lacking_sf1_arq.csv", parse_dates=["calendardate", "datekey", "reportperiod"],\
+    sf1_arq = pd.read_csv("../datasets/testing/lacking_sf1_arq.csv", parse_dates=["calendardate", "datekey", "reportperiod"],\
         index_col="calendardate", low_memory=False)
-    metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", parse_dates=["firstpricedate"], low_memory=False)
+    metadata = pd.read_csv("../datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", parse_dates=["firstpricedate"], low_memory=False)
 
     sf1_art_aapl = sf1_art.loc[sf1_art.ticker=="AAPL"]
     sf1_arq_aapl = sf1_arq.loc[sf1_arq.ticker=="AAPL"]
@@ -94,7 +92,7 @@ def test_running_add_sf1_features():
     sf1_art_aapl_featured = sf1_art_featured.loc[sf1_art_featured.ticker=="AAPL"]
     sf1_art_ntk_featured = sf1_art_featured.loc[sf1_art_featured.ticker=="NTK"]
 
-    sf1_art_featured = sf1_art_featured.sort_values(by=["ticker", "calendardate", "datekey"], ascending=True)
+    sf1_art_featured = sf1_art_featured.sort_values(by=["ticker", "calendardate", "datekey"])
     
     sf1_art_aapl_featured = sf1_art_aapl_featured.sort_values(by=["calendardate", "datekey"])
     
@@ -103,9 +101,9 @@ def test_running_add_sf1_features():
     sf1_art_aapl_only_features = sf1_art_aapl_featured[cols]
 
 
-    sf1_art_featured.to_csv("./datasets/testing/sf1_art_featured_snapshot.csv") # Need to work some more with the testing and then I remove this line to not compremise the correct snapshot...
-    sf1_art_aapl_featured.to_csv("./datasets/testing/sf1_art_aapl_featured_snapshot.csv")
-    sf1_art_aapl_only_features.to_csv("./datasets/testing/sf1_art_aapl_only_features.csv")
+    sf1_art_featured.to_csv("../datasets/testing/sf1_art_featured_snapshot.csv") # Need to work some more with the testing and then I remove this line to not compremise the correct snapshot...
+    sf1_art_aapl_featured.to_csv("../datasets/testing/sf1_art_aapl_featured_snapshot.csv")
+    sf1_art_aapl_only_features.to_csv("../datasets/testing/sf1_art_aapl_only_features.csv")
 
 
 
@@ -128,8 +126,8 @@ def test_setup_aapl_2001_03_31():
     sf1_arq_aapl_filled["caldate"] = sf1_arq_aapl_filled.index # NOT WORKING!!!! ????
 
     # Remove when completely sure they are correct. Then make a test comparing against these
-    sf1_art_aapl_done.to_csv("./datasets/testing/sf1_art_aapl_done_snapshot.csv") # This look good
-    sf1_arq_aapl_filled.to_csv("./datasets/testing/sf1_arq_aapl_filled_snapshot.csv") # This look good
+    sf1_art_aapl_done.to_csv("../datasets/testing/sf1_art_aapl_done_snapshot.csv") # This look good
+    sf1_arq_aapl_filled.to_csv("../datasets/testing/sf1_arq_aapl_filled_snapshot.csv") # This look good
 
     # Select some rows and do some assertions to verify things are selected as they are supposed to
 
@@ -817,7 +815,12 @@ def test_add_sf1_features_pchlt():
 def test_add_sf1_features_pchint():
     global art_row_cur, art_row_1y_ago, check_row     
 
-    pchint = (art_row_cur["intexp"] / art_row_1y_ago["intexp"]) - 1
+    print(art_row_cur["intexp"], art_row_1y_ago["intexp"], check_row["pchint"])
+
+    if art_row_1y_ago["intexp"] != 0:
+        pchint = (art_row_cur["intexp"] / art_row_1y_ago["intexp"]) - 1
+    else:
+        pchint = math.nan
 
     if math.isnan(pchint) == True:
         assert math.isnan(check_row["pchint"])
@@ -955,9 +958,9 @@ def test_add_sf1_features_change_sales():
 
 #______________________END PREP INDUSTRY CALCULATIONS____________________
 
-# Test shape of result to see that features have been calculated for "all" rows
 @pytest.mark.skip()
 def test_shape(): 
+    """Test shape of result to see that features have been calculated for "all" rows"""
     global sf1_art_featured, features
 
     assert (sf1_art_featured.shape[1] - sf1_art.shape[1]) == len(features) + 1 # Don't know exactly...
@@ -965,9 +968,7 @@ def test_shape():
 
 @pytest.mark.skip()
 def test_feature_coverage():
-    """
-    Test to check that features have a minimum coverage in the dataset.
-    """
+    """Test to check that features have a minimum coverage in the dataset."""
     global sf1_art_featured
     
     for ticker in list(sf1_art_featured.ticker.unique()):
@@ -981,66 +982,8 @@ def test_feature_coverage():
 
 
 
-
-
-
 """
 ticker,dimension,calendardate,datekey,reportperiod,lastupdated,accoci,assets,assetsavg,assetsc,assetsnc,assetturnover,bvps,capex,cashneq,cashnequsd,cor,consolinc,currentratio,de,debt,debtc,debtnc,debtusd,deferredrev,depamor,deposits,divyield,dps,ebit,ebitda,ebitdamargin,ebitdausd,ebitusd,ebt,eps,epsdil,epsusd,equity,equityavg,equityusd,ev,evebit,evebitda,fcf,fcfps,fxusd,gp,grossmargin,intangibles,intexp,invcap,invcapavg,inventory,investments,investmentsc,investmentsnc,liabilities,liabilitiesc,liabilitiesnc,marketcap,ncf,ncfbus,ncfcommon,ncfdebt,ncfdiv,ncff,ncfi,ncfinv,ncfo,ncfx,netinc,netinccmn,netinccmnusd,netincdis,netincnci,netmargin,opex,opinc,payables,payoutratio,pb,pe,pe1,ppnenet,prefdivis,price,ps,ps1,receivables,retearn,revenue,revenueusd,rnd,roa,roe,roic,ros,sbcomp,sgna,sharefactor,sharesbas,shareswa,shareswadil,sps,tangibles,taxassets,taxexp,taxliabilities,tbvps,workingcapital
 AAPL,ART,1997-09-30,1997-12-05,1997-09-26,2019-01-30,0.0,4233000000.0,,3424000000.0,809000000.0,,0.34,-53000000.0,1230000000.0,1230000000.0,5713000000.0,-1045000000.0,1.883,2.527,976000000.0,25000000.0,951000000.0,976000000.0,0.0,118000000.0,0.0,0.0,0.0,-1045000000.0,-927000000.0,-0.131,-927000000.0,-1045000000.0,-1045000000.0,-0.29600000000000004,-0.29600000000000004,-0.29600000000000004,1200000000.0,,1200000000.0,1769575844.0,-2.0,-1.909,135000000.0,0.038,1.0,1368000000.0,0.193,0.0,0.0,2161000000.0,,437000000.0,229000000.0,229000000.0,0.0,3033000000.0,1818000000.0,1215000000.0,2023575844.0,-322000000.0,-384000000.0,34000000.0,-161000000.0,0.0,23000000.0,-533000000.0,-36000000.0,188000000.0,0.0,-1045000000.0,-1045000000.0,-1045000000.0,0.0,0.0,-0.14800000000000002,2438000000.0,-1070000000.0,685000000.0,0.0,1.686,-1.936,-1.908,486000000.0,0.0,0.565,0.28600000000000003,0.281,1035000000.0,589000000.0,7081000000.0,7081000000.0,485000000.0,,,,-0.14800000000000002,0.0,1286000000.0,1.0,3583815536.0,3529736000.0,3529736000.0,2.006,4233000000.0,259000000.0,0.0,264000000.0,1.199,1606000000.0
 AAPL,ART,1998-09-30,1998-12-23,1998-09-25,2019-01-30,0.0,4289000000.0,4104750000.0,3698000000.0,591000000.0,1.4469999999999998,0.434,43000000.0,1481000000.0,1481000000.0,4462000000.0,309000000.0,2.4330000000000003,1.612,954000000.0,0.0,954000000.0,954000000.0,0.0,111000000.0,0.0,0.0,0.0,329000000.0,440000000.0,0.07400000000000001,440000000.0,329000000.0,329000000.0,0.084,0.075,0.084,1642000000.0,1440000000.0,1642000000.0,4860080402.0,15.0,11.046,818000000.0,0.221,1.0,1479000000.0,0.249,0.0,0.0,2242000000.0,2288500000.0,78000000.0,819000000.0,819000000.0,0.0,2647000000.0,1520000000.0,1127000000.0,5387080402.0,251000000.0,0.0,41000000.0,-22000000.0,0.0,19000000.0,-543000000.0,-566000000.0,775000000.0,0.0,309000000.0,309000000.0,309000000.0,0.0,0.0,0.052000000000000005,1218000000.0,261000000.0,719000000.0,0.0,3.281,17.434,16.926,348000000.0,0.0,1.422,0.907,0.884,955000000.0,898000000.0,5941000000.0,5941000000.0,303000000.0,0.075,0.215,0.14400000000000002,0.055,0.0,908000000.0,1.0,3788953812.0,3695272000.0,4701676000.0,1.608,4289000000.0,182000000.0,20000000.0,173000000.0,1.135,2178000000.0
-"""
-
-
-
-"""
-def test_forward_filling_of_sf1_art_and_sf1_art():
-    global sf1_art_aapl_filled, sf1_arq_aapl_filled, sf1_art_aapl, sf1_arq_aapl, sf1_art_aapl_index_snapshot
-
-    sf1_art_aapl_index_snapshot = sf1_art_aapl.index
-
-
-    with pytest.raises(KeyError):
-        row = sf1_art_aapl.loc["2000-03-31"]
-        row = sf1_art_aapl.loc["2007-06-30"]
-
-        row = sf1_arq_aapl.loc["2000-03-31"]
-        row = sf1_arq_aapl.loc["2007-06-30"]
-
-    sf1_art_aapl_filled = forward_fill_gaps(sf1_art_aapl, 3)
-    sf1_arq_aapl_filled = forward_fill_gaps(sf1_arq_aapl, 3)
-
-    try:
-        sf1_art_aapl_filled.loc["2000-03-31"]
-        sf1_art_aapl_filled.loc["2000-06-30"]
-        sf1_art_aapl_filled.loc["2000-09-30"]
-        sf1_art_aapl_filled.loc["2007-03-31"]
-        sf1_art_aapl_filled.loc["2007-03-31"]
-        sf1_art_aapl_filled.loc["2007-06-30"]
-        sf1_art_aapl_filled.loc["2007-09-30"]
-
-        sf1_arq_aapl_filled.loc["2000-03-31"]
-        sf1_arq_aapl_filled.loc["2000-06-30"]
-        sf1_arq_aapl_filled.loc["2000-09-30"]
-        sf1_arq_aapl_filled.loc["2007-03-31"]
-        sf1_arq_aapl_filled.loc["2007-03-31"]
-        sf1_arq_aapl_filled.loc["2007-06-30"]
-        row_2007_09_30 = sf1_arq_aapl_filled.loc["2007-09-30"]
-    except KeyError as e:
-        pytest.fail("KeyError raised when it should not have been")
-
-    row_2006_12_31 = sf1_art_aapl.loc[["2006-12-31"]].iloc[-1]
-    assert row_2007_09_30["datekey"] == row_2006_12_31["datekey"]
-
-    with pytest.raises(KeyError):
-        sf1_art_aapl_filled.loc["2007-12-31"]
-
-"""
-
-"""
-def test_downsampling():
-    global sf1_art_aapl, sf1_art_aapl_filled, sf1_art_aapl_index_snapshot
-
-    downsampled = sf1_art_aapl_filled.loc[sf1_art_aapl_index_snapshot]
-
-    assert sf1_art_aapl.index.equals(downsampled.index) 
 """

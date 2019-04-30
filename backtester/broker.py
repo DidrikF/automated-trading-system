@@ -64,7 +64,7 @@ class Broker():
             try:
                 fill_object = self._process_order(portfolio, order)
             except OrderProcessingError as e:
-                Logger.logr.warning("Failed processing order with error: {}".format(e))
+                Logger.logr.warning("Failed processing order with error: {}".format(e)) # Show log from backtest in the dashboard...
 
                 cancelled_order = CancelledOrder(order, e)
                 cancelled_orders.append(cancelled_order)
@@ -433,7 +433,8 @@ class Broker():
 
         return required_margin_account_size
 
-    def calculate_margin_interest(self):
+    # OBS: pay interest on non-business days...
+    def calculate_margin_interest(self): 
         """
         Calculate the daily interest expense to charge the portfolio for any borrowed funds for short positions.
 

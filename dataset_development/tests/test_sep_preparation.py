@@ -3,8 +3,8 @@ import pandas as pd
 from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 
-from packages.multiprocessing.engine import pandas_mp_engine
-from sep_features import add_weekly_and_12m_stock_returns,\
+from ..multiprocessing.engine import pandas_mp_engine
+from ..sep_features import add_weekly_and_12m_stock_returns,\
         add_equally_weighted_weekly_market_returns,\
         dividend_adjusting_prices_backwards, dividend_adjusting_prices_forwards
 
@@ -16,14 +16,14 @@ sep = None
 def setup():
     global sep
     # Will be executed before the first test in the module
-    sep = pd.read_csv("./datasets/testing/sep_extended.csv", parse_dates=["date"], index_col="date")
+    sep = pd.read_csv("../datasets/testing/sep_extended.csv", parse_dates=["date"], index_col="date")
     # sep = sep.drop(columns='index')
     # sep = sep.drop(sep.columns[sep.columns.str.contains('unnamed',case = False)],axis = 1)
     
     yield
     # Will be executed after the last test in the module
     sep.sort_values(by=["ticker", "date"], ascending=True, inplace=True)
-    sep.to_csv("./datasets/testing/sep_prepared.csv")
+    sep.to_csv("../datasets/testing/sep_prepared.csv")
 
 
 
@@ -61,7 +61,6 @@ def test_dividend_adjusting_prices_backwards():
     assert total_return_from_adjusted_close == pytest.approx(total_return)
 
 
-@pytest.mark.skip()
 def test_dividend_adjusting_prices_forwards():
     """
     Note that when dividend adjusting close prices as described here:

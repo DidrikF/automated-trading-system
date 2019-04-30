@@ -1,23 +1,11 @@
 import pandas as pd
 import pytest
 import numpy as np
-from packages.dataset_builder.dataset import Dataset
-from packages.multiprocessing.engine import pandas_mp_engine
-from sf1_industry_features import add_industry_sf1_features
-from packages.helpers.helpers import get_most_up_to_date_10k_filing
 
-"""
-Each step is performed for each industry separately
+from ..multiprocessing.engine import pandas_mp_engine
+from ..sf1_industry_features import add_industry_sf1_features
+from ..helpers.helpers import get_most_up_to_date_10k_filing
 
-Step-by-Step Dataset Construction:
-1. Extend the SEP dataset with information usefull for sampling (most recent 10-K filing date, Industry classifications)
-2. Use different sampling techniques to get monthly observations
-    1. At first use timebars (sampling at a fixed time interval), but try to respect the different fiscal years
-3. Calculate the various price and volume based features
-4. Add inn SF1 and DAILY data
-5. Compute features based on SF1
-6. Select the features you want and combine into one ML ready dataset
-"""
 
 sf1_art_featured = None
 industry_sf1_art_featured = None
@@ -33,20 +21,18 @@ features = ["bm_ia", "cfp_ia", "chatoia", "mve_ia", "pchcapex_ia", "chpmia", "he
 def setup():
     global industry_sf1_art_featured, sf1_art_featured, metadata
     # Will be executed before the first test in the module
-    sf1_art_featured = pd.read_csv("./datasets/testing/sf1_art_featured_snapshot.csv", parse_dates=["calendardate", "datekey", "reportperiod"],\
+    sf1_art_featured = pd.read_csv("../datasets/testing/sf1_art_featured_snapshot.csv", parse_dates=["calendardate", "datekey", "reportperiod"],\
         index_col="calendardate", low_memory=False)
-    metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", parse_dates=["firstpricedate"], low_memory=False)
+    metadata = pd.read_csv("../datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", parse_dates=["firstpricedate"], low_memory=False)
     
     yield
     
     # Will be executed after the last test in the module
-    industry_sf1_art_featured.to_csv("./datasets/testing/industry_sf1_art_featured.csv", index=False)
+    industry_sf1_art_featured.to_csv("../datasets/testing/industry_sf1_art_featured.csv", index=False)
 
 
 def test_running_add_industry_sf1_features():
     global industry_sf1_art_featured, sf1_art_featured, metadata, sf1_aapl, sf1_ce_industry
-
-    # I NEED TO ADD INDUSTRY COLUMN TO SF1_ART_FEATURED (do this in sf1_faetures.py)
 
     industry_sf1_art_featured = pandas_mp_engine(callback=add_industry_sf1_features, atoms=sf1_art_featured, \
         data={'metadata': metadata}, molecule_key='sf1_art', split_strategy= 'industry', \
@@ -57,14 +43,13 @@ def test_running_add_industry_sf1_features():
 
     industry_sf1_art_featured_aapl = industry_sf1_art_featured.loc[industry_sf1_art_featured.ticker=="AAPL"]
 
-    # print(industry_sf1_art_featured)
 
     # Only temporary...
     cols = list(set(features).intersection(set(industry_sf1_art_featured.columns)))
     industry_sf1_aapl_only_features = industry_sf1_art_featured_aapl[cols]
 
-    industry_sf1_art_featured.to_csv("./datasets/testing/industry_sf1_art_featured_snapshot.csv")
-    industry_sf1_aapl_only_features.to_csv("./datasets/testing/industry_sf1_art_aapl_only_features.csv")
+    industry_sf1_art_featured.to_csv("../datasets/testing/industry_sf1_art_featured_snapshot.csv")
+    industry_sf1_aapl_only_features.to_csv("../datasets/testing/industry_sf1_art_aapl_only_features.csv")
 
     # assert False
 

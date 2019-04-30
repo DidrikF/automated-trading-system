@@ -3,8 +3,8 @@ import pandas as pd
 from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 
-from packages.multiprocessing.engine import pandas_mp_engine
-from sep_industry_features import add_indmom
+from ..multiprocessing.engine import pandas_mp_engine
+from ..sep_features import add_indmom
 
 sep = None
 completed = False
@@ -14,12 +14,12 @@ def setup():
     global sep
     global completed
     # Will be executed before the first test in the module
-    sep = pd.read_csv("./datasets/testing/sep_prepared.csv", parse_dates=["date"], index_col="date")
+    sep = pd.read_csv("../datasets/testing/sep_prepared.csv", parse_dates=["date"], index_col="date")
     
     yield
     # Will be executed after the last test in the module
     if completed == True:
-        sep.to_csv("./datasets/testing/sep_prepared.csv")
+        sep.to_csv("../datasets/testing/sep_prepared.csv")
 
 
 def test_add_indmom():

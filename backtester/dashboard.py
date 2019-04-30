@@ -15,7 +15,7 @@ import plotly.graph_objs as go
 import dash_core_components as dcc
 import dash_html_components as html
 
-from backtester import Backtester
+
 from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
 
 
@@ -388,7 +388,7 @@ if __name__ == "__main__":
         ]
     )
 
-    print(backtest["broker"]["active_positions_history"])
+    # print(backtest["broker"]["active_positions_history"])
 
 
     """ CALLBACKS """

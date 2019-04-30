@@ -3,28 +3,15 @@ import sys
 from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 import numpy as np
-from packages.multiprocessing.engine import pandas_mp_engine
-from packages.helpers.helpers import get_most_up_to_date_10k_filing, get_calendardate_x_quarters_ago
+from .multiprocessing.engine import pandas_mp_engine
+from .helpers.helpers import get_most_up_to_date_10k_filing, get_calendardate_x_quarters_ago
 
-"""
-Each step is performed for each industry separately
 
-Step-by-Step Dataset Construction:
-1. Extend the SEP dataset with information usefull for sampling (most recent 10-K filing date, Industry classifications)
-2. Use different sampling techniques to get monthly observations
-    1. At first use timebars (sampling at a fixed time interval), but try to respect the different fiscal years
-3. Calculate the various price and volume based features
-4. Compute features based on SF1
-5. Add inn SF1 and DAILY data
-6. Select the features you want and combine into one ML ready dataset
-"""
-
-# Rewrite for multiprocessing engine
-
-# sf1_art is forward filled and has a calendardate index
 def add_industry_sf1_features(sf1_art, metadata):
     # print("add_industry_sf1_features: ", sf1_art.ticker.unique(), sf1_art.index.min(), sf1_art.index.max())
+    
     """
+    NOTE:  sf1_art is forward filled and has a calendardate index (is this true?)
     NOTE: sf1_art contian data for the same industry (over a specific date rage MAYBE)
     NOTE: sf1_art has a calendardate index
     NOTE: Requires sf1_features.py to be executed first, and that its output is given to this function.
@@ -33,29 +20,12 @@ def add_industry_sf1_features(sf1_art, metadata):
         bm_ia, cfp_ia, chatoia, mve_ia, pchcapex_ia, chpmia, herf, ms and ps
     """
 
-    """
-    Plan
-    Here i get a dataframe containing data for multiple tickers.
-    Datakey is allways greater than calendardate (except for 231 out of 14138 companies). In these instances there
-    is probably only one or two statements that have calendardate greater than datekey, and it is probably so that
-    these dates are very close.
-
-    I need to calculate industry means for each calendardate.
-    When calculating industry adjusted features I adjust using the industry mean for the closes calendardate in
-    the past with respect to the given datekey.
-
-    """
-
-
 
     if isinstance(metadata, pd.DataFrame) == True:
         metadata = metadata.iloc[0]
 
 
-    # first_calendardate = None
-    # calendardate_1y_after_first_calendardate = None
-
-    # sf1_art = forward_fill_gaps(sf1_art, 3) # I NEED TO DO THIS TO BE CONSISTENT WITH sf1_features.py
+    # sf1_art = forward_fill_gaps(sf1_art, 3) # I NEED TO DO THIS TO BE CONSISTENT WITH sf1_features.py # NOTE: is this true
 
     # sf1_art_index_snapshot = sf1_art.index
 
@@ -81,9 +51,7 @@ def add_industry_sf1_features(sf1_art, metadata):
         # ____________________________ CALCULATE INDUSTRY MEANS _____________________________
         
         if caldate_cur not in industry_means.index:
-            # caldate_1y_ago = get_calendardate_x_quarters_ago(caldate_cur, 4)
             
-
             industry_mean_bm = (sf1_art_for_date["equityusd"] / sf1_art_for_date["marketcap"]).mean() # I think it automatically excludes rows which leads to zero in the denominator.
             industry_mean_cfp = (sf1_art_for_date["ncfo"] / sf1_art_for_date["marketcap"]).mean() # I think it automatically excludes rows which leads to zero in the denominator.
             industry_mean_asset_turnover = (sf1_art_for_date["change_sales"] / sf1_art_for_date["assetsavg"]).mean() # I think it automatically excludes rows which leads to zero in the denominator.

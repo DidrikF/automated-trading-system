@@ -6,8 +6,8 @@ from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 
 from event import Event
-from errors import MarketDataNotAvailableError
-from logger import Logger
+from utils.errors import MarketDataNotAvailableError
+from utils.logger import Logger
 
 """
 Due to memory not being an issue, I think it is most effective have data in memory

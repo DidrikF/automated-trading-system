@@ -1,10 +1,9 @@
-!datasets/
-datasets/*
-!datasets/testing/
+!dataset_development/datasets/
+dataset_development/datasets/*
+!dataset_development/datasets/testing/
 logs/
 __pycache__/
-packages/multiprocessing/__pycache__/
 *.pyc
-packages/backtester/test_bundles/
-packages/backtester/backtests/
-packages/backtester/logs/
+backtester/test_bundles/
+backtester/backtests/
+backtester/logs/

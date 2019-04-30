@@ -32,7 +32,7 @@ def get_jobs(atoms, data, callback, molecule_key, split_strategy, num_processes,
             raise Exception("Ticker column not in atoms")
         tickers = list(atoms["ticker"].unique())
         for ticker in tickers:
-            molecule = atoms.loc[atoms["ticker"] == ticker] # CAN YOU DO THIS FASTER?
+            molecule = atoms.loc[atoms["ticker"] == ticker] # Use group by instead
             job = {
                 molecule_key: molecule,
                 'callback': callback,
@@ -47,6 +47,19 @@ def get_jobs(atoms, data, callback, molecule_key, split_strategy, num_processes,
                 
             jobs.append(job)
 
+    # This split strategy is only used in testing
+    elif split_strategy == "linspace":
+        parts = lin_parts(len(atoms), num_processes*molecules_per_process)
+        for i in range(1, len(parts)):
+            index0 = parts[i-1]
+            index1 = parts[i]
+
+            job = {
+                molecule_key: atoms[index0:index1],
+                "callback": callback,
+            }
+            job.update(kwargs)
+            jobs.append(job)
 
     elif split_strategy == 'date':
         lowest_date = atoms.index.min()
@@ -194,9 +207,9 @@ def expandCall(kwargs):
 
 #____________________________________NEW FASTER ENGINE WITH TASK PIPELINE___________________________________
 
-sf1_art_base = pd.read_csv("./datasets/sharadar/SF1_ART_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
-sf1_arq_base = pd.read_csv("./datasets/sharadar/SF1_ARQ_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
-sep_base = pd.read_csv("./datasets/sharadar/SEP_BASE.csv", parse_dates=["date"], index_col="date")
+sf1_art_base = pd.read_csv("c:/pycode/automated-trading-system/dataset_development/datasets/sharadar/SF1_ART_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
+sf1_arq_base = pd.read_csv("c:/pycode/automated-trading-system/dataset_development/datasets/sharadar/SF1_ARQ_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
+sep_base = pd.read_csv("c:/pycode/automated-trading-system/dataset_development/datasets/sharadar/SEP_BASE.csv", parse_dates=["date"], index_col="date")
 
 
 def get_jobs_fast(task, primary_molecules, molecules_dict):
@@ -205,10 +218,9 @@ def get_jobs_fast(task, primary_molecules, molecules_dict):
     Maybe bake split strategy into the cached pickle name.
     """
     jobs = []
-    # print("Type of primary_molecules: ", type(primary_molecules))
-    for job_key, molecule in primary_molecules.items(): # primary_molecules is a list??
+    for job_key, molecule in primary_molecules.items():
         # job_key is AAPL, Electronics etc.
-        # molecule is this jobs atoms (molecule)
+        # molecule is this jobs atoms
         job = {
             "callback": task["callback"],
             task["molecule_key"]: molecule,
@@ -449,11 +461,12 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
         print("Step ", str(index+1), " of ", str(len(tasks)), " - " + task["name"] + " - Time elapsed: ", str(round(minutes_elapsed, 2)), " minutes.")
 
         # The molecules dict is not needed for all tasks, if none is listed in task["data"] it is simply never touched.
-        jobs = get_jobs_fast(task, primary_molecules, molecules_dict) # dont cache jobs
+        jobs = get_jobs_fast(task, primary_molecules, molecules_dict)
 
         primary_molecules = process_jobs_fast(jobs, num_processes=num_processes, sort_by=sort_by) # return as list of Data Frames, I need a dict
         
-        # Save result as csv
+        # Save result as csv 
+        # NOTE: maybe remove as this is not really used...
         if task["save_result_to_disk"] == True:
             print("Saving as csv result from task: ", task["name"])
             save_path = save_dir + "/" + task["disk_name"] + ".csv"
@@ -512,21 +525,6 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
     print("TASKS COMPLETED SUCCESSFULLY")
 
     result = combine_molecules(primary_molecules)
-
-    """
-    out_molecules = list(primary_molecules.values())
-
-    if isinstance(out_molecules[0], pd.DataFrame):
-        result = pd.DataFrame()
-    elif isinstance(out_molecules[0], pd.Series):
-        result = pd.Series()
-    else:
-        return out_molecules
-    
-    for i in out_molecules:
-        result = result.append(i)
-    """
-
 
     if sort_by is not None:
         result = result.sort_values(by=sort_by)

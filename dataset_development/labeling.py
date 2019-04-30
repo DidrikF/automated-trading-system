@@ -9,9 +9,9 @@ import pandas as pd
 from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 import sys
-import numpy
+import numpy as np
 
-from packages.multiprocessing.engine import pandas_mp_engine
+from ..multiprocessing.engine import pandas_mp_engine
 """
 Step by step guide to labeling via the triple barrier method and meta-labeling.
 
@@ -337,13 +337,14 @@ def get_first_barrier_touches_complete(sep_featured: pd.DataFrame, sep: pd.DataF
     # out = pd.DataFrame(index=events.index)
     events["return"] = sep.loc[events["earliest_touch"]]["close"].values / sep.loc[events.index]["close"].values - 1
 
-    events["primary_label"] = numpy.sign(events["return"])
+    events["primary_label"] = np.sign(events["return"])
 
     sep_featured[["return_tbm", "primary_label_tbm"]] = events[["return", "primary_label"]]
     sep_featured["take_profit_barrier"] = take_profit_barriers
     sep_featured["stop_loss_barrier"] = stop_loss_barriers
 
     return sep_featured
+
 
 
 if __name__ == "__main__":

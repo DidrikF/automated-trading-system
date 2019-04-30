@@ -8,6 +8,7 @@ The APIs are inspired by Quantopian/Zipline (https://github.com/quantopian/zipli
 
 # I can read command line options and start the backtest in this file...
 
+# Make it possible to use the cross-validation method for backtesting???
 
 # Import dashboard and all compoentnsto set up a backtest
 
@@ -122,3 +123,5 @@ if __name__ == "__main__":
     """
 
     backtest_state = backtester.save_state_to_disk_and_return()
+
+    

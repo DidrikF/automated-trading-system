@@ -1,21 +1,13 @@
-from sampling import (extend_sep_for_sampling, 
-    first_filing_based_sampling, 
-    rebase_at_each_filing_sampling)
 import pandas as pd
 import pytest
 import math
 import sys
 
-from packages.multiprocessing.engine import pandas_chaining_mp_engine
-
-from packages.multiprocessing.engine import pandas_mp_engine
-from sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
-from sep_preparation import dividend_adjusting_prices_backwards, add_weekly_and_12m_stock_returns, add_equally_weighted_weekly_market_returns
-from sep_industry_features import add_indmom
-from sep_features import add_sep_features
-
-from sf1_features import add_sf1_features
-from sf1_industry_features import add_industry_sf1_features
+from .multiprocessing.engine import pandas_mp_engine, pandas_chaining_mp_engine
+from .sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
+from .sep_features import add_sep_features, add_indmom, dividend_adjusting_prices_backwards, add_weekly_and_12m_stock_returns, add_equally_weighted_weekly_market_returns
+from .sf1_features import add_sf1_features
+from .sf1_industry_features import add_industry_sf1_features
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -45,7 +37,7 @@ def setup():
     # Will be executed after the last test in the module
 
 def test_sep_featured():
-    num_processes = 1
+    num_processes = 6
     save_path = "./testing_datasets"
 
     print("\n\nOLD METHOD\n\n")
@@ -348,7 +340,6 @@ def testing_sep_featured_fast():
     assert len(errors) == 0
 
 
-@pytest.mark.skip()
 def testing_sf1_featured():
     save_path = "./testing_datasets"
 
@@ -361,7 +352,7 @@ def testing_sf1_featured():
     metadata = pd.read_csv("./datasets/sharadar/METADATA_PURGED.csv", parse_dates=["firstpricedate"], low_memory=False)
 
 
-    num_processes = 1
+    num_processes = 6
 
     sf1_art = sf1_art.sort_values(by=["ticker", "calendardate", "datekey"])
 

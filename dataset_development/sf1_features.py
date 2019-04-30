@@ -4,25 +4,11 @@ from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 import numpy as np
 
-from packages.helpers.helpers import print_exception_info, get_most_up_to_date_10k_filing,\
+from .helpers.helpers import print_exception_info, get_most_up_to_date_10k_filing,\
     get_most_up_to_date_10q_filing, get_calendardate_index, forward_fill_gaps, \
         get_calendardate_x_quarters_ago, get_calendardate_x_quarters_later
-from packages.multiprocessing.engine import pandas_mp_engine
+from .multiprocessing.engine import pandas_mp_engine
 
-
-"""
-Step-by-Step Dataset Construction:
-1. Extend the SEP dataset with information usefull for sampling (most recent 10-K filing date, Industry classifications)
-2. Use different sampling techniques to get monthly observations
-    1. At first use timebars (sampling at a fixed time interval), but try to respect the different fiscal years
-3. Calculate the various price and volume based features
-4. Compute features based on SF1
-5. Add inn SF1 and OTHER data
-6. Select the features you want and combine into a ML ready dataset
-"""
-
-# Rewrite for multiprocessing engine
-# Adjust volume? (as long as it is used at a point in time, there is no problem. features are calculated by deviding by sharesbas...)
 
 def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.DataFrame):
     # print("add_sf1_features: ", sf1_art.ticker.unique(), sf1_art.index.min(), sf1_art.index.max())
@@ -555,8 +541,6 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
             # %Δ in XINT (pchint), Formula: (SF1[intexp]t-1 - SF1[intexp]t-2) - 1
             if art_row_1y_ago["intexp"] != 0:
                 sf1_art.at[index_cur, "pchint"] = (art_row_cur["intexp"] / art_row_1y_ago["intexp"]) - 1
-            else:
-                sf1_art.at[index_cur, "pchint"] = 0
 
             # DLTIS/PPENT	(chdebtnc_ppne), Formula: (SF1[debtnc]t-1 - SF1[debtnc]t-2) / SF1[ppnenet]t-1
             if art_row_cur["ppnenet"] != 0:

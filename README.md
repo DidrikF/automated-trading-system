@@ -1,4 +1,32 @@
-# Dataset construction
+# Stock Return Prediction, Automated Trading System and Backtester
+The aim of this project is to develop an automated trading system (ATS) that uses machine learning to inform the generation of orders. The ATS's performance is measured by a custom built backtester that simulates the execution of trades, while keeping track of transaction costs and portfolio return. The project involves five main tasks.
+1. Development of a dataset of approximatly 100 features and 1 million observations for stock return prediction and classification.
+2. Build regression models for monthly stock returns using random forests, deep neural networks and multiple linear regression algorithms.
+3. Build classification models to be used to identify good investment opportunities.
+4. Use the classification models in the development of an automated trading system.
+5. Build a backtester to measure the historical performance of the automated trading system.
+
+## Project structure
+- backtester
+- dataset_development
+- datasets
+- logs
+- tests
+bet_sizing.py
+__main__.py
+etc.
+
+## 1. Dataset Development
+The dataset is a set of approximaly 100 features constructed from fundamental, price, volume and dividend data. The source datasets are from the "Core US Equities Bundle" developed by Sharadar and delivered via Quandl.com.
+Link: https://www.quandl.com/databases/SFA/data
+This following datasets from this bundle was used:
+- Core US Fundamentals (SF1) - includes data from 10-K and 10-Q filings, and includes both "as-reported" and "trailing twelve months" dimensions.
+- Core US Fundamentals Events - contains date of bankruptcies among other events
+- Sharadar Equity Prices (SEP) - contains open, high, low, close, dividend and volume
+- Indicator Descriptions - Descriptions of indicators for all datasets in the bundle
+- Tickers and Metadata - Contains all tickers with metadata such as size classification, industry classification etc.
+
+
 
 Terminology:
 Observation - a row (bar) in a dataset representing a vector of data points regarding a specific firm at a specific day. 
@@ -28,12 +56,6 @@ Exactly what data is updated quarterly and what is updated yearly?
 - This is important to label the frequency correctly in the spreadsheet outlining the features I use.
 
 
-## "Big picture" strategy
-
-
-### Step by step instructions for creating dataset of daily observations from SHARADAR tables:
-
-
 ### "Best Effort" monthly observation sampling:
 This is the first sampling scheme used to build stock return predicting ML models.
 
@@ -43,14 +65,21 @@ This is the first sampling scheme used to build stock return predicting ML model
 - 
 
 
-### "Dollar volume" based observation sampling
+
+The dataset is labeled using the triple-barrier method (see "Advances in Financial Machine Learning", de Prado, 2018). 
+
+## 2. Monthly Stock Return Regressions
 
 
-# Building a stock return predictor
+## 3. ATS Classification Models
+
+## 4. Automated Trading System
+
+## 5. Backtester
 
 
-# Building an automated trading system
 
 
-# Building a backtester
+
+# Dataset construction
 
