@@ -63,11 +63,11 @@ def test_add_return():
     # https://planetcalc.com/410/
 
     assert  sep_featured_aapl.loc["2001-04-12"]["return_1m"] == \
-            (sep_prepared_aapl.loc["2001-05-11"]["adj_close"] / sep_prepared_aapl.loc["2001-04-12"]["adj_close"]) - 1
+            (sep_prepared_aapl.loc["2001-05-11"]["close"] / sep_prepared_aapl.loc["2001-04-12"]["close"]) - 1
     assert  sep_featured_aapl.loc["2001-04-12"]["return_2m"] == \
-            (sep_prepared_aapl.loc["2001-06-11"]["adj_close"] / sep_prepared_aapl.loc["2001-04-12"]["adj_close"]) - 1
+            (sep_prepared_aapl.loc["2001-06-11"]["close"] / sep_prepared_aapl.loc["2001-04-12"]["close"]) - 1
     assert  sep_featured_aapl.loc["2001-04-12"]["return_3m"] == \
-            (sep_prepared_aapl.loc["2001-07-11"]["adj_close"] / sep_prepared_aapl.loc["2001-04-12"]["adj_close"]) - 1
+            (sep_prepared_aapl.loc["2001-07-11"]["close"] / sep_prepared_aapl.loc["2001-04-12"]["close"]) - 1
 
 def test_add_mom1m_mom6m_mom12m_mom24m():
     global sep_prepared
@@ -80,7 +80,7 @@ def test_add_mom1m_mom6m_mom12m_mom24m():
     # Date0 : 2001-04-12 (Shifted 30 days)
     # Date0-30d : 2001-03-13 
     # Data0-182d: 2000-10-12 
-    assert  sep_featured_aapl.loc["2001-04-12"]["mom6m"] == (sep_prepared_aapl.loc["2001-03-13"]["adj_close"] / sep_prepared_aapl.loc["2000-10-12"]["adj_close"]) - 1
+    assert  sep_featured_aapl.loc["2001-04-12"]["mom6m"] == (sep_prepared_aapl.loc["2001-03-13"]["close"] / sep_prepared_aapl.loc["2000-10-12"]["close"]) - 1
 
 
 def test_add_beta():
@@ -127,8 +127,8 @@ def test_add_chmom():
 
     sep_prepared_aapl = sep_prepared.loc[sep_prepared.ticker == "AAPL"]
 
-    chmom_at_2001_04_12 = (sep_prepared_aapl.loc["2001-03-13"]["adj_close"] / sep_prepared_aapl.loc["2000-10-12"]["adj_close"] - 1) - \
-            (sep_prepared_aapl.loc["2000-09-12"]["adj_close"] / sep_prepared_aapl.loc["2000-04-12"]["adj_close"] - 1)
+    chmom_at_2001_04_12 = (sep_prepared_aapl.loc["2001-03-13"]["close"] / sep_prepared_aapl.loc["2000-10-12"]["close"] - 1) - \
+            (sep_prepared_aapl.loc["2000-09-12"]["close"] / sep_prepared_aapl.loc["2000-04-12"]["close"] - 1)
 
     assert sep_featured.loc[(sep_featured.ticker == "AAPL") & (sep_featured.index == "2001-04-12")].iloc[0]["chmom"] == chmom_at_2001_04_12
 
