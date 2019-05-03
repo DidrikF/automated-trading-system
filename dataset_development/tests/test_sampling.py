@@ -5,7 +5,7 @@ from ..sampling import (extend_sep_for_sampling,
     first_filing_based_sampling, 
     rebase_at_each_filing_sampling)
 from ..dataset import Dataset
-from ..multiprocessing.engine import pandas_mp_engine
+from ..processing.engine import pandas_mp_engine
 
 """
 Test datasets:

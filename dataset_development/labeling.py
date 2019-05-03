@@ -10,8 +10,9 @@ from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 import sys
 import numpy as np
+import math
 
-from ..multiprocessing.engine import pandas_mp_engine
+from .processing.engine import pandas_mp_engine
 """
 Step by step guide to labeling via the triple barrier method and meta-labeling.
 
@@ -294,7 +295,7 @@ def get_primary_labels(events, sep):
 
 # Think this will be the last callback in the sep pipeline
 # How will this change when side is not allways long?
-def get_first_barrier_touches_complete(sep_featured: pd.DataFrame, sep: pd.DataFrame, ptSl: tuple, min_ret):
+def add_labels_via_triple_barrier_method(sep_featured: pd.DataFrame, sep: pd.DataFrame, ptSl: tuple, min_ret):
     
     if ("ewmstd_2y_monthly" not in sep_featured.columns) or ("timeout" not in sep_featured.columns):
         return sep_featured
@@ -340,6 +341,7 @@ def get_first_barrier_touches_complete(sep_featured: pd.DataFrame, sep: pd.DataF
     events["primary_label"] = np.sign(events["return"])
 
     sep_featured[["return_tbm", "primary_label_tbm"]] = events[["return", "primary_label"]]
+    sep_featured["date_of_touch"] = events["earliest_touch"]
     sep_featured["take_profit_barrier"] = take_profit_barriers
     sep_featured["stop_loss_barrier"] = stop_loss_barriers
 
@@ -347,26 +349,44 @@ def get_first_barrier_touches_complete(sep_featured: pd.DataFrame, sep: pd.DataF
 
 
 
-if __name__ == "__main__":
-    sep = pd.read_csv("./datasets/sharadar/SEP_PURGED.csv", parse_dates=["date"])
-    sep_featured = pd.read_csv("./datasets/ml_ready_live/sep_featured_done.csv", parse_dates=["date", "datekey", "timeout"])
 
-    # sep = pd.read_csv("./datasets/testing/sep.csv", parse_dates=["date"], index_col="date")
-    # sep_featured = pd.read_csv("./datasets/testing/sep_featured.csv", parse_dates=["date", "datekey", "timeout"], index_col="date")
-    # sep_aapl = sep.loc[sep.ticker=="AAPL"]
-    # sep_featured_aapl = sep_featured.loc[sep_featured.ticker=="AAPL"]
-
-    # print(sep_featured.columns)
-
-    sep_featured = pandas_mp_engine(callback=get_first_barrier_touches_complete, atoms=sep_featured, \
-        data={'sep': sep}, molecule_key='sep_featured', split_strategy= 'ticker', \
-            num_processes=6, molecules_per_process=1, ptSl=[0.8,-0.8], min_ret=None)
-
-    # What is the optimal ptSl?
-    # What is the optimal sampling frequency and history to use in ewmstd?
-
-    sep_featured.to_csv("./datasets/ml_ready_live/sep_featured_labeled.csv")
-
-
-
+def equity_risk_premium_labeling(sep_featured, tb_rate):
+    # 1.    To get the risk free rate over the month, take the most recent 3-month t-bill rate and make 
+    #       it into a decimal number and divide it by 3 to get the monthly rate
+    # 2.    Subtract the risk free rate from the return
     
+    for date, row in sep_featured.iterrows():
+        tb_rate_3m = tb_rate.loc[date]["rate"]
+
+        rf_rate_1m = tb_rate_3m / 3
+        rf_rate_2m = (tb_rate_3m / 3) * 2
+        rf_rate_3m = tb_rate_3m
+
+        sep_featured.at[date, "erp_1m"] = row["return_1m"] - rf_rate_1m
+        sep_featured.at[date, "erp_2m"] = row["return_2m"] - rf_rate_2m
+        sep_featured.at[date, "erp_3m"] = row["return_3m"] - rf_rate_3m
+
+    return sep_featured
+
+
+def process_tree_month_t_bill_rates(tb_rate):
+    tb_rate = tb_rate.rename(columns={"DATE": "date", "DTB3": "rate"})
+    tb_rate = tb_rate.set_index("date")
+    tb_rate.index.name = "date"
+    tb_rate.loc[tb_rate.rate == "."] = math.nan
+    tb_rate["rate"] = pd.to_numeric(tb_rate["rate"])
+    
+    date_index = pd.date_range(tb_rate.index.min(), tb_rate.index.max())
+    tb_rate = tb_rate.reindex(date_index)
+    tb_rate["rate"] = tb_rate["rate"].fillna(method="ffill")
+    tb_rate["rate"] = tb_rate["rate"] / 100
+    tb_rate = tb_rate.round(4)
+
+    return tb_rate
+
+if __name__ == "__main__":
+    tb_rate = pd.read_csv("./datasets/excel/three_month_treasury_bill_rate.csv", parse_dates=["DATE"], low_memory=False)
+
+    tb_rate = process_tree_month_t_bill_rates(tb_rate)
+
+    tb_rate.to_csv("./datasets/macro/t_bill_rate_3m.csv", index=True)

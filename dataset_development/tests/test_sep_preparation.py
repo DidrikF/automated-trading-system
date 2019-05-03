@@ -3,7 +3,7 @@ import pandas as pd
 from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 
-from ..multiprocessing.engine import pandas_mp_engine
+from ..processing.engine import pandas_mp_engine
 from ..sep_features import add_weekly_and_12m_stock_returns,\
         add_equally_weighted_weekly_market_returns,\
         dividend_adjusting_prices_backwards, dividend_adjusting_prices_forwards

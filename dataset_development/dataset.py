@@ -3,6 +3,8 @@ Module providing functionality to manipulate large datasets
 Not currently used...
 """
 
+# NOTE: Will probably end up deleting this file, go through to see if it contains something usefull.
+
 import pandas as pd
 import numpy as np
 from tabulate import tabulate

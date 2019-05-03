@@ -9,7 +9,7 @@ import plotly.tools as tls
 from datetime import datetime
 
 from ..labeling import equity_risk_premium_labeling, add_labels_via_triple_barrier_method
-from ..multiprocessing.engine import pandas_mp_engine
+from ..processing.engine import pandas_mp_engine
 from ..utils.visualization import visualize_triple_barrier_method, candlestick_chart
 
 """
