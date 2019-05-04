@@ -289,9 +289,11 @@ def expandCall(kwargs):
 
 #____________________________________NEW FASTER ENGINE WITH TASK PIPELINE___________________________________
 
-sf1_art_base = pd.read_csv("c:/pycode/automated-trading-system/dataset_development/datasets/sharadar/SF1_ART_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
-sf1_arq_base = pd.read_csv("c:/pycode/automated-trading-system/dataset_development/datasets/sharadar/SF1_ARQ_BASE.csv", parse_dates=["calendardate", "datekey"], index_col="calendardate")
-sep_base = pd.read_csv("c:/pycode/automated-trading-system/dataset_development/datasets/sharadar/SEP_BASE.csv", parse_dates=["date"], index_col="date")
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+sf1_art_base = pd.read_csv(os.path.join(dir_path, "../datasets/sharadar/SF1_ART_BASE.csv"), parse_dates=["calendardate", "datekey"], index_col="calendardate")
+sf1_arq_base = pd.read_csv(os.path.join(dir_path, "../datasets/sharadar/SF1_ARQ_BASE.csv"), parse_dates=["calendardate", "datekey"], index_col="calendardate")
+sep_base = pd.read_csv(os.path.join(dir_path, "../datasets/sharadar/SEP_BASE.csv"), parse_dates=["date"], index_col="date")
 
 
 def get_jobs_fast(task, primary_molecules, molecules_dict):
