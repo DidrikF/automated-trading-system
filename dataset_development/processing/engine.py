@@ -12,6 +12,7 @@ import pickle
 from io import StringIO
 import math
 import re
+from dateutil.parser import parse
 
 # from ..helpers.helpers import is_date
 

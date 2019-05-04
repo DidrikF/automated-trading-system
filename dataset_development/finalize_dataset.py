@@ -182,7 +182,7 @@ def fix_nans_and_drop_rows(dataset: pd.DataFrame, metadata: pd.DataFrame, featur
     """
     # 1. Drop all with less than two years of sep history (this will fix a lot, as a lot of missing values is due to too little history)
     # 2. Drop all without a label
-    dataset = dataset.dropna(axis=0, subset=["mom24m", "primary_label_tbm", "return_1m", "ill"]) # NOTE: illiquidity does not seem to work... no time to look into it
+    dataset = dataset.dropna(axis=0, subset=["mom24m", "primary_label_tbm", "return_1m"]) # NOTE: illiquidity does not seem to work... no time to look into it
 
     # 3. Drop rows with outdated labels
     dataset = dataset.loc[dataset.age <= 180]
@@ -231,7 +231,10 @@ def fix_nans_and_drop_rows(dataset: pd.DataFrame, metadata: pd.DataFrame, featur
                     mean = size_rvs[feature][size][0] # I guess this could also be null
                     std = size_rvs[feature][size][1]
                 
-                dataset.at[index, feature] = np.random.normal(mean, std)
+                if pd.isnull(mean) or pd.isnull(std):
+                    dataset.at[index, feature] = np.random.normal(0, 1) # Not optimal, but only a very small part of the data gets this treatment (ill)
+                else:
+                    dataset.at[index, feature] = np.random.normal(mean, std)
                 
                 """
                 if (row["ticker"] == "AAPL") and (feature == "bm") and (row["datekey"] == pd.to_datetime("2003-12-19")):
@@ -252,7 +255,7 @@ def fix_nans_and_drop_rows(dataset: pd.DataFrame, metadata: pd.DataFrame, featur
     return dataset
 
 
-
+# Maybe this belongs in the training scripts?
 def feature_scaling(dataset: pd.DataFrame()):
     """
     To make the dataset suitable for machine learning, all features must be expressed as numbers (floats, ints) and be scaled

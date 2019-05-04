@@ -1,6 +1,7 @@
 !dataset_development/datasets/
 dataset_development/datasets/*
 !dataset_development/datasets/testing/
+!dataset_development/datasets/macro/
 logs/
 __pycache__/
 *.pyc

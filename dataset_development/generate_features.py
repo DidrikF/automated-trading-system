@@ -184,7 +184,7 @@ def generate_sep_featured(num_processes, cache_dir, tb_rate, sep_path, sf1_art_p
                 "sep": "sep",
             },
             "kwargs": {
-                "ptSl": [0.8, -0.8],
+                "ptSl": [1, -1],
                 "min_ret": None,
             },
             "split_strategy": "ticker",

@@ -155,10 +155,11 @@ def add_sep_features(sep_sampled, sep, sf1_art):
             # NOTE: NOT WORKING, DROPPING DUE TO LACK OF TIME IN THE FINAL DATASET
             # Illiquidity (ill): avg(SEP[close]-SEP[open] / ( (SEP[close]+SEP[open]) / 2 )*SEP[volume]) for the past year
             # Average of daily (absolute return / dollar volume).
-            illiquidity_df = pd.DataFrame()
-            illiquidity_df["return"] = (sep_past_year["close"] / sep_past_year["open"] - 1)
-            illiquidity_df["dollar_vol"] = (((sep_past_year["open"] + sep_past_year["close"]) / 2)*sep_past_year["volume"])
-            illiquidity_df["return_over_dollar_vol"] = illiquidity_df["return"] / illiquidity_df["dollar_vol"]
+            illiquidity_df = pd.DataFrame(index=sep_past_year.index)
+            illiquidity_df["return"] = (sep_past_year["close"] / sep_past_year["open"] - 1) # daily return
+            illiquidity_df["return"] = illiquidity_df["return"].abs() # Absolute value of daily returns
+            illiquidity_df["dollar_vol"] = (((sep_past_year["open"] + sep_past_year["close"]) / 2)*sep_past_year["volume"]) # Avg stock price each day * volume of each day
+            illiquidity_df["return_over_dollar_vol"] = illiquidity_df["return"] / illiquidity_df["dollar_vol"] # daily return / daily volume
             illiquidity = illiquidity_df["return_over_dollar_vol"].mean()
             sep_sampled.at[date, "ill"] = illiquidity
             

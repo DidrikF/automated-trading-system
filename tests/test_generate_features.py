@@ -4,8 +4,8 @@ import timeit
 import shutil
 import os
 import math
-import multiprocessing as mp
-from packages.multiprocessing.engine import pandas_mp_engine, split_df_into_molecules, pandas_chaining_mp_engine
+import processing as mp
+from packages.processing.engine import pandas_mp_engine, split_df_into_molecules, pandas_chaining_mp_engine
 import time
 import pandas as pd
 from sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
