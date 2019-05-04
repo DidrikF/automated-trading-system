@@ -51,7 +51,6 @@ def setup():
     yield
     # Will be executed after the last test in the module
 
-@pytest.mark.skip()
 def test_sep_featured():
     global save_path, cache_dir
     num_processes = 6
@@ -85,10 +84,13 @@ def test_sep_featured():
         molecule_key='sep', split_strategy= 'ticker', \
             num_processes=num_processes, molecules_per_process=1)
 
+    sep_adjusted_plus_returns.sort_values(by=["ticker", "date"], ascending=True, inplace=True)
+
     sep_prepared = pandas_mp_engine(callback=add_equally_weighted_weekly_market_returns, atoms=sep_adjusted_plus_returns, data=None, \
         molecule_key='sep', split_strategy= 'date', \
             num_processes=num_processes, molecules_per_process=1)
 
+    sep_prepared.sort_values(by=["ticker", "date"], ascending=True, inplace=True)
 
     sep_prepared_plus_indmom = pandas_mp_engine(callback=add_indmom, atoms=sep_prepared, data=None, \
         molecule_key='sep', split_strategy= 'industry', \
@@ -96,7 +98,7 @@ def test_sep_featured():
 
     sep_prepared_plus_indmom.sort_values(by=["ticker", "date"], inplace=True)
 
-    sep_prepared_plus_indmom.to_csv("../datasets/testing/sep_prepared.csv")
+    # sep_prepared_plus_indmom.to_csv("../datasets/testing/sep_prepared.csv")
     
     sep_sampled = pandas_mp_engine(callback=rebase_at_each_filing_sampling, atoms=sep_prepared_plus_indmom, data=None, \
         molecule_key='observations', split_strategy='ticker', num_processes=num_processes, molecules_per_process=1, \
@@ -109,14 +111,20 @@ def test_sep_featured():
         data={'sep': sep_prepared_plus_indmom, "sf1_art": sf1_art}, molecule_key='sep_sampled', split_strategy= 'ticker', \
             num_processes=num_processes, molecules_per_process=1)
 
+    sep_featured.sort_values(by=["ticker", "date"], ascending=True, inplace=True)
+
+
     tbm_labeled_sep = pandas_mp_engine(callback=add_labels_via_triple_barrier_method, atoms=sep_featured, \
         data={'sep': sep}, molecule_key='sep_featured', split_strategy= 'ticker', \
-            num_processes=num_processes, molecules_per_process=1, ptSl=[0.8, -0.8], min_ret=None)
+            num_processes=num_processes, molecules_per_process=1, ptSl=[1, -1], min_ret=None)
+
+    tbm_labeled_sep.sort_values(by=["ticker", "date"], ascending=True, inplace=True)
 
     erp_labeled_sep = pandas_mp_engine(callback=equity_risk_premium_labeling, atoms=tbm_labeled_sep, \
         data=None, molecule_key='sep_featured', split_strategy= 'ticker', \
             num_processes=num_processes, molecules_per_process=1, tb_rate=tb_rate)
 
+    erp_labeled_sep.sort_values(by=["ticker", "date"], ascending=True, inplace=True)
 
     sep_featured = erp_labeled_sep
 

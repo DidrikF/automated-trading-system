@@ -61,21 +61,21 @@ def test_merge_datasets():
 # @pytest.mark.skip()
 def test_finalize_dataset():
     global metadata, dataset
+    """
+    Requires to make the filling of missing values deterministic in the "fix_nans_and_drop_rows" function.
+    """
 
     sep = pd.read_csv("../datasets/testing/sep.csv")
     sep_featured = pd.read_csv("./testing_datasets/sep_featured.csv", parse_dates=["date", "datekey"])
     sf1_featured = pd.read_csv("./testing_datasets/sf1_featured.csv", parse_dates=["datekey", "calendardate"])
 
-    cols = ["bm", "chinv"]
-
     date0 = "2004-01-20"
     datekey0 = "2003-12-19"
-
     date1 = "2006-05-05"
     datekey1 = "2005-02-01"
 
     sf1_featured["bm"].loc[(sf1_featured.ticker == "AAPL") & (sf1_featured.datekey == datekey0)] = pd.NaT
-    # sf1_featured["bm"].loc[(sf1_featured.ticker == "AAPL") & (sf1_featured.datekey == datekey1)] = pd.NaT
+    sf1_featured["bm"].loc[(sf1_featured.ticker == "AAPL") & (sf1_featured.datekey == datekey1)] = pd.NaT
 
     
     # Get desired_value
@@ -105,12 +105,15 @@ def test_finalize_dataset():
     market_std = check_dataset["bm"].std()
     market_val = market_mean + market_std
 
-    print("desired: ", dataset.loc[(dataset.ticker == "AAPL") & (dataset.datekey == datekey0)].iloc[-1]["bm"])
+    print("desired for date0: ", dataset.loc[(dataset.ticker == "AAPL") & (dataset.datekey == datekey0)].iloc[-1]["bm"])
+    print("desired for date1: ", dataset.loc[(dataset.ticker == "AAPL") & (dataset.datekey == datekey1)].iloc[-1]["bm"])
+    
     print("industry: ", ind_val)
     print("market: ", market_val)
 
     assert dataset.loc[(dataset.ticker == "AAPL") & (dataset.datekey == datekey0)].iloc[-1]["bm"] == ind_val
-        
+
+
 
 @pytest.mark.skip()
 def test_feature_scaling():

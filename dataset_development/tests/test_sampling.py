@@ -1,9 +1,7 @@
 import pandas as pd
 import pytest
 
-from ..sampling import (extend_sep_for_sampling, 
-    first_filing_based_sampling, 
-    rebase_at_each_filing_sampling)
+from ..sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
 from ..dataset import Dataset
 from ..processing.engine import pandas_mp_engine
 
@@ -89,6 +87,7 @@ def test_extend_sep_for_sampling():
     assert sep_extended_ntk.loc["2011-05-04"]["datekey"] == pd.to_datetime("2011-03-31")
 
 
+@pytest.mark.skip()
 def test_rebase_at_each_filing_sampling():
     global sep_extended
     global sep_sampled
