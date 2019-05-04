@@ -4,10 +4,10 @@ from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 import numpy as np
 
-from .helpers.helpers import print_exception_info, get_most_up_to_date_10k_filing,\
+from helpers.helpers import print_exception_info, get_most_up_to_date_10k_filing,\
     get_most_up_to_date_10q_filing, get_calendardate_index, forward_fill_gaps, \
         get_calendardate_x_quarters_ago, get_calendardate_x_quarters_later
-from .processing.engine import pandas_mp_engine
+from processing.engine import pandas_mp_engine
 
 
 def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.DataFrame):

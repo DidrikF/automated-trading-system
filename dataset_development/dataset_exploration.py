@@ -3,8 +3,8 @@ import sys
 from dateutil.relativedelta import *
 from datetime import datetime, timedelta
 import numpy as np
-from packages.processing.engine import pandas_mp_engine
-from packages.helpers.helpers import get_calendardate_index, forward_fill_gaps
+from processing.engine import pandas_mp_engine
+from helpers.helpers import get_calendardate_index, forward_fill_gaps
 
 def detect_gaps(df):
     df.sort_index()

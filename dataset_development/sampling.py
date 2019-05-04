@@ -5,7 +5,6 @@ from os import listdir
 from os.path import isfile, join
 
 from helpers.helpers import print_exception_info
-from .dataset import Dataset
 
 
 def extend_sep_for_sampling(sep, sf1_art, metadata):

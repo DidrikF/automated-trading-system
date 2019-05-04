@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 import numpy as np
 
 
-from .processing.engine import pandas_mp_engine
-from .helpers.helpers import get_most_up_to_date_10k_filing, get_calendardate_x_quarters_ago
+from processing.engine import pandas_mp_engine
+from helpers.helpers import get_most_up_to_date_10k_filing, get_calendardate_x_quarters_ago
 
 
 def add_industry_sf1_features(sf1_art, metadata):

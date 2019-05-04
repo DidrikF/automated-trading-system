@@ -12,7 +12,7 @@ import sys
 import numpy as np
 import math
 
-from .processing.engine import pandas_mp_engine
+from processing.engine import pandas_mp_engine
 """
 Step by step guide to labeling via the triple barrier method and meta-labeling.
 
