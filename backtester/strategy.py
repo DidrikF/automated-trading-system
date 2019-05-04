@@ -27,6 +27,7 @@ class Strategy(ABC):
         pass
 
 
+
 class RandomLongShortStrategy():
     def __init__(self, desc, tickers, amount):
         self.description = desc

@@ -189,7 +189,7 @@ def generate_sep_featured(num_processes, cache_dir, tb_rate, sep_path, sf1_art_p
             },
             "split_strategy": "ticker",
             "cache_result": True,
-            "disk_name": "tbm_labelet_sep"
+            "disk_name": "tbm_labeled_sep"
         },
         {
             "name": "Label the dataset for regressions on monthly equity risk premums",
@@ -312,7 +312,7 @@ if __name__ == "__main__":
             resume=True
         )
         
-        sep_featured.to_csv(save_path + "/ml_dataset.csv")
+        sep_featured.to_csv(save_path + "/sep_featured.csv")
 
 
     if True:

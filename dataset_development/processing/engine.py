@@ -528,7 +528,9 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
                 atoms = atoms.sort_values(by=atoms_config["sort_by"])
             molecules_dict[disk_name] = split_df_into_molecules(atoms, split_strategy, num_processes*molecules_per_process) # Split strategy here might have changed
 
-            if (atoms_config["cache"]) == True and (resume == False): # Only cache parsed atoms, when we are not resuming (which could have changed the split_strategy, making the contents of the cache harder to reason about)
+            if (atoms_config["cache"]) == True: # and (resume == False): 
+                # Only cache parsed atoms, when we are not resuming (which could have changed the split_strategy, making the contents 
+                # of the cache harder to reason about)
                 pickle_out = open(pickle_path,"wb")
                 pickle.dump(molecules_dict[disk_name], pickle_out)
                 pickle_out.close()

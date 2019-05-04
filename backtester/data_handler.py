@@ -54,6 +54,8 @@ class DailyBarsDataHander(DataHandler):
         if not os.path.exists(store_path):
             os.makedirs(store_path)
 
+
+        # Load time data
         full_path_time_data = self.store_path + "/" + self.file_name_time_data + ".pickle"
         if os.path.isfile(full_path_time_data) == True:
             data_file = open(full_path_time_data, 'rb')
@@ -61,20 +63,15 @@ class DailyBarsDataHander(DataHandler):
             data_file.close()
         else:
             self.ingest(parse_type="time")
-        
-        # data = self.time_data.loc[(self.time_data.index >= self.start) & (self.time_data.index <= self.end)]
-        # self.date_index_to_iterate = data.index.get_level_values(0)
-        # date_index_to_iterate = date_index[self.start:(self.end + relativedelta(days=1))]
-        # print(self.time_data)
 
-        # print(type(self.time_data))
-
+        # Set up data iterator
         dates = self.time_data.index.get_level_values(0).drop_duplicates(keep='first').to_frame()
         self.date_index_to_iterate  = dates.loc[(dates.index >= self.start) & (dates.index <= self.end)].index
 
         self.tick = self._next_tick_generator()
 
         
+        # Load ticker data
         full_path_ticker_data = self.store_path + "/" + self.file_name_ticker_data + ".pickle"
         if os.path.isfile(full_path_ticker_data) == True:
             data_file = open(full_path_ticker_data, 'rb')
@@ -82,6 +79,22 @@ class DailyBarsDataHander(DataHandler):
             data_file.close()
         else:
             self.ingest(parse_type="ticker")
+
+
+        # Load s&p500 data
+        full_path_snp500_data = self.store_path + "/" + self.file_name_snp_500_data + ".pickle"
+        if os.path.isfile(full_path_snp500_data) == True:
+            data_file = open(full_path_snp500_data, 'rb')
+            self.ticker_data = pickle.load(data_file)
+            data_file.close()
+        else:
+            self.ingest(parse_type="ticker")
+
+
+        # Load interest data
+
+        # ...
+
 
 
     def ingest(self, parse_type="time"):
@@ -239,6 +252,8 @@ class DailyBarsDataHander(DataHandler):
         """
         return DateTimeIndex that contains all dates with data from self.time_data
         """
+
+
 
 
 

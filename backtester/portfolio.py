@@ -45,6 +45,7 @@ class Signal():
 
 
 
+
 class Portfolio():
     def __init__(self, market_data, broker, balance: float, strategy: Strategy, initial_margin_requirement=0.5, maintenance_margin_requirement=0.3):
         self.market_data = market_data # Shared with backtester and broker
