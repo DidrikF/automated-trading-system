@@ -301,7 +301,7 @@ if __name__ == "__main__":
 
     if True:
         
-        tb_rate = pd.read_csv("./dataset/macro/t_bill_rate_3m.csv", parse_dates=["date"], index_col="date")
+        tb_rate = pd.read_csv("./datasets/macro/t_bill_rate_3m.csv", parse_dates=["date"], index_col="date")
         sep_featured = generate_sep_featured(
             num_processes=32, 
             cache_dir=cache_dir, 
