@@ -13,7 +13,7 @@ import os
 import pandas as pd
 
 
-from .processing.engine import pandas_chaining_mp_engine
+from processing.engine import pandas_chaining_mp_engine
 from .helpers.helpers import get_calendardate_x_quarters_later
 
 
