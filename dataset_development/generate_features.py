@@ -14,15 +14,15 @@ import pandas as pd
 
 
 from processing.engine import pandas_chaining_mp_engine
-from .helpers.helpers import get_calendardate_x_quarters_later
+from helpers.helpers import get_calendardate_x_quarters_later
 
 
-from .sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
-from .sep_features import add_sep_features, dividend_adjusting_prices_backwards, \
+from sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
+from sep_features import add_sep_features, dividend_adjusting_prices_backwards, \
     add_weekly_and_12m_stock_returns, add_equally_weighted_weekly_market_returns, add_indmom
-from .sf1_features import add_sf1_features
-from .sf1_industry_features import add_industry_sf1_features
-from .labeling import add_labels_via_triple_barrier_method, equity_risk_premium_labeling
+from sf1_features import add_sf1_features
+from sf1_industry_features import add_industry_sf1_features
+from labeling import add_labels_via_triple_barrier_method, equity_risk_premium_labeling
 
 
 sep_features = [
