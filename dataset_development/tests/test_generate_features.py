@@ -4,16 +4,23 @@ import math
 import sys
 import os
 
-from ..processing.engine import pandas_mp_engine, pandas_chaining_mp_engine
-from ..sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
-from ..sep_features import add_sep_features, add_indmom, dividend_adjusting_prices_backwards, add_weekly_and_12m_stock_returns, add_equally_weighted_weekly_market_returns
-from ..sf1_features import add_sf1_features
-from ..sf1_industry_features import add_industry_sf1_features
-from ..generate_features import generate_sep_featured, generate_sf1_featured
-from ..labeling import add_labels_via_triple_barrier_method, equity_risk_premium_labeling
+
+myPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(myPath, ".."))
+sys.path.insert(0, os.path.join(myPath))
+
+from processing.engine import pandas_mp_engine, pandas_chaining_mp_engine
+from sampling import extend_sep_for_sampling, rebase_at_each_filing_sampling
+from sep_features import add_sep_features, add_indmom, dividend_adjusting_prices_backwards, add_weekly_and_12m_stock_returns, add_equally_weighted_weekly_market_returns
+from sf1_features import add_sf1_features
+from sf1_industry_features import add_industry_sf1_features
+from generate_features import generate_sep_featured, generate_sf1_featured
+from labeling import add_labels_via_triple_barrier_method, equity_risk_premium_labeling
 
 save_path = ""
 cache_dir = ""
+
+
 
 @pytest.fixture(scope='module', autouse=True)
 def setup():
@@ -74,13 +81,11 @@ def test_sep_featured():
 
     sep_extended.sort_values(by=["ticker", "date"], ascending=True, inplace=True)
 
-    """
     sep_adjusted = pandas_mp_engine(callback=dividend_adjusting_prices_backwards, atoms=sep_extended, data=None, \
         molecule_key='sep', split_strategy= 'ticker', \
             num_processes=num_processes, molecules_per_process=1)
-    """
 
-    sep_adjusted_plus_returns = pandas_mp_engine(callback=add_weekly_and_12m_stock_returns, atoms=sep_extended, data=None, \
+    sep_adjusted_plus_returns = pandas_mp_engine(callback=add_weekly_and_12m_stock_returns, atoms=sep_adjusted, data=None, \
         molecule_key='sep', split_strategy= 'ticker', \
             num_processes=num_processes, molecules_per_process=1)
 
@@ -115,7 +120,7 @@ def test_sep_featured():
 
 
     tbm_labeled_sep = pandas_mp_engine(callback=add_labels_via_triple_barrier_method, atoms=sep_featured, \
-        data={'sep': sep}, molecule_key='sep_featured', split_strategy= 'ticker', \
+        data={'sep': sep_prepared_plus_indmom}, molecule_key='sep_featured', split_strategy= 'ticker', \
             num_processes=num_processes, molecules_per_process=1, ptSl=[1, -1], min_ret=None)
 
     tbm_labeled_sep.sort_values(by=["ticker", "date"], ascending=True, inplace=True)
@@ -203,7 +208,7 @@ def test_sep_featured():
 
 
 
-
+@pytest.mark.skip()
 def testing_sf1_featured():
     global save_path, cache_dir
     num_processes = 6
