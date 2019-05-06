@@ -1,6 +1,7 @@
 import pandas as pd
 import math
 import datetime
+from typing import Callable
 
 # from strategy import Strategy
 from portfolio import Portfolio, Order, Strategy
@@ -18,11 +19,27 @@ from errors import MarketDataNotAvailableError, BalanceTooLowError
 from visualization.visualization import plot_data
 from logger import Logger
 
+"""
+TO DO:
+
+
+
+"""
+
 
 # NOT SURE ABOUT THIS, WHERE TO PUT METHODS ETC
 class Backtester():
-    def __init__(self, market_data_handler: DataHandler, feature_data_handler: DataHandler, start, end, output_path, \
-        initialize_hook=None, handle_data_hook=None, analyze_hook=None):
+    def __init__(
+        self, 
+        market_data_handler: DataHandler, 
+        feature_data_handler: DataHandler, 
+        start: pd.datetime, 
+        end: pd.datetime, 
+        output_path: str,
+        initialize_hook: Callable=None, 
+        handle_data_hook: Callable=None, 
+        analyze_hook: Callable=None
+    ):
         """
         data_handler: DataHandler for price data.
         feature_data: DataHandler for feature data informing the strategy.
@@ -37,7 +54,6 @@ class Backtester():
         self.market_data = market_data_handler
         self.feature_data = feature_data_handler
 
-        # self.market_data = {} # Add data as it becomes available, to avoid look-ahead bias, do it another way
 
         self.start = start
         self.end = end

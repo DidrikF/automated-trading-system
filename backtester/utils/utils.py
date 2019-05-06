@@ -4,29 +4,42 @@ import time
 import datetime as dt
 import sys
 
+class Strategy(ABC):
+    def generate_signals(self):
+        pass
 
-def report_progress(cur_date: pd.datetime, start_date: pd.datetime, end_date: pd.datetime, time0, task):
-    """
-    Print progression statistics for the backtest to stdout.
-    """
+    # @staticmethod
+    def generate_orders_from_signals(self):
+        pass
 
-    total_days = end_date - start_date
-    days_completed = cur_date - start_date
+    def get_order_id(self):
+        pass
 
-    ratio_of_jobs_completed = float(days_completed.days/total_days.days)
-    minutes_elapsed = (time.time()-time0)/60
-    minutes_remaining = minutes_elapsed*(1/ratio_of_jobs_completed - 1)
-    time_stamp = str(dt.datetime.fromtimestamp(time.time()))
-    msg = time_stamp + " " + str(round(ratio_of_jobs_completed*100, 2)) + "% " + " ratio of days completed " + str(days_completed.days) + "/" + str(total_days.days) + \
-        " - " + task + " done after " + str(round(minutes_elapsed, 2)) + " minutes. Remaining " + \
-            str(round(minutes_remaining, 2)) + ' minutes.'
-    
-    if cur_date < end_date: 
-        sys.stderr.write(msg + '\r') # override previous line
-    else: 
-        sys.stderr.write(msg + '\n')
-    return
+    def get_signal_id(self):
+        pass
 
+
+
+
+class Signal():
+    def __init__(self, signal_id, ticker, direction, certainty, ewmstd, ptSl):
+        self.signal_id = signal_id
+        self.ticker = ticker
+        self.direction = direction
+        self.certainty = certainty
+
+        self.ewmstd = ewmstd # The variablity measure behind the barriers, may also be relevant
+        self.ptSl = ptSl
+        # I dont really have barriers for new predictions, but I have the ewmstd and ptSl which was used to generate barriers for training.
+        # self.barriers = (None, None, None) # Relevant for calculations of stop-loss, take-profit and also relevent for rebalancing
+
+        self.feature_data_index = None # Need to take this as arguments, makes it easier to track the data behind signals
+        self.feature_data_date = None # Need to take this as arguments, makes it easier to track the data behind signals
+
+
+    @classmethod
+    def from_nothing(cls):
+        return cls("NONE", "NONE", "NONE", "NONE", "NONE")
 
 
 class CommissionModel(ABC):
@@ -105,6 +118,34 @@ class EquitySlippageModel(SlippageModel):
 
 
 
+def report_progress(cur_date: pd.datetime, start_date: pd.datetime, end_date: pd.datetime, time0, task):
+    """
+    Print progression statistics for the backtest to stdout.
+    """
+
+    total_days = end_date - start_date
+    days_completed = cur_date - start_date
+
+    ratio_of_jobs_completed = float(days_completed.days/total_days.days)
+    minutes_elapsed = (time.time()-time0)/60
+    minutes_remaining = minutes_elapsed*(1/ratio_of_jobs_completed - 1)
+    time_stamp = str(dt.datetime.fromtimestamp(time.time()))
+    msg = time_stamp + " " + str(round(ratio_of_jobs_completed*100, 2)) + "% " + " ratio of days completed " + str(days_completed.days) + "/" + str(total_days.days) + \
+        " - " + task + " done after " + str(round(minutes_elapsed, 2)) + " minutes. Remaining " + \
+            str(round(minutes_remaining, 2)) + ' minutes.'
+    
+    if cur_date < end_date: 
+        sys.stderr.write(msg + '\r') # override previous line
+    else: 
+        sys.stderr.write(msg + '\n')
+    return
+
+
+
+
+
+
+
 
 
 
@@ -176,8 +217,6 @@ class Account(): # Dont know if this is appropriate for me
 
 class CachedObject():
     pass
-
-
 
 
 

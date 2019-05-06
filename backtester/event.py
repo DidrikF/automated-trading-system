@@ -27,12 +27,14 @@ class EventQueue():
         return self.queue.pop()
 
 
-
-# Don't know if this is needed.
-
 class MarketDataEvent(Event):
-    def __init__(self):
-        self.type = "MARKET"
+    def __init__(self, event_type, data, date, interest, business_day):
+        
+        super(event_type, data, date)
+
+        self.interest = interest
+        self.business_day = business_day    
+
 
 
 class FillEvent(Event):

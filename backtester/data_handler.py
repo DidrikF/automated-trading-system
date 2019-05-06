@@ -1,13 +1,19 @@
-import os
+import sys, os
 import pickle
 import pandas as pd
 from abc import ABC, abstractmethod
 from dateutil.relativedelta import *
 from datetime import datetime, timedelta
+import math
 
-from event import Event
+myPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(myPath, ".."))
+
+
+from event import Event, MarketDataEvent
 from utils.errors import MarketDataNotAvailableError
 from utils.logger import Logger
+from dataset_development.processing.engine import pandas_mp_engine
 
 """
 Due to memory not being an issue, I think it is most effective have data in memory
@@ -35,14 +41,53 @@ class DataHandler(ABC):
     def current(self):
         pass
 
+"""
+I want all data to have a complete datetime index. But I need to be able to distinguish between business day and non-business days.
+Options:
+- Don't forward fill data..
+- Have a column indicating if it is a business day (or better, if the price was reported in the source in the given date) 
+    (then I can ffill and still know if i can trade...)
+- I also need to know if it is a business day, which means that all sort of code is supposed to run.
+
+What if data is messing for a company on a day, then it may to be safe to assume it can be traded.
+
+Also, now I end up with a lot of different dataframes, would be nice to just work with one.
+
+OHLC are not dividend adjusted
+sep:
+open (int) - high (int) - low (int) - close (int) - close_adjusted (int) - business_day (bool) - can_trade (bool)
+
+
+Ticker data df conduces me. It is best if I can trust that the same data is in both time and ticker data dataframes.
+
+For this reason I should to all wanted transformations before "dividing" the data...
+
+I can have -> Then I only have 2 dataframes (!!!)
+ticker_data["snp_500"] # split and dividend adjsuted, so I can compare directly with the portfolio
+ticker_data["rf_3m"]
+ticker_data["rf_1m"]
+ticker_data["rf_1d"]
+
+"""
 
 class DailyBarsDataHander(DataHandler):
-    def __init__(self, source_path, store_path: str, file_name_time_data, file_name_ticker_data, start: pd.datetime, end: pd.datetime):
-        self.source_path = source_path
+    def __init__(
+        self, 
+        path_prices: str, 
+        path_snp500: str, 
+        path_interest: str,
+        store_path: str,
+        start: pd.datetime, 
+        end: pd.datetime
+    ):
+        self.path_prices = path_prices
+        self.path_snp500 = path_snp500
+        self.path_interest = path_interest
+
+        self.file_name_bundle = "data_bundle" # Store all data needed for backtesting here
+
         self.store_path = store_path
-        self.file_name_time_data = file_name_time_data
-        self.file_name_ticker_data = file_name_ticker_data
-        
+
         self.start = start
         self.end = end
 
@@ -54,15 +99,29 @@ class DailyBarsDataHander(DataHandler):
         if not os.path.exists(store_path):
             os.makedirs(store_path)
 
-
-        # Load time data
-        full_path_time_data = self.store_path + "/" + self.file_name_time_data + ".pickle"
-        if os.path.isfile(full_path_time_data) == True:
-            data_file = open(full_path_time_data, 'rb')
-            self.time_data = pickle.load(data_file)
+        # Make and store time and ticker data together
+        full_path_bundle_data = self.store_path + "/" + self.file_name_bundle + ".pickle"
+        if os.path.isfile(full_path_bundle_data) == True:
+            data_file = open(full_path_bundle_data, 'rb')
+            bundle = pickle.load(data_file)
             data_file.close()
         else:
-            self.ingest(parse_type="time")
+            # Make bundle
+            bundle = self.ingest_data()
+
+            # Store bundle
+            full_store_path = self.store_path + '/' + self.file_name_bundle + ".pickle"
+            outfile = open(full_store_path, 'wb')
+            pickle.dump(bundle, outfile)
+            outfile.close()
+
+
+        self.time_data = bundle["time_data"]
+        self.ticker_data = bundle["ticker_data"]
+        self.rf_rate = bundle["rf_rate"]
+
+
+        # print(self.time_data)
 
         # Set up data iterator
         dates = self.time_data.index.get_level_values(0).drop_duplicates(keep='first').to_frame()
@@ -70,91 +129,161 @@ class DailyBarsDataHander(DataHandler):
 
         self.tick = self._next_tick_generator()
 
+
+
+    def ingest_data(self):
+        data: pd.DataFrame = pd.read_csv(self.path_prices, parse_dates=["date"], index_col="date", low_memory=False)
         
-        # Load ticker data
-        full_path_ticker_data = self.store_path + "/" + self.file_name_ticker_data + ".pickle"
-        if os.path.isfile(full_path_ticker_data) == True:
-            data_file = open(full_path_ticker_data, 'rb')
-            self.ticker_data = pickle.load(data_file)
-            data_file.close()
-        else:
-            self.ingest(parse_type="ticker")
+        data = self.ingest_snp500(data)
 
-
-        # Load s&p500 data
-        full_path_snp500_data = self.store_path + "/" + self.file_name_snp_500_data + ".pickle"
-        if os.path.isfile(full_path_snp500_data) == True:
-            data_file = open(full_path_snp500_data, 'rb')
-            self.ticker_data = pickle.load(data_file)
-            data_file.close()
-        else:
-            self.ingest(parse_type="ticker")
-
-
-        # Load interest data
-
-        # ...
-
-
-
-    def ingest(self, parse_type="time"):
+        # Reindex all stocks, ffill and add business_day and can_trade columns
+        data = pandas_mp_engine(
+            callback=reindex_and_ffill,
+            atoms=data,
+            data=None,
+            molecule_key="sep",
+            split_strategy="ticker",
+            num_processes=6,
+            molecules_per_process=1
+        )
+        
         """
-        Parse data into desired format for backtesting, save it and make set it on the time_data
-        or ticker_data attributes.
+        grouped_data = data.groupby("ticker")
+        dfs = pd.DataFrame(columns=data.columns)
+        for ticker, df in grouped_data:
+            df = reindex_and_ffill(df)
+            dfs = dfs.append(df, sort=True)
+
+        print(dfs)
         """
-        print("ingest called")
-        source_df = pd.read_csv(self.source_path, parse_dates=["date"], low_memory=False)
 
-        if parse_type == "time":
-            print("Parsing data to time format from source_path{}".format(self.source_path))
-            self.time_data = {}
-            split_df = source_df.groupby("date")
-            for date, df in split_df:
-                df = df.sort_values(by=["ticker"])
-                self.time_data[date] = df.set_index("ticker")
-                if any(self.time_data[date].index.duplicated()):
-                    print("duplicate data for one or more tickers on date: ", date)
-                    # drop duplicates probably
+        
+        data = data.reset_index()
 
-            self.time_data = pd.concat(self.time_data)
-            self.time_data = self.time_data.sort_index()
+        data = data.rename(index=str, columns={"index": "date"})
 
-            full_store_path = self.store_path + '/' + self.file_name_time_data + ".pickle"
-            outfile = open(full_store_path, 'wb')
-            pickle.dump(self.time_data, outfile)
-            outfile.close()
+        time_data = {}
+        split_df = data.groupby("date")
+        for date, df in split_df:
+            df = df.sort_values(by=["ticker"])
+            time_data[date] = df.set_index("ticker").sort_index()
+            if any(time_data[date].index.duplicated()):
+                print("duplicate data for one or more tickers on date: ", date)
+                # drop duplicates probably
+
+        time_data = pd.concat(time_data)
+        time_data = time_data.sort_index()
 
 
-        elif parse_type == "ticker":
-            print("Parsing data to ticker format from source_path{}".format(self.source_path))
-            self.ticker_data = {}
-            split_df = source_df.groupby("ticker")
-            for ticker, df in split_df:
-                df = df.sort_values(by="date")
-                self.ticker_data[ticker] = df.set_index("date")
-                if any(self.ticker_data[ticker].index.duplicated()):
-                    print("duplicate data for ticker ", ticker, " on one or more dates")
-                    # drop duplicates probably
+        ticker_data = {}
+        split_df = data.groupby("ticker")
+        for ticker, df in split_df:
+            df = df.sort_values(by="date")
+            ticker_data[ticker] = df.set_index("date").sort_index()
+            if any(ticker_data[ticker].index.duplicated()):
+                print("duplicate data for ticker ", ticker, " on one or more dates")
+                # drop duplicates probably
+        ticker_data = pd.concat(ticker_data)
+        ticker_data = ticker_data.sort_index()
 
-            self.ticker_data = pd.concat(self.ticker_data)
-            self.ticker_data = self.ticker_data.sort_index()
 
-            full_store_path = self.store_path + '/' + self.file_name_ticker_data + ".pickle"
-            outfile = open(full_store_path, 'wb')
-            pickle.dump(self.ticker_data, outfile)
-            outfile.close()
 
+        rf_rate = self.ingest_interest()
+
+        return {
+            "time_data": time_data,
+            "ticker_data": ticker_data,
+            "rf_rate": rf_rate
+        }
+            
+
+
+    def ingest_snp500(self, data):
+        """
+        Ingest S&P500 data and merge it into the data bundle as another instrument.
+        """
+        dateparse = lambda x: pd.datetime.strptime(x, "%d.%m.%Y")
+        snp500: pd.DataFrame = pd.read_csv(self.path_snp500, parse_dates=["date"], date_parser=dateparse, index_col="date")
+
+        # new_index: pd.DatetimeIndex = pd.date_range(snp500.index.min(), snp500.index.max())
+        # snp500 = snp500.reindex(new_index)
+        # snp500 = snp500.fillna(method="ffill", axis=0)
+        
+        snp500["ticker"] = "snp500"
+        
+        data = data.append(snp500, sort=True)
+
+        return data
+
+        
+    def ingest_interest(self):
+        """
+        Ingest Interest rate data and calculate daily and weekly rates and return as a dataframe.
+        """
+
+        rf_rate: pd.DataFrame = pd.read_csv(self.path_interest, parse_dates=["date"], index_col="date")
+
+        # Make daily, weekly, and 3m (not modified)
+        rf_rate["daily"] = rf_rate["rate"] / 91 # Assumes 3-month T-bill reaches maturity after 13 weeks (13*7 = 91 days)
+        rf_rate["weekly"] = rf_rate["rate"] / 13
+        rf_rate["3_month"] = rf_rate["rate"]
+
+        rf_rate = rf_rate.drop(columns=["rate"])
     
-    
+        return rf_rate
+
+
+
+    # ____________________________________________________________________________________________________________
+    # NEED TO UPDATE THE BELOW: to take into account: business days, can trade
+    # This should make things easier as prices is allways available even though it might not be possible to trade
+
+
     def _next_tick_generator(self):
+        """
+        Maybe this should indicate whether it is a business day or not.
+        """
 
         for date in self.date_index_to_iterate:
             self.cur_date = date
             tick_data = self.time_data.loc[date]
-            
-            yield Event(event_type="DAILY_MARKET_DATA", data=tick_data, date=date)
+            interest_data = self.rf_rate[date]
+            is_business_day = self.is_business_day()
 
-    
+            yield MarketDataEvent(event_type="DAILY_MARKET_DATA", data=tick_data, date=date, interest=interest_data, business_day=is_business_day)
+            
+            # yield MarketDataEvent("DAILY_MARKET_DATA", tick_data, date, interest_data, is_business_day)
+
+    def can_trade(self, ticker, date):
+        """
+        Use can_trade column the date being outside min/max date index for the ticker.
+        Important to check this for all tickers the strategy/portfolio/broker that should be traded.
+        """
+        try:
+            res = self.ticker_data.loc[ticker, date]["can_trade"]
+        except:
+            res = False
+
+        return res
+        
+
+    def is_business_day(self, date=None):
+        """
+        It is a business day if data is available for one or more tickers (firms).
+        """
+        if date is None:
+            date = self.cur_date
+
+        data = self.time_data.loc[date]
+
+        for ticker, row in data.iterrows():
+            if (ticker != "snp500") and (row["can_trade"] == True):
+                return True
+
+        return False
+
+
+
     # The final method, update_bars, is the second abstract method from DataHandler. 
     # It simply generates a MarketEvent that gets added to the queue as it appends the latest bars 
     # to the latest_symbol_data:
@@ -181,9 +310,11 @@ class DailyBarsDataHander(DataHandler):
         
         return Event(event_type="DAILY_MARKET_DATA", data=daily_data, date=self.cur_date)
 
+
     def current_tick(self): # Should not be possible to fail...
         """
         Returns the market data for the current tick.
+        This does not say whether or not you can trade....
         """
         return self.get_data_for_date(self.cur_date)
 
@@ -236,23 +367,48 @@ class DailyBarsDataHander(DataHandler):
 
 
 
-    def can_trade_ticker(self, ticker, date):
-        """ Checks if the there is price data beyond the $date for the $ticker """
-        # Use max() on dateindex
-        pass
-
-    def history(self, ticker): # REDUNDANT
-        """
-        Returns a window of data for the given assets and fields.
-        This data is adjusted for splits, dividends, and mergers as of the current algorithm time.
-        """
-        pass
     
-    def get_index(self):
-        """
-        return DateTimeIndex that contains all dates with data from self.time_data
-        """
 
+def dividend_adjusting_prices_backwards(sep: pd.DataFrame) -> pd.DataFrame: 
+    """
+    Split strategy: ticker
+    Adds dividend adjusted close prices to dataframe.
+    """
+    sep = sep.sort_values(by="date", ascending=False)
+    adjustment_factor = 1
+
+    # Looping backwards in time...
+    for date, row in sep.iterrows():
+        # At each date we want to adjust the price according to the accumulated 
+        # adjustment factor from future dates, not the current date.
+        sep.at[date, "adj_open"] = row["open"] / adjustment_factor
+        sep.at[date, "adj_high"] = row["high"] / adjustment_factor
+        sep.at[date, "adj_low"] = row["low"] / adjustment_factor
+        sep.at[date, "adj_close"] = row["close"] / adjustment_factor
+        
+        # All the earlier dates than the current need to be adjusted according 
+        # to the current accumulated adjustment factor, taking into account
+        # any new dividend on the current date.
+        adjustment_factor_update = (row["close"] + row["dividends"]) / row["close"]
+        adjustment_factor = adjustment_factor * adjustment_factor_update
+
+    return sep
+
+
+def reindex_and_ffill(sep: pd.DataFrame) -> pd.DataFrame:
+    """
+    Use this with multiprocessing
+    """
+
+    # Create complete index
+    new_index = pd.date_range(sep.index.min(), sep.index.max())
+    sep = sep.reindex(new_index)
+    sep["can_trade"] = ~sep["close"].isnull()
+
+    sep = sep.fillna(method="ffill")
+
+
+    return sep
 
 
 
@@ -308,18 +464,3 @@ class MLFeaturesDataHandler(DataHandler):
 
 # Data readers
 # All sort of query methods implemented by zipline to get wanted data fast.
-
-
-class DataLoader():
-    """Class for loading and parsing data into a format suited for running backtest on."""
-    pass
-
-
-
-class Bundle(): # Dont think this is appropriate for me
-    def __init__(self):
-        pass
-    def ingest(self):
-        pass
-
-

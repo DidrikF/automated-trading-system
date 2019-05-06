@@ -113,12 +113,21 @@ def generate_sep_featured(num_processes, cache_dir, tb_rate, sep_path, sf1_art_p
             },
             "kwargs": {}, # Key word arguments to the callback
             "split_strategy": "ticker", # How the molecules needs to be split for this task
-            "save_result_to_disk": False, # Whether to combine and store the resulting molecules to disk (as a csv file)
             "sort_by": ["ticker", "date"], # Sorting parameters, used both for molecules individually and when combined
             "cache_result": True,  # Whether to cache the resulting molecules, because they are needed later in the chain
             "disk_name": "sep_extended", # Name of molecules saved as pickle in cache_dir or as one csv file in save_dir
         },
         # Dividend adjustment...
+        {
+            "name": "Dividend adjusting close prices",
+            "callback": dividend_adjusting_prices_backwards,
+            "molecule_key": "sep",
+            "data": None,
+            "kwargs": {},
+            "split_strategy": "ticker",
+            "cache_result": True,
+            "disk_name": "sep_extended_divadj",
+        },
         {
             "name": "Add weekly and 12 month stock returns",
             "callback": add_weekly_and_12m_stock_returns,
@@ -142,7 +151,7 @@ def generate_sep_featured(num_processes, cache_dir, tb_rate, sep_path, sf1_art_p
         {
             "name": "Add industry momentum",
             "callback": add_indmom,
-            "molecule_key": "sep",
+            "molecule_key": "sep", 
             "data": None,
             "kwargs": {},
             "split_strategy": "industry",
@@ -181,7 +190,7 @@ def generate_sep_featured(num_processes, cache_dir, tb_rate, sep_path, sf1_art_p
             "callback": add_labels_via_triple_barrier_method,
             "molecule_key": "sep_featured",
             "data": {
-                "sep": "sep",
+                "sep": "sep_extended_divadj_ret_market_ind",
             },
             "kwargs": {
                 "ptSl": [1, -1],
@@ -303,11 +312,11 @@ if __name__ == "__main__":
         
         tb_rate = pd.read_csv("./datasets/macro/t_bill_rate_3m.csv", parse_dates=["date"], index_col="date")
         sep_featured = generate_sep_featured(
-            num_processes=32, 
-            cache_dir=cache_dir, 
+            num_processes=32,
+            cache_dir=cache_dir,
             tb_rate=tb_rate, 
-            sep_path="./datasets/sharadar/SEP_PURGED.csv", 
-            sf1_art_path="./datasets/sharadar/SHARADAR_SF1_ART.csv", 
+            sep_path="./datasets/sharadar/SEP_PURGED.csv",
+            sf1_art_path="./datasets/sharadar/SHARADAR_SF1_ART.csv",
             metadata_path="./datasets/sharadar/METADATA_PURGED.csv",
             resume=True
         )
@@ -315,11 +324,13 @@ if __name__ == "__main__":
         sep_featured.to_csv(save_path + "/sep_featured.csv")
 
 
-    if True:
+    if False:
         """ Do I need to do this? I've done this in the test sets???
         sf1_art.drop_duplicates(subset=["ticker", "calendardate", "datekey"], keep="last", inplace=True)
         sf1_arq.drop_duplicates(subset=["ticker", "calendardate", "datekey"], keep="last", inplace=True)
         """
+
+        # Come Runntime Warnings occure when running this...
 
         sf1_featured = generate_sf1_featured(
             num_processes=32,
@@ -333,9 +344,47 @@ if __name__ == "__main__":
 
         sf1_featured.to_csv(save_path + "/sf1_featured.csv")
 
-   
+
+"""
+STDOUT when running generate_sf1_featured:
+
+# Errors might have something todo with me forgetting to activate the conda environment (ran on python 3.7)
 
 
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:140: RuntimeWarning: Degrees of freedom <= 0 for slice
+  keepdims=keepdims)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:110: RuntimeWarning: invalid value encountered in true_divide
+  arrmean, rcount, out=arrmean, casting='unsafe', subok=False)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:132: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:140: RuntimeWarning: Degrees of freedom <= 0 for slice
+  keepdims=keepdims)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:110: RuntimeWarning: invalid value encountered in true_divide
+  arrmean, rcount, out=arrmean, casting='unsafe', subok=False)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:132: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:140: RuntimeWarning: Degrees of freedom <= 0 for slice
+  keepdims=keepdims)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:110: RuntimeWarning: invalid value encountered in true_divide
+  arrmean, rcount, out=arrmean, casting='unsafe', subok=False)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:132: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:140: RuntimeWarning: Degrees of freedom <= 0 for slice
+  keepdims=keepdims)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:110: RuntimeWarning: invalid value encountered in true_divide
+  arrmean, rcount, out=arrmean, casting='unsafe', subok=False)
+/home/ubuntu/anaconda3/lib/python3.7/site-packages/numpy/core/_methods.py:132: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+2019-05-04 16:21:24.591384 100.0% 14138/14138 - add_sf1_features done after 6.5 minutes. Remaining 0.0 minutes...
+Cacheing as pickle result from task:  Add sf1 features
+Step  2  of  2  - Add industry sf1 features - Time elapsed:  9.46  minutes.
+/home/ubuntu/pycode/automated-trading-system/dataset_development/sf1_industry_features.py:163: RuntimeWarning: invalid value encountered in double_scalars
+  sum_sqrd_percent_of_revenue += (company_row["revenueusd"] / sum_industry_revenue)**2
+/home/ubuntu/pycode/automated-trading-system/dataset_development/sf1_industry_features.py:163: RuntimeWarning: invalid value encountered in double_scalars
+  sum_sqrd_percent_of_revenue += (company_row["revenueusd"] / sum_industry_revenue)**2
+Connection reset by 52.215.29.43 port 226 - add_industry_sf1_features done after 6.33 minutes. Remaining 0.13 minutes.
+
+"""
 
 
 """
@@ -359,17 +408,4 @@ Traceback (most recent call last):
   File "final_dataset_generation.py", line 232, in <module>
     molecules_per_process=2, resume=True)
   File "/home/ubuntu/pycode/automated-trading-system/packages/processing/engine.py", line 430, in pandas_chaining_mp_engine
-"""
-
-""" NOT NEEDED IT SEEMS
-{
-    "name": "Dividend adjusting close price",
-    "callback": dividend_adjusting_prices_backwards,
-    "molecule_key": "sep",
-    "data": None,
-    "kwargs": {},
-    "split_strategy": "ticker",
-    "cache_result": True,
-    "disk_name": "sep_extended_divadj",
-},
 """

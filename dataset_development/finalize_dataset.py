@@ -353,21 +353,19 @@ def finalize_dataset(sep, metadata, sep_featured=None, sf1_featured=None, num_pr
     return dataset
 
 
-
-
 if __name__ == "__main__":
 
     sep = pd.read_csv("./datasets/sharadar/SEP_PURGED.csv", parse_dates=["date"], index_col="date", low_memory=False)
 
     metadata = pd.read_csv("./datasets/sharadar/METADATA_PURGED.csv")
     
-    sep_featured = pd.read_csv("./datasets/ml_ready_live/sep_featured_labeled.csv", parse_dates=["date", "datekey", "age"])
+    sep_featured = pd.read_csv("./datasets/completed/sep_featured.csv", parse_dates=["date", "datekey", "age"])
         
-    sf1_featured = pd.read_csv("./datasets/ml_ready_live/sf1_featured.csv", parse_dates=["calendardate", "datekey"])
+    sf1_featured = pd.read_csv("./datasets/completed/sf1_featured.csv", parse_dates=["calendardate", "datekey"])
 
     dataset = finalize_dataset(sep=sep, metadata=metadata, sep_featured=sep_featured, sf1_featured=sf1_featured)
 
-    dataset.to_csv("./datasets/ml_ready_live/dataset_without_nans.csv", index=False)
+    dataset.to_csv("./datasets/completed/ml_dataset.csv", index=False)
 
     # Report on final dataset
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
@@ -378,18 +376,3 @@ if __name__ == "__main__":
         print(dataset.isnull().sum())
         print(dataset.describe())
         
-
-
-
-    # NEED TO TEST THE ABOVE CODE, NEED TO USE TESTSETS, BECAUSE IT TAKE TOO MUCH TIME!!! 
-    # NEED TO STEP BACK...
-
-
-    """
-    # 4. Scale Features
-    scaled_dataset = pandas_mp_engine(callback=feature_type_fixing_and_scaling, atoms=dataset, data=None, molecule_key="dataset", \
-        split_strategy="ticker_new", num_processes=6, molecules_per_process=1)
-
-
-
-    """

@@ -20,11 +20,10 @@ def add_sep_features(sep_sampled, sep, sf1_art):
     date_index = pd.date_range(sep.index.min(), sep.index.max())
     sep_filled = sep.reindex(date_index)
     
-    # sep_filled["adj_close"] = sep_filled["adj_close"].fillna(method="ffill")
-    
-    sep_filled["close"] = sep_filled["close"].fillna(method="ffill")
+    sep_filled = sep_filled.fillna(method="ffill")
 
-    # Maybe i can to a combination or reindex, resample and shift to calculate features
+    # sep_filled["adj_close"] = sep_filled["adj_close"].fillna(method="ffill")
+    # sep_filled["close"] = sep_filled["close"].fillna(method="ffill")
 
     sep_filled_1m_ahead = sep_filled.shift(periods=-30)
     sep_filled_2m_ahead = sep_filled.shift(periods=-60)
@@ -38,22 +37,22 @@ def add_sep_features(sep_sampled, sep, sf1_art):
 
     """ CALCULATE FEATURES IN NEED OF SEP_FILLED """
     # Labels
-    sep_filled["return_1m"] = (sep_filled_1m_ahead["close"] / sep_filled["close"]) - 1
-    sep_filled["return_2m"] = (sep_filled_2m_ahead["close"] / sep_filled["close"]) - 1
-    sep_filled["return_3m"] = (sep_filled_3m_ahead["close"] / sep_filled["close"]) - 1
+    sep_filled["return_1m"] = (sep_filled_1m_ahead["adj_close"] / sep_filled["adj_close"]) - 1
+    sep_filled["return_2m"] = (sep_filled_2m_ahead["adj_close"] / sep_filled["adj_close"]) - 1
+    sep_filled["return_3m"] = (sep_filled_3m_ahead["adj_close"] / sep_filled["adj_close"]) - 1
     
 
     # Momentum features
-    sep_filled["mom1m"] = (sep_filled["close"] / sep_filled_1m_ago["close"]) - 1
-    sep_filled["mom6m"] = (sep_filled_1m_ago["close"] / sep_filled_6m_ago["close"]) - 1 # 5-month cumulative returns ending one month before month end.
-    sep_filled["mom12m"] = (sep_filled_1m_ago["close"] / sep_filled_12m_ago["close"]) - 1 # 11-month cumulative returns ending one month before month end.
-    sep_filled["mom24m"] = (sep_filled["close"] / sep_filled_24m_ago["close"]) - 1 # MY OWN ...
+    sep_filled["mom1m"] = (sep_filled["adj_close"] / sep_filled_1m_ago["adj_close"]) - 1
+    sep_filled["mom6m"] = (sep_filled_1m_ago["adj_close"] / sep_filled_6m_ago["adj_close"]) - 1 # 5-month cumulative returns ending one month before month end.
+    sep_filled["mom12m"] = (sep_filled_1m_ago["adj_close"] / sep_filled_12m_ago["adj_close"]) - 1 # 11-month cumulative returns ending one month before month end.
+    sep_filled["mom24m"] = (sep_filled["adj_close"] / sep_filled_24m_ago["adj_close"]) - 1 # MY OWN ...
     
     # In preparation for chmom --> Cumulative returns from months t-6 to t-1 (mom6m) minus months t-12 to t-7
     sep_filled_7m_ago = sep_filled.shift(periods=182+30)
-    sep_filled["mom12m_to_7m"] = (sep_filled_7m_ago["close"] / sep_filled_12m_ago["close"]) - 1
+    sep_filled["mom12m_to_7m"] = (sep_filled_7m_ago["adj_close"] / sep_filled_12m_ago["adj_close"]) - 1
     
-    # Change in 6 month momentum (chmom): ((SEP[close]u-1 / SEP[close]u-6) - 1) - ((SEP[close]u-7 / SEP[close]u-12) -1) --> Cumulative returns from months t-6 to t-1 minus months t-12 to t-7
+    # Change in 6 month momentum (chmom): ((SEP[adj_close]u-1 / SEP[adj_close]u-6) - 1) - ((SEP[adj_close]u-7 / SEP[adj_close]u-12) -1) --> Cumulative returns from months t-6 to t-1 minus months t-12 to t-7
     sep_filled["chmom"] = sep_filled["mom6m"] - sep_filled["mom12m_to_7m"]
 
 
@@ -215,7 +214,7 @@ def add_sep_features(sep_sampled, sep, sf1_art):
             num_zero_trading_days_the_past_month = len(sep_past_1month.loc[sep_past_1month["volume"] == 0])
             total_volume_past_month = sep_past_1month["volume"].sum()
             avg_number_of_shares_outstanding = sep_past_1month["sharesbas"].mean()
-            monthly_turnover = total_volume_past_month / avg_number_of_shares_outstanding
+            monthly_turnover = total_volume_past_month / avg_number_of_shares_outstanding # avg_number_of_shares_outstanding may be zero...
             deflator = 11000/12 # Liu selected deflator of 11000 for 12-month zerotrade in 2006, might not be optimal for todays market.
             number_of_trading_days_past_month = len(sep_past_1month)
             if (number_of_trading_days_past_month != 0) and (monthly_turnover != 0):
@@ -245,9 +244,9 @@ def add_indmom(sep: pd.DataFrame) -> pd.DataFrame:
 
 
 
-def dividend_adjusting_prices_backwards(sep): 
+def dividend_adjusting_prices_backwards(sep: pd.DataFrame) -> pd.DataFrame: 
     """
-    - sep contains all tickers for a date range.
+    Split strategy: ticker
     Adds dividend adjusted close prices to dataframe.
     """
     sep = sep.sort_values(by="date", ascending=False)
@@ -267,18 +266,6 @@ def dividend_adjusting_prices_backwards(sep):
 
     return sep
 
-def dividend_adjusting_prices_forwards(sep):
-    adjustment_factor = 1
-    # Looping forwards in time...
-    for date, row in sep.iterrows():
-        # Calculate adjustment factor
-        adjustment_factor_update = (row["close"] + row["dividends"]) / row["close"]
-        adjustment_factor = adjustment_factor * adjustment_factor_update
-        # Update close
-        sep.at[date, "adj_close_forward"] = row["close"] * adjustment_factor
-
-    return sep
-
 
 def add_weekly_and_12m_stock_returns(sep):
     """ sep only contains one ticker """
@@ -293,15 +280,15 @@ def add_weekly_and_12m_stock_returns(sep):
     date_index = pd.date_range(sep.index.min(), sep.index.max()) # [0], [1]
     
     sep_filled = sep.reindex(date_index)
-    sep_filled["close"] = sep_filled["close"].fillna(method="ffill")
+    sep_filled["adj_close"] = sep_filled["adj_close"].fillna(method="ffill")
     sep_filled_1w_behind = sep_filled.shift(periods=7)
 
     # Calculate weekly momentum/return
-    sep_filled["mom1w"] = (sep_filled["close"] / sep_filled_1w_behind["close"]) - 1
+    sep_filled["mom1w"] = (sep_filled["adj_close"] / sep_filled_1w_behind["adj_close"]) - 1
     
     # Calculate 12 month momentum (mom12m_actual) for indmom in sep_industry_features.py
     sep_filled_12m_behind = sep_filled.shift(periods=365)
-    sep_filled["mom12m_actual"] = (sep_filled["close"] / sep_filled_12m_behind["close"]) - 1
+    sep_filled["mom12m_actual"] = (sep_filled["adj_close"] / sep_filled_12m_behind["adj_close"]) - 1
 
     # Downsample and set values
     sep_filled = sep_filled.loc[sep.index]
@@ -326,6 +313,21 @@ def add_equally_weighted_weekly_market_returns(sep):
         sep_for_date = sep.loc[sep.index == date]
         avg_weekly_market_momentum = sep_for_date["mom1w"].mean()
         sep.loc[sep.index==date, "mom1w_ewa_market"] = avg_weekly_market_momentum
+
+    return sep
+
+
+
+
+def dividend_adjusting_prices_forwards(sep):
+    adjustment_factor = 1
+    # Looping forwards in time...
+    for date, row in sep.iterrows():
+        # Calculate adjustment factor
+        adjustment_factor_update = (row["close"] + row["dividends"]) / row["close"]
+        adjustment_factor = adjustment_factor * adjustment_factor_update
+        # Update close
+        sep.at[date, "adj_close_forward"] = row["close"] * adjustment_factor
 
     return sep
 

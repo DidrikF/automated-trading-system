@@ -20,6 +20,148 @@ Step by step guide to labeling via the triple barrier method and meta-labeling.
     deivation on monthly/weekly returns the past year.
 """
 
+
+
+# Think this will be the last callback in the sep pipeline
+# How will this change when side is not allways long?
+def add_labels_via_triple_barrier_method(sep_featured: pd.DataFrame, sep: pd.DataFrame, ptSl: tuple, min_ret):
+    
+    if ("ewmstd_2y_monthly" not in sep_featured.columns) or ("timeout" not in sep_featured.columns):
+        return sep_featured
+
+    ewmstd = sep_featured[["ewmstd_2y_monthly"]]
+
+    # I only consider the case there there is a timeout
+    timeout = sep_featured[["timeout"]]
+
+    side_long = pd.DataFrame(index=ewmstd.index)
+    side_long["side"] = 1.0
+
+
+    # 3) form events objects, apply stop loss on t1
+    events = pd.concat({'timeout': timeout["timeout"], 'ewmstd': ewmstd["ewmstd_2y_monthly"], 'side': side_long["side"]}, axis=1) # .dropna(subset=["trgt"])
+    # print(events)
+    barrier_touch_dates = events[["timeout"]].copy(deep=True)
+
+    take_profit_barriers = ptSl[0] * events["ewmstd"] # I only consider the case where there is both horizontal barriers
+    stop_loss_barriers = ptSl[1] * events["ewmstd"]
+    # print(stop_loss_barriers)
+
+    # NOTE: Use adjusted close
+    for date, timeout in events["timeout"].fillna(sep.index[-1]).iteritems(): # If timeout is missing for an event (this should not be the case), we use the last date in sep (for the ticker) as timeout.
+        path_of_prices = sep.loc[(sep.index >= date) & (sep.index <= timeout)][["close"]]
+        path_of_returns = ((path_of_prices["close"] / path_of_prices.iloc[0]["close"]) - 1) * events.loc[events.index == date].iloc[0]["side"] # events.loc[date]["side"] # remember we are still allways long
+        barrier_touch_dates.loc[date, "earliest_take_profit_touch"] = path_of_returns[path_of_returns > take_profit_barriers[date]].index.min()
+        barrier_touch_dates.loc[date, "earliest_stop_loss_touch"] = path_of_returns[path_of_returns < stop_loss_barriers[date]].index.min()
+        
+
+    # print(barrier_touch_dates)
+    # print(events)
+    # drop those where none of the barrieres where touched (should be extremly rare, if not at all I think)
+    events["earliest_touch"] = barrier_touch_dates.dropna(how='all').min(axis=1) # pd.min ignores nan, here events["t1"] becomes the timesamp of the earliest barrier touch
+
+    # events = events.drop("side", axis=1)
+    # events_ = events.dropna(subset=["earliest_touch"]) # Does not do anything.
+    # sample_date__earliest_touch_date = events_.index.union(events_["earliest_touch"].values).drop_duplicates()
+    # close_reindexed = close.reindex(close_index, method="bfill")
+
+    # out = pd.DataFrame(index=events.index)
+
+    # NOTE: Use adjusted close
+    events["return"] = sep.loc[events["earliest_touch"]]["close"].values / sep.loc[events.index]["close"].values - 1
+    events["primary_label"] = np.sign(events["return"])
+
+    sep_featured[["return_tbm", "primary_label_tbm"]] = events[["return", "primary_label"]]
+    sep_featured["date_of_touch"] = events["earliest_touch"]
+    sep_featured["take_profit_barrier"] = take_profit_barriers
+    sep_featured["stop_loss_barrier"] = stop_loss_barriers
+
+    return sep_featured
+
+
+
+
+def equity_risk_premium_labeling(sep_featured, tb_rate):
+    # 1.    To get the risk free rate over the month, take the most recent 3-month t-bill rate and make 
+    #       it into a decimal number and divide it by 3 to get the monthly rate
+    # 2.    Subtract the risk free rate from the return
+    
+    for date, row in sep_featured.iterrows():
+        tb_rate_3m = tb_rate.loc[date]["rate"]
+
+        rf_rate_1m = tb_rate_3m / 3
+        rf_rate_2m = (tb_rate_3m / 3) * 2
+        rf_rate_3m = tb_rate_3m
+
+        sep_featured.at[date, "erp_1m"] = row["return_1m"] - rf_rate_1m # uses adjusted close
+        sep_featured.at[date, "erp_2m"] = row["return_2m"] - rf_rate_2m
+        sep_featured.at[date, "erp_3m"] = row["return_3m"] - rf_rate_3m
+
+    return sep_featured
+
+
+def process_tree_month_t_bill_rates(tb_rate):
+    tb_rate = tb_rate.rename(columns={"DATE": "date", "DTB3": "rate"})
+    tb_rate = tb_rate.set_index("date")
+    tb_rate.index.name = "date"
+    tb_rate.loc[tb_rate.rate == "."] = math.nan
+    tb_rate["rate"] = pd.to_numeric(tb_rate["rate"])
+    
+    date_index = pd.date_range(tb_rate.index.min(), tb_rate.index.max())
+    tb_rate = tb_rate.reindex(date_index)
+    tb_rate["rate"] = tb_rate["rate"].fillna(method="ffill")
+    tb_rate["rate"] = tb_rate["rate"] / 100
+    tb_rate = tb_rate.round(4)
+
+    return tb_rate
+
+if __name__ == "__main__":
+    tb_rate = pd.read_csv("./datasets/excel/three_month_treasury_bill_rate.csv", parse_dates=["DATE"], low_memory=False)
+
+    tb_rate = process_tree_month_t_bill_rates(tb_rate)
+
+    tb_rate.to_csv("./datasets/macro/t_bill_rate_3m.csv", index=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# _______________ NOTES _________________________
+
+
 """
 def get_daily_volatility(close, span0=100):
     # Daily volatility, reindexed to close
@@ -30,8 +172,6 @@ def get_daily_volatility(close, span0=100):
     df0 = df0.ewm(span=span0).std()
     return df0
 """
-
-
 
 
 def getEvents(close: pd.Series, tEvents: pd.DatetimeIndex, ptSl: tuple, trgt: pd.Series, minRet: float, numThreads: int, t1=False):
@@ -158,35 +298,6 @@ def getBins(events, close):
 # With the above you can label the dataset for side prediction, meta-labeling can be deferred to later.
 
 
-# Metalabaling functions:
-
-def get_events_metalabaling(close, tEvents, ptSl, trgt, minRet, numThreads, t1=False, side=None):
-    # 1) get target
-    trgt = trgt.loc[tEvents]
-    trgt = trgt[trgt>minRet] # minRet
-
-    # 2) Get t1 (max holding period)
-    if t1 is False:
-        t1 = pd.Series(pd.NaT, index=tEvents)
-
-    # 3) form events object, apply stop loss on t1
-    if side is None: 
-        side_, ptSl = pd.Series(1.0, index=trgt.index), [ ptSl[0], ptSl[0] ]
-    else:
-        side_, ptSl_ = side.loc[trgt.index], ptSl[:2]
-    
-    events = pd.concat({"t1": t1, "trgt": trgt, "side": side_}, axis=1).dropna(subset=["trgt"])
-    df0 = pandas_mp_engine(callback=apply_ptsl_on_t1, pdObj=("molecule", events.index), numThreads=numThreads, \
-        close=inst["close"], events=events, ptSl=ptSl_)
-
-
-    events["t1"] = df0.dropna(how="all").min(axis=1) # pd.min ignores nan
-    if side is None: 
-        events = events.drop("side", axis=1)
-
-    return events
-
-
 def getBins(events, close):
     """
     Compute event's outcome (include side information, if provided).
@@ -236,6 +347,37 @@ def drop_labels(events, min_pct=0.05):
 
 
 
+
+# Metalabaling functions:
+
+def get_events_metalabaling(close, tEvents, ptSl, trgt, minRet, numThreads, t1=False, side=None):
+    # 1) get target
+    trgt = trgt.loc[tEvents]
+    trgt = trgt[trgt>minRet] # minRet
+
+    # 2) Get t1 (max holding period)
+    if t1 is False:
+        t1 = pd.Series(pd.NaT, index=tEvents)
+
+    # 3) form events object, apply stop loss on t1
+    if side is None: 
+        side_, ptSl = pd.Series(1.0, index=trgt.index), [ ptSl[0], ptSl[0] ]
+    else:
+        side_, ptSl_ = side.loc[trgt.index], ptSl[:2]
+    
+    events = pd.concat({"t1": t1, "trgt": trgt, "side": side_}, axis=1).dropna(subset=["trgt"])
+    df0 = pandas_mp_engine(callback=apply_ptsl_on_t1, pdObj=("molecule", events.index), numThreads=numThreads, \
+        close=inst["close"], events=events, ptSl=ptSl_)
+
+
+    events["t1"] = df0.dropna(how="all").min(axis=1) # pd.min ignores nan
+    if side is None: 
+        events = events.drop("side", axis=1)
+
+    return events
+
+
+
 def triple_barrier_search(events, sep, ptSl):
     barrier_touch_dates = events[["timeout"]].copy(deep=True)
 
@@ -243,7 +385,7 @@ def triple_barrier_search(events, sep, ptSl):
     stop_loss_barriers = ptSl[1] * events["ewmstd"]
 
     for date, timeout in events["timeout"].fillna(sep.index[-1]).iterrows(): # If timeout is missing for an event (this should not be the case), we use the last date in sep (for the ticker) as timeout.
-        path_of_prices = sep[date:timeout]["close"]
+        path_of_prices = sep[date:timeout]["adj_close"] # close originally....
         path_of_returns = (path_of_prices / path_of_prices[0] - 1) * events.at[date, "side"] # remember we are still allways long
         barrier_touch_dates.loc[date, "earliest_take_profit_touch"] = path_of_returns[path_of_returns > take_profit_barriers[date]].index.min()
         barrier_touch_dates.loc[date, "earliest_stop_loss_touch"] = path_of_returns[path_of_returns < stop_loss_barriers[date]].index.min()
@@ -266,7 +408,7 @@ def get_first_barrier_touches(sep_featured, sep, ptSl: tuple, trgt: pd.Series, m
     
     sep_featured = pandas_mp_engine(callback=triple_barrier_search, atoms=sep_featured, \
         data={'sep': sep}, molecule_key='sep_sampled', split_strategy= 'ticker', \
-            num_processes=1, molecules_per_process=1, ptSl=[0.9,0.9], minRet=None)
+            num_processes=1, molecules_per_process=1, ptSl=[1,-1], minRet=None)
 
     # drop those where none of the barrieres where touched (should be extremly rare, if not at all I think)
     events["earliest_touch"] = df0.dropna(how='all').min(axis=1) # pd.min ignores nan, here events["t1"] becomes the timesamp of the earliest barrier touch
@@ -291,102 +433,3 @@ def get_primary_labels(events, sep):
     return out
 
 
-
-
-# Think this will be the last callback in the sep pipeline
-# How will this change when side is not allways long?
-def add_labels_via_triple_barrier_method(sep_featured: pd.DataFrame, sep: pd.DataFrame, ptSl: tuple, min_ret):
-    
-    if ("ewmstd_2y_monthly" not in sep_featured.columns) or ("timeout" not in sep_featured.columns):
-        return sep_featured
-
-    ewmstd = sep_featured[["ewmstd_2y_monthly"]]
-
-    # I only consider the case there there is a timeout
-    timeout = sep_featured[["timeout"]] # NEED TO ADD
-
-    side_long = pd.DataFrame(index=ewmstd.index)
-    side_long["side"] = 1.0
-
-
-    # 3) form events objects, apply stop loss on t1
-    events = pd.concat({'timeout': timeout["timeout"], 'ewmstd': ewmstd["ewmstd_2y_monthly"], 'side': side_long["side"]}, axis=1) # .dropna(subset=["trgt"])
-    # print(events)
-    barrier_touch_dates = events[["timeout"]].copy(deep=True)
-
-    take_profit_barriers = ptSl[0] * events["ewmstd"] # I only consider the case where there is both horizontal barriers
-    stop_loss_barriers = ptSl[1] * events["ewmstd"]
-    # print(stop_loss_barriers)
-
-    for date, timeout in events["timeout"].fillna(sep.index[-1]).iteritems(): # If timeout is missing for an event (this should not be the case), we use the last date in sep (for the ticker) as timeout.
-        path_of_prices = sep.loc[(sep.index >= date) & (sep.index <= timeout)][["close"]]
-        path_of_returns = ((path_of_prices["close"] / path_of_prices.iloc[0]["close"]) - 1) * events.loc[events.index == date].iloc[0]["side"] # events.loc[date]["side"] # remember we are still allways long
-        barrier_touch_dates.loc[date, "earliest_take_profit_touch"] = path_of_returns[path_of_returns > take_profit_barriers[date]].index.min()
-        barrier_touch_dates.loc[date, "earliest_stop_loss_touch"] = path_of_returns[path_of_returns < stop_loss_barriers[date]].index.min()
-        
-
-    # print(barrier_touch_dates)
-    # print(events)
-    # drop those where none of the barrieres where touched (should be extremly rare, if not at all I think)
-    events["earliest_touch"] = barrier_touch_dates.dropna(how='all').min(axis=1) # pd.min ignores nan, here events["t1"] becomes the timesamp of the earliest barrier touch
-
-    # events = events.drop("side", axis=1)
-    # events_ = events.dropna(subset=["earliest_touch"]) # Does not do anything.
-    # sample_date__earliest_touch_date = events_.index.union(events_["earliest_touch"].values).drop_duplicates()
-    # close_reindexed = close.reindex(close_index, method="bfill")
-
-    # out = pd.DataFrame(index=events.index)
-    events["return"] = sep.loc[events["earliest_touch"]]["close"].values / sep.loc[events.index]["close"].values - 1
-
-    events["primary_label"] = np.sign(events["return"])
-
-    sep_featured[["return_tbm", "primary_label_tbm"]] = events[["return", "primary_label"]]
-    sep_featured["date_of_touch"] = events["earliest_touch"]
-    sep_featured["take_profit_barrier"] = take_profit_barriers
-    sep_featured["stop_loss_barrier"] = stop_loss_barriers
-
-    return sep_featured
-
-
-
-
-def equity_risk_premium_labeling(sep_featured, tb_rate):
-    # 1.    To get the risk free rate over the month, take the most recent 3-month t-bill rate and make 
-    #       it into a decimal number and divide it by 3 to get the monthly rate
-    # 2.    Subtract the risk free rate from the return
-    
-    for date, row in sep_featured.iterrows():
-        tb_rate_3m = tb_rate.loc[date]["rate"]
-
-        rf_rate_1m = tb_rate_3m / 3
-        rf_rate_2m = (tb_rate_3m / 3) * 2
-        rf_rate_3m = tb_rate_3m
-
-        sep_featured.at[date, "erp_1m"] = row["return_1m"] - rf_rate_1m
-        sep_featured.at[date, "erp_2m"] = row["return_2m"] - rf_rate_2m
-        sep_featured.at[date, "erp_3m"] = row["return_3m"] - rf_rate_3m
-
-    return sep_featured
-
-
-def process_tree_month_t_bill_rates(tb_rate):
-    tb_rate = tb_rate.rename(columns={"DATE": "date", "DTB3": "rate"})
-    tb_rate = tb_rate.set_index("date")
-    tb_rate.index.name = "date"
-    tb_rate.loc[tb_rate.rate == "."] = math.nan
-    tb_rate["rate"] = pd.to_numeric(tb_rate["rate"])
-    
-    date_index = pd.date_range(tb_rate.index.min(), tb_rate.index.max())
-    tb_rate = tb_rate.reindex(date_index)
-    tb_rate["rate"] = tb_rate["rate"].fillna(method="ffill")
-    tb_rate["rate"] = tb_rate["rate"] / 100
-    tb_rate = tb_rate.round(4)
-
-    return tb_rate
-
-if __name__ == "__main__":
-    tb_rate = pd.read_csv("./datasets/excel/three_month_treasury_bill_rate.csv", parse_dates=["DATE"], low_memory=False)
-
-    tb_rate = process_tree_month_t_bill_rates(tb_rate)
-
-    tb_rate.to_csv("./datasets/macro/t_bill_rate_3m.csv", index=True)
