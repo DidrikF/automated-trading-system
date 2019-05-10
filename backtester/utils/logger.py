@@ -17,7 +17,7 @@ class Logger():
 
         logFormatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
         
-        fileHandler = logging.FileHandler("./logs/backtest.log")
+        fileHandler = logging.FileHandler("../logs/backtest.log")
         fileHandler.setFormatter(logFormatter)
         
         consoleHandler = logging.StreamHandler()

@@ -6,132 +6,14 @@ from abc import ABC, abstractmethod
 import random
 from event import Event
 from dateutil.relativedelta import *
+import math
 
-from helpers import sign
-from portfolio import Order
-from errors import MarketDataNotAvailableError
-from logger import Logger
-from utils.utils import Strategy
-
-from utils.utils import Signal, Strategy
-
-class RandomLongShortStrategy(Strategy):
-    def __init__(self, desc, tickers, amount):
-        self.description = desc
-        self.amount = amount
-        self.tickers = tickers
-        self.signal_id_seed = 0
-
-        # Restrictions
-        self.max_position_size = None
-
-    def generate_signals(self, feature_data_event: Event):
-        signals = []
-        possible_directions = [-1, 1]
-
-        for _ in range(self.amount):
-            ticker = random.choice(self.tickers)
-            direction = random.choice(possible_directions)
-            certainty = random.uniform(0, 1)
-            signals.append(Signal(signal_id=self.get_signal_id(), ticker=ticker, direction=direction, certainty=certainty, ewmstd=0.15, ptSl=[0.8, -0.8]))
-
-        return Event(event_type="SIGNALS", data=signals, date=feature_data_event.date)
-
-
-    def generate_orders_from_signals(self, portfolio, signals_event: Event):
-        orders = []
-        signals = signals_event.data
-
-        for signal in signals:
-            ticker = signal.ticker
-            amount = sign(signal.direction) * signal.certainty * self.max_position_size
-            cur_date = portfolio.market_data.cur_date
-            try:
-                cur_price = portfolio.market_data.current_for_ticker(ticker)
-            except MarketDataNotAvailableError as e:
-                Logger.logr.warning("Failed to generate order from signal because market data was not available for ticker {} in {}".format(ticker, cur_date))
-                continue
-                
-            take_profit = cur_price + signal.eqmstd * signal.ptSl[0]
-            stop_loss = cur_price - signal.ewmstd * signal.ptSl[1] # may not use the ptSl settings behind the signal
-            time_out = cur_date + relativedelta(months=1)
-            # order_id, ticker, amount, date, signal, stop_loss=None, take_profit=None, time_out=None
-            orders.append(Order(order_id=self.get_order_id(), ticker=ticker, amount=amount, date=self.market_data.cur_date, signal=signal, \
-                stop_loss=stop_loss , take_profit=take_profit, time_out=time_out))
-
-
-        return orders
-
-
-    # @staticmethod
-    def generate_orders_from_signals_real(self, portfolio, signals_event: Event):
-        orders = []
-        signals = signals_event.data
-
-        cur_portfolio = portfolio.portfolio
-
-        desired_portfolio = self.get_desired_portfolio(cur_portfolio, signals)
-
-        orders = self.generate_orders(cur_portfolio, desired_portfolio)
-
-        return Event(event_type="ORDERS", data=orders, date=signals_event.date) # Orders are 
-
-    def get_desired_portfolio(self, cur_portfolio, signals):
-        """
-        I need a prioritized list of "moves", then I execute as many as I can under the given restrictions
-        """
-        # Is this where enforce portfolio restrictiond and make sure I have the balance, margin required?
-
-
-        desired_portfolio = {}
-
-        return desired_portfolio
-
-    
-    def generate_orders(self, cur_portfolio, desired_portfolio):
-        """
-        Returns ordered list of market orders to send to the broker, that will to the greatest extent move the portfolio 
-        to the desired state given the restrictions.
-        """
-        orders = []
-
-        # Liquidate first to get capital for new orders
-
-        # Then the rest of the orders, don't think the order matters
-
-        # Its very possible to not generate any orders, this should probably happen most of the time.
-
-        return orders
-
-
-    def set_order_restrictions(self, max_size, max_positions, min_positions, max_orders_per_day, max_orders_per_month, max_hold_period):
-        """
-        Set a limit on the number of shares and/or dollar value held for the given sid. Limits are treated 
-        as absolute values and are enforced at the time that the algo attempts to place an order for sid. 
-        This means that it’s possible to end up with more than the max number of shares due to splits/dividends, 
-        and more than the max notional due to price improvement.
-        If an algorithm attempts to place an order that would result in increasing the absolute value of shares/dollar 
-        value exceeding one of these limits, raise a "TradingControlException".
-        """
-        
-        self.max_position_size_percentage = max_size # Percentage of total portfolio value
-        
-        self.max_positions = max_positions
-        self.min_positions = min_positions
-
-        self.max_orders_per_day = max_orders_per_day
-        self.max_orders_per_month = max_orders_per_month
-
-        self.max_hold_period = max_hold_period
-        
-        # max position size together with max orders per time will limit turnaround
-
-    def get_order_id(self):
-        pass
-
-    def get_signal_id(self):
-        self.signal_id_seed += 1
-        return self.signal_id_seed
+from numpy import sign
+from order import Order
+from utils.errors import MarketDataNotAvailableError
+from utils.logger import Logger
+from utils.types import Strategy
+from utils.utils import Signal
 
 
 
@@ -213,7 +95,7 @@ class RandomLongShortStrategy():
             ticker = random.choice(self.tickers)
             direction = random.choice(possible_directions)
             certainty = random.uniform(0, 1)
-            signals.append(Signal(signal_id=self.get_signal_id(), ticker=ticker, direction=direction, certainty=certainty, ewmstd=0.15, ptSl=[0.8, -0.8]))
+            signals.append(Signal(signal_id=self.get_signal_id(), ticker=ticker, direction=direction, certainty=certainty, ewmstd=0.15, ptSl=[1, -1]))
 
         return Event(event_type="SIGNALS", data=signals, date=feature_data_event.date)
 
@@ -231,7 +113,7 @@ class RandomLongShortStrategy():
                 Logger.logr.warning("Failed to generate order from signal because market data was not available for ticker {} in {}".format(signal.ticker, cur_date))
                 continue
 
-            max_dollar_size = self.max_position_size_percentage * portfolio.calculate_value()
+            max_dollar_size = self.max_position_size_percentage * portfolio.calculate_portfolio_value()
             max_nr_stocks_of_ticker = math.floor(max_dollar_size / ticker_data["open"])
             amount = math.floor(signal.direction * signal.certainty * max_nr_stocks_of_ticker)
             
@@ -242,15 +124,16 @@ class RandomLongShortStrategy():
                 continue
             
                 
-            take_profit = ticker_data["open"]* (1 + (signal.ewmstd * signal.ptSl[0]))
-            stop_loss = ticker_data["open"] * (1 + (signal.ewmstd * signal.ptSl[1])) # may not use the ptSl settings behind the signal
-            time_out = cur_date + relativedelta(months=1)
+            take_profit = signal.ewmstd * signal.ptSl[0]
+            stop_loss = signal.ewmstd * signal.ptSl[1]
+            timeout = cur_date + relativedelta(months=1)
             orders.append(Order(order_id=self.get_order_id(), ticker=signal.ticker, amount=amount, date=portfolio.market_data.cur_date, signal=signal, \
-                stop_loss=stop_loss , take_profit=take_profit, time_out=time_out))
-
+                stop_loss=stop_loss , take_profit=take_profit, timeout=timeout))
 
         return Event(event_type="ORDERS", data=orders, date=signals_event.date)
 
+    def handle_event(self, event):
+        pass
 
     # @staticmethod
     def generate_orders_from_signals_real(self, portfolio, signals_event: Event):
@@ -327,6 +210,23 @@ class RandomLongShortStrategy():
     def get_order_id(self):
         self.order_id_seed += 1
         return self.order_id_seed
+
+
+class TestStrategy(Strategy):
+    def __init__(self):
+        pass
+
+    def generate_signals(self):
+        pass
+
+    def generate_orders_from_signals(self):
+        pass
+
+    def get_order_id(self):
+        pass
+
+    def get_signal_id(self):
+        pass
 
 
 

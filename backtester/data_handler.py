@@ -8,7 +8,7 @@ import math
 
 myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(myPath, ".."))
-
+# sys.path.insert(0, os.path.join(myPath))
 
 from event import Event, MarketDataEvent
 from utils.errors import MarketDataNotAvailableError
@@ -18,55 +18,33 @@ from dataset_development.processing.engine import pandas_mp_engine
 """
 Due to memory not being an issue, I think it is most effective have data in memory
 split both by ticker and date.
-time_data = {
+data_handler.time_data = {
 "2012-01-04": df(columns: ["ticker", "open", "high", ...], index_col="ticker"),
 "2012-01-05": df(columns: ["ticker", "open", "high", ...], index_col="date"),
 ...
 }
-ticker_data = {
+data_handler.ticker_data = {
 "AAPL": df(columns: ["date", "open", "high", ...]),
 "MSFT: df(columns: ["date", "open", "high", ...]),
 ...
 }
-
 """
 
 class DataHandler(ABC):
-    def ingest(self, parse_type):
-        pass
-
-    def get_data(self):
+    def ingest_data(self):
         pass
 
     def current(self):
         pass
 
 """
-I want all data to have a complete datetime index. But I need to be able to distinguish between business day and non-business days.
-Options:
-- Don't forward fill data..
-- Have a column indicating if it is a business day (or better, if the price was reported in the source in the given date) 
-    (then I can ffill and still know if i can trade...)
-- I also need to know if it is a business day, which means that all sort of code is supposed to run.
+All data to have a complete datetime index and a "can_trade" bool column is used to find out if the data was forward filled or not. 
 
-What if data is messing for a company on a day, then it may to be safe to assume it can be traded.
 
-Also, now I end up with a lot of different dataframes, would be nice to just work with one.
-
+May want to add dividend adjusted OHLC data for more accurate exit rule computations
 OHLC are not dividend adjusted
 sep:
 open (int) - high (int) - low (int) - close (int) - close_adjusted (int) - business_day (bool) - can_trade (bool)
-
-
-Ticker data df conduces me. It is best if I can trust that the same data is in both time and ticker data dataframes.
-
-For this reason I should to all wanted transformations before "dividing" the data...
-
-I can have -> Then I only have 2 dataframes (!!!)
-ticker_data["snp_500"] # split and dividend adjsuted, so I can compare directly with the portfolio
-ticker_data["rf_3m"]
-ticker_data["rf_1m"]
-ticker_data["rf_1d"]
 
 """
 
@@ -76,13 +54,16 @@ class DailyBarsDataHander(DataHandler):
         path_prices: str, 
         path_snp500: str, 
         path_interest: str,
+        path_corp_actions: str,
         store_path: str,
         start: pd.datetime, 
-        end: pd.datetime
+        end: pd.datetime,
+        rebuild: bool=False,
     ):
         self.path_prices = path_prices
         self.path_snp500 = path_snp500
         self.path_interest = path_interest
+        self.path_corp_actions = path_corp_actions
 
         self.file_name_bundle = "data_bundle" # Store all data needed for backtesting here
 
@@ -101,7 +82,7 @@ class DailyBarsDataHander(DataHandler):
 
         # Make and store time and ticker data together
         full_path_bundle_data = self.store_path + "/" + self.file_name_bundle + ".pickle"
-        if os.path.isfile(full_path_bundle_data) == True:
+        if (os.path.isfile(full_path_bundle_data) == True) and (rebuild == False):
             data_file = open(full_path_bundle_data, 'rb')
             bundle = pickle.load(data_file)
             data_file.close()
@@ -119,9 +100,7 @@ class DailyBarsDataHander(DataHandler):
         self.time_data = bundle["time_data"]
         self.ticker_data = bundle["ticker_data"]
         self.rf_rate = bundle["rf_rate"]
-
-
-        # print(self.time_data)
+        self.corp_actions = bundle["corp_actions"]
 
         # Set up data iterator
         dates = self.time_data.index.get_level_values(0).drop_duplicates(keep='first').to_frame()
@@ -129,39 +108,30 @@ class DailyBarsDataHander(DataHandler):
 
         self.tick = self._next_tick_generator()
 
-
-
     def ingest_data(self):
+        print("Reading SEP")
         data: pd.DataFrame = pd.read_csv(self.path_prices, parse_dates=["date"], index_col="date", low_memory=False)
         
+        print("Ingesting SNP500")
         data = self.ingest_snp500(data)
 
         # Reindex all stocks, ffill and add business_day and can_trade columns
+        print("Reindex and Forward Fill")
         data = pandas_mp_engine(
             callback=reindex_and_ffill,
             atoms=data,
             data=None,
             molecule_key="sep",
-            split_strategy="ticker",
+            split_strategy="ticker_new",
             num_processes=6,
             molecules_per_process=1
         )
         
-        """
-        grouped_data = data.groupby("ticker")
-        dfs = pd.DataFrame(columns=data.columns)
-        for ticker, df in grouped_data:
-            df = reindex_and_ffill(df)
-            dfs = dfs.append(df, sort=True)
 
-        print(dfs)
-        """
-
-        
         data = data.reset_index()
-
         data = data.rename(index=str, columns={"index": "date"})
 
+        print("Making time_data")
         time_data = {}
         split_df = data.groupby("date")
         for date, df in split_df:
@@ -174,7 +144,7 @@ class DailyBarsDataHander(DataHandler):
         time_data = pd.concat(time_data)
         time_data = time_data.sort_index()
 
-
+        print("Making ticker_data")
         ticker_data = {}
         split_df = data.groupby("ticker")
         for ticker, df in split_df:
@@ -187,13 +157,17 @@ class DailyBarsDataHander(DataHandler):
         ticker_data = ticker_data.sort_index()
 
 
-
+        print("Ingesting Interest Rates")
         rf_rate = self.ingest_interest()
+        date_index = time_data.index.get_level_values(0).drop_duplicates(keep='first')
+        print("Ingesting Coporate Actions")
+        corp_actions = self.ingest_corporate_actions(data.set_index("date"), date_index)
 
         return {
             "time_data": time_data,
             "ticker_data": ticker_data,
-            "rf_rate": rf_rate
+            "rf_rate": rf_rate,
+            "corp_actions": corp_actions
         }
             
 
@@ -232,12 +206,64 @@ class DailyBarsDataHander(DataHandler):
     
         return rf_rate
 
+    def ingest_corporate_actions(self, sep, date_index, actions=None):
+        """
+        Ingest Sharadars Corporate Events dataset and extract reports of bankruptices.
+        Also get the dates and tickers of delistings, which is defined to be the last date 
+        of ticker data in sep, before the last date in sep.
+        """
+
+        if actions is None:
+            actions = pd.read_csv(self.path_corp_actions, parse_dates=["date"])
+
+        corp_actions = pd.DataFrame(columns=["date", "ticker", "action"])
+        ca_index = 0
+
+        for index, row in actions.iterrows():
+            codes = [int(num_string) for num_string in str(row["eventcodes"]).split("|")]
+            if 13 in codes:
+                corp_actions.loc[ca_index] = [row["date"], row["ticker"], "bankruptcy"]
+                ca_index += 1
+
+
+        bankrupt_tickers = corp_actions["ticker"].unique()
+
+        sep_grouped = sep.groupby("ticker")
+        last_date_of_sep = date_index.max()
+        for ticker, ticker_df in sep_grouped:
+            last_date_of_ticker = ticker_df.index.max()
+            if last_date_of_ticker < last_date_of_sep:
+                # Company was delisted
+                corp_actions.loc[ca_index] =  [last_date_of_ticker, ticker, "delisted"]
+                ca_index += 1
+
+
+        # If a delesting happens on the same day or before a bankruptcy, then the bankruptcy takes presidence.
+        for ticker in bankrupt_tickers: # It can only be a conflict if the ticker went bankrupt
+            ticker_actions: pd.DataFrame = corp_actions.loc[corp_actions.ticker == ticker]
+            
+            if ticker_actions.shape[0] > 1: # Multiple bankruptices or delestings or both a bankruptcy and delesting
+                # Prioritize bankruptcy by make all action's bankruptcy if one of them are
+                if "bankruptcy" in (ticker_actions["action"].unique()):
+                    for index in ticker_actions.index:
+                        corp_actions.loc[index, "action"] = "bankruptcy"
+
+                # Remove all but the earliest bankruptcy action from corp_actions
+                earliest_ticker_event_date = ticker_actions["date"].min()
+                ticker_actions_less_earliset_date = ticker_actions.loc[ticker_actions.date != earliest_ticker_event_date]
+                indexes_to_drop = ticker_actions_less_earliset_date.index
+                corp_actions = corp_actions.drop(indexes_to_drop, axis=0)
+
+        # Drop any remaining duplicates (a result of bankruptcy being reported multiple times for the same stock on the same date)
+        corp_actions = corp_actions.drop_duplicates(subset=["ticker"]) # Must be updated if more corporate actions are to be supported
+        corp_actions = corp_actions.sort_values(['date', "ticker"])
+
+        return corp_actions
 
 
     # ____________________________________________________________________________________________________________
     # NEED TO UPDATE THE BELOW: to take into account: business days, can trade
     # This should make things easier as prices is allways available even though it might not be possible to trade
-
 
     def _next_tick_generator(self):
         """
@@ -247,25 +273,57 @@ class DailyBarsDataHander(DataHandler):
         for date in self.date_index_to_iterate:
             self.cur_date = date
             tick_data = self.time_data.loc[date]
-            interest_data = self.rf_rate[date]
-            is_business_day = self.is_business_day()
+            interest_data = self.rf_rate.loc[date]
+            is_business_day = self.is_business_day(self.cur_date)
 
-            yield MarketDataEvent(event_type="DAILY_MARKET_DATA", data=tick_data, date=date, interest=interest_data, business_day=is_business_day)
+            yield MarketDataEvent(event_type="DAILY_MARKET_DATA", data=tick_data, date=date, interest=interest_data, is_business_day=is_business_day)
             
-            # yield MarketDataEvent("DAILY_MARKET_DATA", tick_data, date, interest_data, is_business_day)
 
-    def can_trade(self, ticker, date):
+    def can_trade(self, ticker, date=None):
         """
         Use can_trade column the date being outside min/max date index for the ticker.
         Important to check this for all tickers the strategy/portfolio/broker that should be traded.
         """
+        if date is None:
+            date = self.cur_date
+
+        if self.is_bankrupt_or_delisted(ticker, date):
+            return False
+
         try:
             res = self.ticker_data.loc[ticker, date]["can_trade"]
         except:
             res = False
 
         return res
+
+    def is_bankrupt_or_delisted(self, ticker, date=None):
+        if date is None:
+            date = self.cur_date
+
+        # NOTE: can fail
+        passed_ticker_actions = self.corp_actions.loc[(self.corp_actions.ticker == ticker) & (self.corp_actions.date <= date)]["action"].unique()
         
+        if ("bankruptcy" in passed_ticker_actions) or ("delisted" in passed_ticker_actions):
+            return True
+        
+        return False
+
+    def current_corp_actions(self) -> pd.DataFrame:
+        # NOTE: can fail
+        return self.corp_actions.loc[self.corp_actions.date == self.cur_date]
+
+    def get_dividends(self, date: pd.datetime):
+        cur_sep = self.time_data.loc[date]
+        sep_with_dividends = cur_sep.loc[cur_sep.dividends != 0]
+        sep_with_dividends = sep_with_dividends.dropna(axis=0, subset=["dividends"])
+        return sep_with_dividends
+
+    def current_dividends(self):
+        cur_sep = self.time_data.loc[self.cur_date]
+        sep_with_dividends = cur_sep.loc[cur_sep.dividends != 0]
+        sep_with_dividends = sep_with_dividends.dropna(axis=0, subset=["dividends"])        
+        return sep_with_dividends
 
     def is_business_day(self, date=None):
         """
@@ -283,51 +341,26 @@ class DailyBarsDataHander(DataHandler):
         return False
 
 
-
-    # The final method, update_bars, is the second abstract method from DataHandler. 
-    # It simply generates a MarketEvent that gets added to the queue as it appends the latest bars 
-    # to the latest_symbol_data:
-    def next_tick_old(self):
-        """
-        Pushes the latest bar to the latest_symbol_data structure
-        for all symbols in the symbol list.
-
-        OBS: may be more stable to maintain the index we are looking up and then get the date from that...
-        """
-        while True:
-            if self.cur_date > self.end:
-                self.end_of_data_reached = True
-                raise IndexError("The current date is beyond the end date of the backtest. DataHandler cannot return next_tick.")
-
-            try:
-                daily_data = self.get_data_for_date(self.cur_date)
-                break
-            except KeyError:   
-                self.cur_date = self.cur_date + relativedelta(days=1) # Skip non-business days, holidays, etc.
-
-
-        self.cur_date = self.cur_date + relativedelta(days=1) # increment cur_date for before next call to next_tick
-        
-        return Event(event_type="DAILY_MARKET_DATA", data=daily_data, date=self.cur_date)
-
-
     def current_tick(self): # Should not be possible to fail...
         """
-        Returns the market data for the current tick.
-        This does not say whether or not you can trade....
+        Returns the market data for the current tick. Because marketdata is forward filled, this method will allways return 
+        the last available prices (also on holidays, weekends, etc.).
         """
         return self.get_data_for_date(self.cur_date)
 
 
     def get_data_for_date(self, date: pd.datetime):
         try:
-            daily_data = self.time_data.loc[date] # I thnk .loc
+            daily_data = self.time_data.loc[date]
         except:
             raise KeyError("No daily data for date {}".format(date))
         else:
             return daily_data
 
-    def current_for_ticker(self, ticker):
+    def current_for_ticker(self, ticker): # NOTE: I want this to fail if sebsequent code depends on this being provided.
+        """
+        Returns the current sep row for the provided ticker.
+        """
         try:
             data = self.ticker_data.loc[ticker, self.cur_date] # may need to update, df style
         except Exception as e:
@@ -335,12 +368,6 @@ class DailyBarsDataHander(DataHandler):
         else:
             return data
 
-    def last_for_ticker(self, ticker):
-        """
-        Returns the most recent SEP row for the ticker.
-        """
-        # Need to implement
-        return math.nan
 
     def continue_backtest(self):
         """Checks if there are more ticks to be processed"""
@@ -350,24 +377,123 @@ class DailyBarsDataHander(DataHandler):
             return False
 
 
-    
     def get_ticker_data(self, ticker):
         """
-        Return data for ticker
+        Return data for ticker from the start to the end date.
         """
-        
         try:
             data = self.ticker_data.loc[ticker][self.start:self.end]
         except Exception as e:
             return pd.DataFrame(columns=self.ticker_data.iloc[[0]].columns)
-            # print(e)
-            # raise MarketDataNotAvailableError("No market data for ticker {} from {} to {}".format(ticker, start, end))
         else:
             return data
 
 
+    def get_daily_interest_rate(self):
+        return self.rf_rate.loc[self.cur_date]["daily"]
 
+
+# NOTE: Maybe just the portfolio need to know about this...
+class MLFeaturesDataHandler(DataHandler):
+    def __init__(
+        self, 
+        path_features: str, 
+        store_path: str, 
+        start: pd.datetime, 
+        end: pd.datetime
+    ):
+        self.path_features = path_features
+        self.store_path = store_path
+        self.file_name = "feature_bundle"
+        self.start = start
+        self.end = end
+
+        self.emitted_until_date = start
+
+
+        full_store_path = self.store_path + '/' + self.file_name + ".pickle"
+        
+        if os.path.isfile(full_store_path):
+            data_file = open(full_store_path,'rb')
+            feature_data = pickle.load(data_file)
+            data_file.close()
+        else:
+            feature_data = self.ingest_data()
+
+            outfile = open(full_store_path, 'wb')
+            pickle.dump(feature_data, outfile)
+            outfile.close()
+
+        self.feature_data = feature_data
+        
+
+    def ingest_data(self):
+        """
+        Ingest feature data. The data can have model predictions with them. It is up to the user of this object
+        to avoid lookahead bias.
+        """
+        data: pd.DataFrame = pd.read_csv(self.path_features, parse_dates=["date", "datekey", "timeout"], low_memory=False)
+        feature_data = {}
+        split_df = data.groupby("date")
+        for date, df in split_df:
+            df = df.sort_values(by=["ticker"])
+            feature_data[date] = df.set_index("ticker").sort_index()
+            if any(feature_data[date].index.duplicated()):
+                print("duplicate data for one or more tickers on date: ", date)
+                # drop duplicates probably
+
+        feature_data = pd.concat(feature_data)
+        feature_data = feature_data.sort_index()
+
+        return feature_data
+
+    def get_range(self, start, stop) -> Event:
+        # make sure to only give new data that was released available the previous day.
+        if isinstance(start, str):
+            start = pd.to_datetime(start)
+        if isinstance(stop, str):
+            stop = pd.to_datetime(stop)
     
+        stop = stop - relativedelta(days=1)
+        # NOTE: think the exception handling should be better, but maybe its fine
+        try:
+            data = self.feature_data.loc[start:stop]
+        except: 
+            data = pd.DataFrame()
+
+        return data
+
+
+    def next_batch(self, date):
+        """
+        Returns feature data from self.emitted_until_date to the day before the provided date.
+        The user must decide what features are relevant. (can return 10 days of data, 14 days, 7 days... 
+        it all depends on how frequent the function is called and business days (non-holiday, non-extreme events, non-weekend))
+        """
+
+        # make sure to only give new data that was released available the previous day.
+        if isinstance(date, str):
+            date = pd.to_datetime(date)
+        
+        date = date - relativedelta(days=1)
+        
+        try:
+            data = self.feature_data.loc[self.emitted_until_date:date]
+            self.emitted_until_date = date
+        except Exception as e:
+            data = pd.DataFrame()
+
+        return Event(event_type="FEATURE_DATA", data=data, date=date)
+
+
+    def get_data_for_day(self, date):
+        pass
+
+    def get_data(self, ticker, start, end):
+        pass
+    
+
+
 
 def dividend_adjusting_prices_backwards(sep: pd.DataFrame) -> pd.DataFrame: 
     """
@@ -397,7 +523,10 @@ def dividend_adjusting_prices_backwards(sep: pd.DataFrame) -> pd.DataFrame:
 
 def reindex_and_ffill(sep: pd.DataFrame) -> pd.DataFrame:
     """
-    Use this with multiprocessing
+    Reinded and forward fill a dataframe of prices. Also adds a column to indicate whether or
+    not a row was forward filled or not.
+
+    Can be uses with pandas multiprocessing engines.
     """
 
     # Create complete index
@@ -407,60 +536,68 @@ def reindex_and_ffill(sep: pd.DataFrame) -> pd.DataFrame:
 
     sep = sep.fillna(method="ffill")
 
-
     return sep
 
 
+""" Interesting Event Codes:
 
+[
+    "EVENTCODES",
+    "13",
+    "N",
+    "N",
+    "Bankruptcy or Receivership",
+    "EventCode to Title mapping for EVENTS table.",
+    "text"
+],
+[
+    "EVENTCODES",
+    "31",
+    "N",
+    "N",
+    "Notice of Delisting or Failure to Satisfy a Continued Listing Rule or Standard; Transfer of Listing",
+    "EventCode to Title mapping for EVENTS table.",
+    "text"
+],
+[
+    "EVENTCODES",
+    "25",
+    "N",
+    "N",
+    "Cost Associated with Exit or Disposal Activities",
+    "EventCode to Title mapping for EVENTS table.",
+    "text"
+],
+            [
+    "EVENTCODES",
+    "51",
+    "N",
+    "N",
+    "Changes in Control of Registrant",
+    "EventCode to Title mapping for EVENTS table.",
+    "text"
+],
+"""
 
-# IMPLEMENTATION OF THIS CAN BE DEFERRED TO LATER, WHEN BUILDING THE ML STRATEGY
-class MLFeaturesDataHandler(DataHandler):
-    def __init__(self, source_path: str, store_path: str, file_name):
-        self.source_path = source_path
-        self.store_path = store_path
-        self.file_name = file_name
+"""
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "C:\Anaconda3\envs\master\lib\multiprocessing\spawn.py", line 105, in spawn_main
+    exitcode = _main(fd)
+  File "C:\Anaconda3\envs\master\lib\multiprocessing\spawn.py", line 114, in _main
+    prepare(preparation_data)
+  File "C:\Anaconda3\envs\master\lib\multiprocessing\spawn.py", line 225, in prepare
+    _fixup_main_from_path(data['init_main_from_path'])
+  File "C:\Anaconda3\envs\master\lib\multiprocessing\spawn.py", line 277, in _fixup_main_from_path
+    run_name="__mp_main__")
+  File "C:\Anaconda3\envs\master\lib\runpy.py", line 263, in run_path
+    pkg_name=pkg_name, script_name=fname)
+  File "C:\Anaconda3\envs\master\lib\runpy.py", line 96, in _run_module_code
+    mod_name, mod_spec, pkg_name, script_name)
+  File "C:\Anaconda3\envs\master\lib\runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "c:\pycode\automated-trading-system\backtester\__main__.py", line 25, in <module>
+    from backtester import Backtester
+ImportError: cannot import name 'Backtester'
 
-
-        full_store_path = self.store_path + '/' + self.file_name + ".pickle"
-        if os.path.isfile(full_store_path):
-            data_file = open(full_store_path,'rb')
-            self.data = pickle.load(data_file)
-            data_file.close()
-        else:
-            self.ingest()
-
-    def ingest(self):
-        pass
-
-    def get_data_for_day(self, date):
-        pass
-
-    def get_data(self, ticker, start, end):
-        pass
-    
-    def current(self, current_date) -> Event:
-        # event.date = event.date - realativedelta(days=1)
-        # make sure to only give new data that was released the previous business day.
-        
-        return Event(event_type="FEATURE_DATA", data=pd.DataFrame(), date=current_date) # Will contain feature data for last business day before current_date
-
-
-
-
-
-
-
-
-
-
-"""The below is all about moving data fast in and out of python in a desired format"""
-
-# I'M NOT SURE HOW IMPORTANT EFFICIENT DATA READING AND WRITING IS FOR ME. CAN I NOT JUST USE PANDAS?
-
-# Data API
-
-# Data writers
-
-
-# Data readers
-# All sort of query methods implemented by zipline to get wanted data fast.
+"""

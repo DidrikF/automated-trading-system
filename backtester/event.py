@@ -28,12 +28,12 @@ class EventQueue():
 
 
 class MarketDataEvent(Event):
-    def __init__(self, event_type, data, date, interest, business_day):
+    def __init__(self, event_type, data, date, interest, is_business_day):
         
-        super(event_type, data, date)
+        super().__init__(event_type, data, date)
 
         self.interest = interest
-        self.business_day = business_day    
+        self.is_business_day = is_business_day    
 
 
 

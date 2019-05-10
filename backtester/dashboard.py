@@ -15,11 +15,24 @@ import plotly.graph_objs as go
 import dash_core_components as dcc
 import dash_html_components as html
 
-
-
 from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
 
+"""
+Reference:
 
+trades/blotter_history = pd.DataFrame(columns=["order_id", "ticker", "direction", "amount", "stop_loss", "take_profit", "timeout", "date", "fill_price",\
+            "commission", "slippage", "interest_expenses", "dividends_per_share", "CLOSED", "close_price", "close_date", "close_cause", \
+                "ret", "total_ret", "total_dividends"])
+canelled_orders = pd.DataFrame(columns=["order_id", "ticker", "date", "error", "amount", "direction", "stop_loss", "take_profit", "timeout", "type"])
+trade_objects = Trade[]
+"""
+
+"""
+Dashboard Layout:
+
+
+
+"""
 
 if __name__ == "__main__":
 
@@ -36,25 +49,29 @@ if __name__ == "__main__":
     start_date = backtest["settings"]["start"]
     end_date = backtest["settings"]["end"]
 
-
+    # NOTE: TEST DATA, NEED TO UPDATE LATER
     market_data = DailyBarsDataHander( 
-        source_path="../../datasets/testing/sep.csv",
-        store_path="./test_bundles",
-        file_name_time_data="time_data",
-        file_name_ticker_data="ticker_data",
+        path_prices="../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="./tests/test_bundles",
         start=start_date,
         end=end_date
     )
 
+    # NOTE: TEST DATA, NEED TO UPDATE LATER
     feature_data = MLFeaturesDataHandler(
-        source_path="../../datasets/testing/sep.csv",
-        store_path="./test_bundles",
-        file_name="feature_data",
+        path_features="../dataset_development/datasets/testing/ml_dataset.csv",
+        store_path="./tests/test_bundles",
+        start=pd.to_datetime("2001-02-12"),
+        end=pd.to_datetime("2002-05-14")
     )
-
     
+
     app = dash.Dash(__name__)
 
+    # Dashboard Configuration:
     colors = {
         'background': '#111111',
         'text': '#7FDBFF'
@@ -62,42 +79,14 @@ if __name__ == "__main__":
 
     figure_height = 350
 
+    # CONFIG
+    # All in markdown
 
-    """ FIGURE OBJECTS AND SUCH """
-    """
-    portfolio_total_value_figure = go.Figure(
-        data=[go.Scatter(
-            x=backtest["perf"].index,
-            y=backtest["perf"]["portfolio_value"],
-        )],
-        layout=go.Layout(
-            plot_bgcolor=colors['background'],
-            paper_bgcolor=colors['background'],
-            font={'color': colors['text']},
-        )
-    )
-    """
-
-    commissions_charged_figure = go.Figure(
+    # SUMMARY STATISTICS
+    costs_slippage_figure = go.Figure(
         data=[go.Bar(
-            x=backtest["portfolio"]["commissions_charged"].index,
-            y=backtest["portfolio"]["commissions_charged"]["amount"],
-        )],
-        layout=go.Layout(
-            # plot_bgcolor=colors['background'],
-            # paper_bgcolor=colors['background'],
-            # font={'color': colors['text']},
-            title="Commissions Carged",
-            xaxis=dict(title="Date"),
-            yaxis=dict(title="Dollar"),
-            height=figure_height
-        )
-    )
-
-    slippage_suffered_figure = go.Figure(
-        data=[go.Bar(
-            x=backtest["portfolio"]["slippage_suffered"].index,
-            y=backtest["portfolio"]["slippage_suffered"]["amount"],
+            x=backtest["portfolio"]["costs"].index,
+            y=backtest["portfolio"]["costs"]["slippage"],
         )],
         layout=go.Layout(
             # plot_bgcolor=colors['background'],
@@ -109,8 +98,21 @@ if __name__ == "__main__":
             height=figure_height
         )
     )
-
-
+    costs_commissions_figure = go.Figure(
+        data=[go.Bar(
+            x=backtest["portfolio"]["costs"].index,
+            y=backtest["portfolio"]["costs"]["commission"],
+        )],
+        layout=go.Layout(
+            # plot_bgcolor=colors['background'],
+            # paper_bgcolor=colors['background'],
+            # font={'color': colors['text']},
+            title="Commissions Charged",
+            xaxis=dict(title="Date"),
+            yaxis=dict(title="Dollar"),
+            height=figure_height
+        )
+    )
     portfolio_value_figure = go.Figure(
         data=[go.Scatter(
             x=backtest["portfolio"]["portfolio_value"].index,
@@ -126,8 +128,12 @@ if __name__ == "__main__":
             name="Market Value"
         ),go.Scatter(
             x=backtest["portfolio"]["portfolio_value"].index,
-            y=backtest["portfolio"]["portfolio_value"]["market_value"]+backtest["portfolio"]["portfolio_value"]["balance"]+backtest["portfolio"]["portfolio_value"]["margin_account"],
+            y=backtest["portfolio"]["portfolio_value"]["total"],
             name="Total Portfolio Value"
+        ),go.Scatter(
+            x=backtest["portfolio"]["portfolio_value"].index,
+            y=backtest["portfolio"]["portfolio_value"]["market_value"]+backtest["portfolio"]["portfolio_value"]["balance"]+backtest["portfolio"]["portfolio_value"]["margin_account"],
+            name="Total Portfolio Value - MANUAL TEST"
         )],
         layout=go.Layout(
             # plot_bgcolor=colors['background'],
@@ -141,259 +147,108 @@ if __name__ == "__main__":
     )
 
 
+    @app.callback(Output("active-trades-value-graph", "figure"), [Input("date-picker", "date")])
+    def update_portfolio_allocation_value_graph(date):
+        blotter_history = backtest["broker"]["blotter_history"]
+        try:
+            active_trades = blotter_history.loc[blotter_history.date == date]
+        except:
+            active_trades = pd.DataFrame(columns=blotter_history.columns)
+        
+        short_trace = go.Bar(
+            x=active_trades["ticker"],
+            y=active_trades["short_value"], # NOTE: Need to rethink this...
+            name="Short Value",
+            marker=go.bar.Marker(color="rgb(237, 79, 35)")
+        )
+        long_trace = go.Bar(
+            x=active_trades["ticker"],
+            y=active_trades["long_value"],
+            name="Long Value",
+            marker=go.bar.Marker(color="rgb(90, 198, 17)")
+        )
+        net_trace = go.Bar(
+            x=active_trades["ticker"],
+            y=active_trades["net_value"],
+            name="Net Value",
+            marker=go.bar.Marker(color="rgb(46, 108, 232)")
+        )
 
-    """ APP LAYOUT """
+        data = [short_trace, long_trace, net_trace]
+        
+        layout=go.Layout(
+            title='Portfolio Value Allocation ' + str(date),
+            xaxis=dict(title="Ticker"),
+            yaxis=dict(title="Dollar Value"),
+            height=figure_height,
+        )
 
-    app.layout = html.Div(
-        [
-            html.H1(
-                children='ML Driven Automated Trading System Results',
-                style={
-                    'textAlign': 'center',
-                }
-            ),
-            html.Span("Choose date: "),
-            dcc.DatePickerSingle(
-                id='portfolio-allocation-date-picker',
-                date=start_date
-            ),
-            dcc.Graph(id='portfolio-allocation-value-graph'),
+        return dict(data=data, layout=layout)
 
-            dcc.Graph(id='portfolio-allocation-amount-graph'),
+    @app.callback(Output("active-trades-amount-graph", "figure"), [Input("date-picker", "date")])
+    def update_portfolio_allocation_amount_graph(date):
+        blotter_history = backtest["broker"]["blotter_history"]
+        try:
+            active_trades = blotter_history.loc[blotter_history.date == date]
+            active_trades = active_trades.loc[active_trades.ticker != "Cash"]
+            active_trades = active_trades.loc[active_trades.ticker != "margin Account"]
+        except:
+            active_trades = pd.DataFrame(columns=blotter_history.columns)
 
-            html.H2(
-                children='Broker Active Positions',
-                style={
-                    'textAlign': 'center',
-                }
-            ),
-            dash_table.DataTable(
-                id='broker-active-positions-history-table',
-                columns=[{"name": i, "id": i} for i in backtest["broker"]["active_positions_history"].columns],
-                # data=backtest["portfolio"]["blotter"].to_dict("rows"),
-                filtering=True,
-                sorting=True,
-                sorting_type="multi",
-                pagination_mode="fe",
-                pagination_settings={
-                    "displayed_pages": 1,
-                    "current_page": 0,
-                    "page_size": 50,
-                },
-                navigation="page",
-            ),
-            html.H2(
-                children='Portfolio Active Positions',
-                style={
-                    'textAlign': 'center',
-                }
-            ),
-            dash_table.DataTable(
-                id='portfolio-active-positions-history-table',
-                columns=[{"name": i, "id": i} for i in backtest["portfolio"]["active_positions_history"].columns],
-                # data=backtest["portfolio"]["blotter"].to_dict("rows"),
-                filtering=True,
-                sorting=True,
-                sorting_type="multi",
-                pagination_mode="fe",
-                pagination_settings={
-                    "displayed_pages": 1,
-                    "current_page": 0,
-                    "page_size": 50,
-                },
-                navigation="page",
-            ),
+        short_trace = go.Bar(
+            x=active_trades["ticker"],
+            y=active_trades["short_position"], # NOTE:  Need to rethink
+            name="Short Position",
+            marker=go.bar.Marker(color="rgb(237, 79, 35)")
+        )
+        long_trace = go.Bar(
+            x=active_trades["ticker"],
+            y=active_trades["long_position"],
+            name="Long Position",
+            marker=go.bar.Marker(color="rgb(90, 198, 17)")
+        )
+        net_trace = go.Bar(
+            x=active_trades["ticker"],
+            y=active_trades["net_position"],
+            name="Net Position",
+            marker=go.bar.Marker(color="rgb(46, 108, 232)")
+        )
 
+        data = [short_trace, long_trace, net_trace]
+        
+        layout=go.Layout(
+            title='Portfolio Share Allocation ' + str(date),
+            xaxis=dict(title="Ticker"),
+            yaxis=dict(title="Nr. Shares"),
+            height=figure_height,
+        )
 
-
-            html.Span("Search for ticker: "),
-            dcc.Input(id="ticker-search-field", type="text", value="AAPL"),
-            dcc.Graph(id="candlestick-chart"),
-
-            dcc.Graph(id="portfolio-value", figure=portfolio_value_figure),
-
-            # dcc.Graph(id="portfolio-total-value", figure=portfolio_total_value_figure), # Redundant, need to clean up
-
-            dcc.Graph(id="commissions-charged", figure=commissions_charged_figure),
-
-            dcc.Graph(id="slippage-suffered", figure=slippage_suffered_figure),
-
-
-
-            html.H2(
-                children='Portfolio Blotter',
-                style={
-                    'textAlign': 'center',
-                }
-            ),
-            dash_table.DataTable(
-                id='blotter-table',
-                columns=[{"name": i, "id": i} for i in backtest["portfolio"]["blotter"].columns],
-                data=backtest["portfolio"]["blotter"].to_dict("rows"),
-                filtering=True,
-                sorting=True,
-                sorting_type="multi",
-                pagination_mode="fe",
-                pagination_settings={
-                    "displayed_pages": 1,
-                    "current_page": 0,
-                    "page_size": 50,
-                },
-                navigation="page",
-            ),
+        return dict(data=data, layout=layout)
+        
 
 
 
-            html.H2(
-                children='Portfolio Order History',
-                style={
-                    'textAlign': 'center',
-                }
-            ),
-            dash_table.DataTable(
-                id='order-history-table',
-                columns=[{"name": i, "id": i} for i in backtest["portfolio"]["order_history"].columns],
-                data=backtest["portfolio"]["order_history"].to_dict("rows"),
-                filtering=True,
-                sorting=True,
-                sorting_type="multi",
-                pagination_mode="fe",
-                pagination_settings={
-                    "displayed_pages": 1,
-                    "current_page": 0,
-                    "page_size": 50,
-                },
-                navigation="page",
-            ),
+    @app.callback(Output("active-trades-table", "data"), [Input("date-picker", "date")])
+    def update_broker_blotter_history(date):
+        date = pd.to_datetime(date)
+        blotter_history = backtest["broker"]["blotter_history"]
+        try:
+            active_trades = blotter_history.loc[blotter_history.date == date]
+        except:
+            active_trades = pd.DataFrame(columns=active_trades.columns)
+        return active_trades.to_dict("rows")
 
 
+    # INSPECT PORTFOLIO WEEK BY WEEK
 
 
-            html.H2(
-                children='Portfolio Cancelled Orders',
-                style={
-                    'textAlign': 'center',
-                }
-            ),
-            dash_table.DataTable(
-                id='cancelled-orders-table',
-                columns=[{"name": i, "id": i} for i in backtest["portfolio"]["cancelled_orders"].columns],
-                data=backtest["portfolio"]["cancelled_orders"].to_dict("rows"),
-                filtering=True,
-                sorting=True,
-                sorting_type="multi",
-                pagination_mode="fe",
-                pagination_settings={
-                    "displayed_pages": 1,
-                    "current_page": 0,
-                    "page_size": 50,
-                },
-                navigation="page",
-            ),
+    # TRADE INSPECTION
 
 
+    # STRATEGY AND ML STATISTICS
 
-            html.H2(
-                children='Portfolio Signals',
-                style={
-                    'textAlign': 'center',
-                }
-            ),
-            dash_table.DataTable(
-                id='signals-table',
-                columns=[{"name": i, "id": i} for i in backtest["portfolio"]["signals"].columns],
-                data=backtest["portfolio"]["signals"].to_dict("records"), # Why no signal id?
-                filtering=True,
-                sorting=True,
-                sorting_type="multi",
-                pagination_mode="fe",
-                pagination_settings={
-                    "displayed_pages": 1,
-                    "current_page": 0,
-                    "page_size": 50,
-                },
-                navigation="page",
-            ),
-
-
-
-
-            html.H2(
-                children='Broker Blotter',
-                style={
-                    'textAlign': 'center',
-                }
-            ),
-            dash_table.DataTable(
-                id='broker-blotter-table',
-                columns=[{"name": i, "id": i} for i in backtest["broker"]["blotter"].columns],
-                data=backtest["broker"]["blotter"].to_dict("records"), # Why no signal id?
-                filtering=True,
-                sorting=True,
-                sorting_type="multi",
-                pagination_mode="fe",
-                pagination_settings={
-                    "displayed_pages": 1,
-                    "current_page": 0,
-                    "page_size": 50,
-                },
-                navigation="page",
-            ),
-
-
-            html.H2(
-                children='Broker Active Positions History',
-                style={
-                    'textAlign': 'center',
-                }
-            ),
-            dash_table.DataTable(
-                id='broker-active-positions-history-table-complete',
-                columns=[{"name": i, "id": i} for i in backtest["broker"]["active_positions_history"].columns],
-                data=backtest["broker"]["active_positions_history"].to_dict("records"), # Why no signal id?
-                filtering=True,
-                sorting=True,
-                sorting_type="multi",
-                pagination_mode="fe",
-                pagination_settings={
-                    "displayed_pages": 1,
-                    "current_page": 0,
-                    "page_size": 50,
-                },
-                navigation="page",
-            ),
-
-
-            html.H2(
-                children='Broker Cancelled Orders',
-                style={
-                    'textAlign': 'center',
-                }
-            ),
-            dash_table.DataTable(
-                id='broker-cancelled-orders-table',
-                columns=[{"name": i, "id": i} for i in backtest["broker"]["cancelled_orders"].columns],
-                data=backtest["broker"]["cancelled_orders"].to_dict("records"), # Why no signal id?
-                filtering=True,
-                sorting=True,
-                sorting_type="multi",
-                pagination_mode="fe",
-                pagination_settings={
-                    "displayed_pages": 1,
-                    "current_page": 0,
-                    "page_size": 50,
-                },
-                navigation="page",
-            ),
-
-        ]
-    )
-
-    # print(backtest["broker"]["active_positions_history"])
-
-
-    """ CALLBACKS """
-
+    # RAW DATA INSPECTION
+    
     @app.callback(Output("candlestick-chart", "figure"), [Input("ticker-search-field", "value")])
     def update_candlestick_chart(ticker):
         ticker_sep = market_data.get_ticker_data(ticker)
@@ -418,132 +273,208 @@ if __name__ == "__main__":
 
         return dict(data=data, layout=layout)
 
-    @app.callback(Output("portfolio-allocation-amount-graph", "figure"), [Input("portfolio-allocation-date-picker", "date")])
-    def update_portfolio_allocation_amount_graph(date):
-        # ticker_sep = market_data.get_ticker_data(ticker)
-        # ticker_sep = sep.loc[sep.ticker==ticker][start:stop]
-        portfolio_history = backtest["portfolio"]["portfolio_history"]
-        try:
-            portfolio = portfolio_history.loc[portfolio_history.date == date]
-           #  portfolio = portfolio.reset_index()
-            portfolio = portfolio.loc[portfolio.ticker != "Cash"]
-            portfolio = portfolio.loc[portfolio.ticker != "margin Account"]
-        except:
-            portfolio = pd.DataFrame(columns=["date", "ticker", "close", "short_position", "long_position", "net_position", "short_value", "long_value", "net_value" ])
 
-        short_trace = go.Bar(
-            x=portfolio["ticker"],
-            y=portfolio["short_position"],
-            name="Short Position",
-            marker=go.bar.Marker(color="rgb(237, 79, 35)")
-        )
+    # RAW DATA INSPECTION
+    """
+    dcc.DatePickerSingle(
+        id='date-picker-single',
+        date=dt(1997, 5, 10)
+    )
 
-        long_trace = go.Bar(
-            x=portfolio["ticker"],
-            y=portfolio["long_position"],
-            name="Long Position",
-            marker=go.bar.Marker(color="rgb(90, 198, 17)")
-        )
-
-        net_trace = go.Bar(
-            x=portfolio["ticker"],
-            y=portfolio["net_position"],
-            name="Net Position",
-            marker=go.bar.Marker(color="rgb(46, 108, 232)")
-        )
-
-        data = [short_trace, long_trace, net_trace]
-        
-        layout=go.Layout(
-            title='Portfolio Share Allocation ' + str(date),
-            xaxis=dict(title="Ticker"),
-            yaxis=dict(title="Nr. Shares"),
-            height=figure_height,
-        )
-
-        return dict(data=data, layout=layout)
-        
-    @app.callback(Output("portfolio-allocation-value-graph", "figure"), [Input("portfolio-allocation-date-picker", "date")])
-    def update_portfolio_allocation_value_graph(date):
-        # ticker_sep = market_data.get_ticker_data(ticker)
-        # ticker_sep = sep.loc[sep.ticker==ticker][start:stop]
-
-        portfolio_history = backtest["portfolio"]["portfolio_history"]
-        try:
-            portfolio = portfolio_history.loc[portfolio_history.date == date]
-            # portfolio = portfolio.reset_index()
-
-        except:
-            portfolio = pd.DataFrame(columns=["date", "ticker", "close", "short_position", "long_position", "net_position", "short_value", "long_value", "net_value" ])
-        
-    
-        short_trace = go.Bar(
-            x=portfolio["ticker"],
-            y=portfolio["short_value"],
-            name="Short Value",
-            marker=go.bar.Marker(color="rgb(237, 79, 35)")
-        )
-
-        long_trace = go.Bar(
-            x=portfolio["ticker"],
-            y=portfolio["long_value"],
-            name="Long Value",
-            marker=go.bar.Marker(color="rgb(90, 198, 17)")
-        )
-
-        net_trace = go.Bar(
-            x=portfolio["ticker"],
-            y=portfolio["net_value"],
-            name="Net Value",
-            marker=go.bar.Marker(color="rgb(46, 108, 232)")
-        )
-
-        data = [short_trace, long_trace, net_trace]
-        
-        layout=go.Layout(
-            title='Portfolio Value Allocation ' + str(date),
-            xaxis=dict(title="Ticker"),
-            yaxis=dict(title="Dollar Value"),
-            height=figure_height,
-        )
-
-        return dict(data=data, layout=layout)
+    dcc.DatePickerRange(
+        id='date-picker-range',
+        start_date=dt(1997, 5, 3),
+        end_date_placeholder_text='Select a date!'
+    )
+    """
 
 
-    @app.callback(Output("broker-active-positions-history-table", "data"), [Input("portfolio-allocation-date-picker", "date")])
-    def update_broker_active_positions_history_table(date):
-        # ticker_sep = market_data.get_ticker_data(ticker)
-        # ticker_sep = sep.loc[sep.ticker==ticker][start:stop]
 
-        date = pd.to_datetime(date)
-        active_positions_history = backtest["broker"]["active_positions_history"]
-        try:
-            active_positions = active_positions_history.loc[active_positions_history.date == date]
-            # portfolio = portfolio.reset_index()
-
-        except:
-            active_positions = pd.DataFrame(columns=active_positions.columns)
-            # portfolio = pd.DataFrame(columns=["date", "ticker", "close", "short_position", "long_position", "net_position", "short_value", "long_value", "net_value" ])
-        
-        return active_positions.to_dict("rows")
+    # BACKTEST FINAL STATE TABLES
 
 
-    @app.callback(Output("portfolio-active-positions-history-table", "data"), [Input("portfolio-allocation-date-picker", "date")])
-    def update_portfolio_active_positions_history_table(date):
-        # ticker_sep = market_data.get_ticker_data(ticker)
-        # ticker_sep = sep.loc[sep.ticker==ticker][start:stop]
 
-        date = pd.to_datetime(date)
-        active_positions_history = backtest["portfolio"]["active_positions_history"]
-        try:
-            active_positions = active_positions_history.loc[active_positions_history.date == date]
-            # portfolio = portfolio.reset_index()
+    """ APP LAYOUT """
 
-        except:
-            active_positions = pd.DataFrame(columns=active_positions.columns)
-            # portfolio = pd.DataFrame(columns=["date", "ticker", "close", "short_position", "long_position", "net_position", "short_value", "long_value", "net_value" ])
-        
-        return active_positions.to_dict("rows")
+    app.layout = html.Div(
+        [
+            html.H1(
+                children='ML Driven Automated Trading System - Backtest Results',
+                style={
+                    'textAlign': 'center',
+                }
+            ),
+            # CONFIG
+            html.H2("Backtest Config"),
+            html.Div(
+                children=[
+                    html.Div(children=[
+                        html.Span("Start: {}".format(backtest.settings.start)),
+                        html.Span("End: {}".format(backtest.settings.end)),
+                    ])
+                ]
+            ),
+
+            # SUMMARY STATISTICS
+            html.H2("Backtest Summary Statistics"),
+            html.Div(children=[
+                html.Div(children=[
+                    html.Span("Total Return: {}".format(backtest.stats.total_return)),
+                    html.Span("Total Slippage: {}".format(backtest.stats.total_slippage))    
+                ])
+            ]),
+
+            # - Summary Graphs
+            dcc.Graph(id="portfolio-value", figure=portfolio_value_figure),
+
+            dcc.Graph(id="costs-slippage", figure=costs_slippage_figure),
+            dcc.Graph(id="costs-commissions", figure=costs_commissions_figure),
+            # dcc.Graph(id="costs-total-charged", figure=costs_total_charged_figure),
+            # etc..
+
+
+            # INSPECT WEEK
+            html.H2("Inspect State For Week"),
+            html.H3(children="Portfolio Composition"),
+            dcc.Slider( # NOTE: Calculate number of weeks to set this up above
+                id="week-slider",
+                min=0,
+                max=10,
+                marks={i: 'Label {}'.format(i) for i in range(10)},
+                value=5,
+            ),
+            html.Span("Choose date: "),
+            dcc.DatePickerSingle(
+                id='date-picker',
+                date=start_date
+            ),
+            # NOTE: UPDATE FILTER/NAMING
+            dcc.Graph(id='active-trades-value-graph'), # Dollar value of each Trade (+ balance and margin account)
+            dcc.Graph(id='active-trades-amount-graph'), # Amount of Stock For Each Trade
+
+            # - Active Trades
+            html.H3(children='Active Trades'),
+            dash_table.DataTable( # NOTE: FILTER CONTENTS
+                id='active-trades-table',
+                columns=[{"name": i, "id": i} for i in backtest["broker"]["active_positions_history"].columns],
+                # data=backtest["portfolio"]["blotter"].to_dict("rows"),
+                filtering=True,
+                sorting=True,
+                sorting_type="multi",
+                pagination_mode="fe",
+                pagination_settings={
+                    "displayed_pages": 1,
+                    "current_page": 0,
+                    "page_size": 50,
+                },
+                navigation="page",
+            ),
+            # TRADE INSPECTION
+
+
+
+            # RAW DATA INSPECTION
+
+            html.Span("Search for ticker: "),
+            dcc.Input(id="ticker-search-field", type="text", value="AAPL"),
+            dcc.Graph(id="candlestick-chart"),
+
+            
+            # BACKTEST'S FINAL STATE TABLES 
+
+            
+            html.H2(children='Trades'),
+            dash_table.DataTable(
+                id='broker-blotter-table',
+                columns=[{"name": i, "id": i} for i in backtest["broker"]["blotter"].columns],
+                data=backtest["broker"]["blotter"].to_dict("records"), # Why no signal id?
+                filtering=True,
+                sorting=True,
+                sorting_type="multi",
+                pagination_mode="fe",
+                pagination_settings={
+                    "displayed_pages": 1,
+                    "current_page": 0,
+                    "page_size": 50,
+                },
+                navigation="page",
+            ),
+
+            html.H2(
+                children='Portfolio Signals',
+                style={
+                    'textAlign': 'center',
+                }
+            ),
+            dash_table.DataTable(
+                id='signals-table',
+                columns=[{"name": i, "id": i} for i in backtest["portfolio"]["signals"].columns],
+                data=backtest["portfolio"]["signals"].to_dict("records"), # Why no signal id?
+                filtering=True,
+                sorting=True,
+                sorting_type="multi",
+                pagination_mode="fe",
+                pagination_settings={
+                    "displayed_pages": 1,
+                    "current_page": 0,
+                    "page_size": 50,
+                },
+                navigation="page",
+            ),
+
+            html.H2(
+                children='Portfolio Order History',
+                style={
+                    'textAlign': 'center',
+                }
+            ),
+            dash_table.DataTable(
+                id='order-history-table',
+                columns=[{"name": i, "id": i} for i in backtest["portfolio"]["order_history"].columns],
+                data=backtest["portfolio"]["order_history"].to_dict("rows"),
+                filtering=True,
+                sorting=True,
+                sorting_type="multi",
+                pagination_mode="fe",
+                pagination_settings={
+                    "displayed_pages": 1,
+                    "current_page": 0,
+                    "page_size": 50,
+                },
+                navigation="page",
+            ),
+
+            html.H2(
+                children='Broker Cancelled Orders',
+                style={
+                    'textAlign': 'center',
+                }
+            ),
+            dash_table.DataTable(
+                id='broker-cancelled-orders-table',
+                columns=[{"name": i, "id": i} for i in backtest["broker"]["cancelled_orders"].columns],
+                data=backtest["broker"]["cancelled_orders"].to_dict("records"), # Why no signal id?
+                filtering=True,
+                sorting=True,
+                sorting_type="multi",
+                pagination_mode="fe",
+                pagination_settings={
+                    "displayed_pages": 1,
+                    "current_page": 0,
+                    "page_size": 50,
+                },
+                navigation="page",
+            ),
+
+            # BACKTEST LOG
+            # NOTE: How to do this
+
+
+        ]
+    )
+
+
+    """ CALLBACKS """
 
 
     app.run_server(debug=True)

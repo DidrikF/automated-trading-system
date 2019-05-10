@@ -10,32 +10,34 @@ import plotly.graph_objs as go
 import plotly.tools as tls
 
 myPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(myPath, "../.."))
+sys.path.insert(0, os.path.join(myPath, ".."))
 # sys.path.insert(0, os.path.join(myPath))
 
 
-from data_handler import DailyBarsDataHander, dividend_adjusting_prices_backwards
-
+from data_handler import DailyBarsDataHander, dividend_adjusting_prices_backwards, MLFeaturesDataHandler
+from event import EventQueue, MarketDataEvent, Event
 
 @pytest.fixture(scope='module', autouse=True)
 def setup():
+    """
     import shutil
-    if os.path.exists("./test_bundles"):
-        shutil.rmtree("./test_bundles") 
-    
+    if os.path.exists("../test_bundles"):
+        shutil.rmtree("../test_bundles") 
+    """
     yield
-    
 
+@pytest.mark.skip()
 def test_data_handler_ingest():
 
     start_date = pd.to_datetime("2010-01-01")
     end_date = pd.to_datetime("2010-06-01")
 
     dh = DailyBarsDataHander( 
-        path_prices="../dataset_development/datasets/testing/sep.csv",
-        path_snp500="../dataset_development/datasets/macro/snp500.csv",
-        path_interest="../dataset_development/datasets/macro/t_bill_rate_3m.csv",
-        store_path="./test_bundles",
+        path_prices="../../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="../test_bundles",
         start=start_date,
         end=end_date
     )
@@ -45,21 +47,23 @@ def test_data_handler_ingest():
         dh.time_data.loc["1998-01-20", "AAPL"]["close"]
         dh.ticker_data.loc["snp500", "1998-01-20"]["close"]
         dh.rf_rate.loc["1998-01-20"]["daily"]
+        dh.corp_actions.loc[dh.corp_actions.date == "1998-01-20"]
     except KeyError as e:
         pytest.fail(e)
     
     assert dh.ticker_data.loc["snp500", "2019-04-24"]["close"] == 2927.25 # 24.04.2019,2927.25
 
-
+@pytest.mark.skip()
 def test_data_handler_can_trade():
     start_date = pd.to_datetime("2010-01-01")
     end_date = pd.to_datetime("2010-06-01")
 
     dh = DailyBarsDataHander( 
-        path_prices="../dataset_development/datasets/testing/sep.csv",
-        path_snp500="../dataset_development/datasets/macro/snp500.csv",
-        path_interest="../dataset_development/datasets/macro/t_bill_rate_3m.csv",
-        store_path="./test_bundles",
+        path_prices="../../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="../test_bundles",
         start=start_date,
         end=end_date
     )
@@ -68,16 +72,17 @@ def test_data_handler_can_trade():
     assert dh.can_trade("AAPL", "1998-01-20") == True
 
 
-
+@pytest.mark.skip()
 def test_data_handler_is_business_day():
     start_date = pd.to_datetime("2010-01-01")
     end_date = pd.to_datetime("2010-06-01")
 
     dh = DailyBarsDataHander( 
-        path_prices="../dataset_development/datasets/testing/sep.csv",
-        path_snp500="../dataset_development/datasets/macro/snp500.csv",
-        path_interest="../dataset_development/datasets/macro/t_bill_rate_3m.csv",
-        store_path="./test_bundles",
+        path_prices="../../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="../test_bundles",
         start=start_date,
         end=end_date
     )
@@ -86,24 +91,224 @@ def test_data_handler_is_business_day():
     assert dh.is_business_day("2013-02-16") == False
 
 
+@pytest.mark.skip()
+def test_market_data_generator():
 
+    start_date = pd.to_datetime("2010-01-01")
+    end_date = pd.to_datetime("2010-06-01")
 
+    market_data = DailyBarsDataHander( 
+        path_prices="../../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="../test_bundles",
+        start=start_date,
+        end=end_date
+    )
+
+    event_queue = EventQueue()
+
+    i = 0
+
+    while True: # This loop generates new "ticks" until the backtest is completed.
+        try:
+            market_data_event = next(market_data.tick) # THIS MUST ONLY BE CALLED HERE!
+        except Exception as e: # What error does the generator give?
+            print(e)
+            break
+        else:
+            event_queue.add(market_data_event)
+        
+        i += 1
+        if i >= 5:
+            break
+
+    assert len(event_queue.queue) == 5
+    assert isinstance(event_queue.get(), MarketDataEvent)
 
 
 @pytest.mark.skip()
-def test_ml_feature_data_handler():
-    try:
-        shutil.rmtree(base_test_dir)
-    except:
-        pass
+def test_data_handler_corporate_actions():
+    """
+    How to to this..., probably sepearate dataframe like rf_rate 
+    """
+    # Corporate actions: bankruptcies, delisting (not dividends, it is read directly from sep)
+    start_date = pd.to_datetime("2010-01-01")
+    end_date = pd.to_datetime("2010-06-01")
 
-    data_handler = MLFeaturesDataHandler(
-        source_path="../../datasets/testing/sep.csv",
-        store_path="./test_bundles",
-        file_name="feature_data",
+    dh = DailyBarsDataHander( 
+        path_prices="../../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="../test_bundles",
+        start=start_date,
+        end=end_date
+    )
+    """
+    Datastructure:
+            ticker  action
+    date    
+    2010-01-01 AAPL "bankruptcy"
+    2010-01-01 AAPL "delisted"
+
+    delisted tickers gets added at the date of last row in sep
+    """
+
+    data = {
+                    # Before delisting           # After desliting              # C has the maximum index       # D was just delisted
+        "date": [pd.to_datetime("2010-06-15"), pd.to_datetime("2011-01-10"), pd.to_datetime("2010-05-10"), pd.to_datetime("2010-05-10")],
+        'ticker': ["A", "B", "C", "D"], 
+        'eventcodes': ["12|14|13", "13|52|9|51", "14|25", "24|16"], 
+    }
+    test_actions = pd.DataFrame(data=data)
+
+    A_df = pd.DataFrame(index=pd.date_range("2010-01-01", "2010-6-30"))
+    A_df["ticker"] = "A"
+    A_df["close"] = 10
+    B_df = pd.DataFrame(index=pd.date_range("2010-01-01", "2010-12-31"))
+    B_df["ticker"] = "B"
+    B_df["close"] = 10
+    C_df = pd.DataFrame(index=pd.date_range("2010-01-01", "2011-12-31")) # Represent max index size of sep
+    C_df["ticker"] = "C"
+    C_df["close"] = 10
+    D_df = pd.DataFrame(index=pd.date_range("2010-01-01", "2010-12-31"))
+    D_df["ticker"] = "D"
+    D_df["close"] = 10
+
+    test_sep = A_df.append(B_df, sort=True).append(C_df, sort=True).append(D_df, sort=True)
+
+    date_index = pd.date_range(test_sep.index.min(), test_sep.index.max())
+
+    corp_actions = dh.ingest_corporate_actions(test_sep, date_index, test_actions)
+    
+    print(corp_actions)
+    assert False
+
+    # Extract path to argument...
+
+@pytest.mark.skip()
+def test_data_handler_corporate_actions_real():
+    start_date = pd.to_datetime("2010-01-01")
+    end_date = pd.to_datetime("2010-06-01")
+
+    dh = DailyBarsDataHander( 
+        path_prices="../../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="../test_bundles",
+        start=start_date,
+        end=end_date
     )
 
-    # Not implemented yet
+    sep = pd.read_csv("../../dataset_development/datasets/sharadar/SEP_PURGED.csv", parse_dates=["date"], index_col="date", low_memory=False)
+    actions = pd.read_csv("../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv", parse_dates=["date"], low_memory=False)
+
+    date_index = pd.date_range(sep.index.min(), sep.index.max())
+    corp_actions = dh.ingest_corporate_actions(sep, date_index, actions)
+
+    corp_actions.to_csv("./test_bundles/corp_actions.csv")
+    # Do visual inspection.
+
+@pytest.mark.skip()
+def test_ml_feature_data_handler():
+
+    data_handler = MLFeaturesDataHandler(
+        path_features="../../dataset_development/datasets/testing/ml_dataset.csv",
+        store_path="./test_bundles",
+        start=pd.to_datetime("2001-02-12"),
+        end=pd.to_datetime("2002-05-14")
+    )
+
+    # print(data_handler.feature_data.loc["2001-06-14", :])
+
+    try: 
+        data_handler.feature_data.loc["2001-06-14", :]
+    except Exception as e:
+        pytest.fail(e)
+
+    # print(data_handler.get_range("2001-02-12", "2001-06-14"))
+
+    # Test get range
+    assert isinstance(data_handler.get_range("2001-02-12", "2001-06-14"), pd.DataFrame)
+    assert data_handler.get_range("2001-02-12", "2001-06-14").shape[0] == 8
+    assert "2001-06-14" not in list(data_handler.get_range("2001-02-12", "2001-06-14").index)
+
+    # Test get batch
+    batch_1_event = data_handler.next_batch("2001-04-12") # 4 rows i think
+    batch_2_event = data_handler.next_batch("2001-07-13") # 6 rows i think
+
+    batch_3_event = data_handler.next_batch("2020-01-01") # Should not fail, but return all available data until 2020-01-01
+
+    """
+    print("Batch_1: ", batch_1_event.data)
+    print("Batch_2: ", batch_2_event.data)
+    print(data_handler.feature_data.loc["2001-04-12":"2001-07-13"])
+    print("Batch_3: ", batch_3_event.data)
+    """
+
+    assert isinstance(batch_1_event, Event)
+    assert isinstance(batch_2_event, Event)
+    assert isinstance(batch_1_event.data, pd.DataFrame)
+    assert batch_1_event.data.shape[0] == 4 
+    assert batch_2_event.data.shape[0] == 6
+    assert "2001-04-12" not in list(batch_1_event.data.index)
+
+
+    """
+    Sample Dates for AAPL:
+    2001-02-12
+    2001-03-12
+    2001-04-12
+    2001-05-14
+    2001-06-14
+
+    2001-07-13
+    2001-08-13
+    2001-09-10
+    2001-10-12
+    2001-11-13
+    2001-12-21
+    2002-01-22
+    2002-02-11
+    2002-03-11
+    2002-04-11
+    2002-05-14
+    """
+
+
+def test_current_dividends():
+    start_date = pd.to_datetime("2010-01-01")
+    end_date = pd.to_datetime("2010-06-01")
+
+    dh = DailyBarsDataHander( 
+        path_prices="../../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="../test_bundles",
+        start=start_date,
+        end=end_date
+    )
+
+
+    dividends_with = dh.get_dividends(pd.to_datetime("2017-05-11"))
+    dividends_without = dh.get_dividends(pd.to_datetime("2017-05-12"))
+
+    print(dividends_with)
+    print(dividends_without)
+
+    assert isinstance(dividends_with, pd.DataFrame)
+    assert isinstance(dividends_with.loc["AAPL"]["dividends"], float)
+
+
+
+
+
+
+
 
 
 
@@ -127,12 +332,47 @@ def test_dividend_adjustment():
     start = pd.to_datetime("2016-04-14")
     end = pd.to_datetime("2017-08-16")
 
-    unadj = dividend_unadjust(sep_aapl)
+    adj = dividend_adjusting_prices_backwards(sep_aapl)
 
     for date, row in sep.iterrows():
         if row["close"] != sep_aapl.loc[date]["closeunadj"]:
             print(date, row["close"], sep_aapl.loc[date]["closeunadj"])
 
+
+
+
+""" Originally from test_data_handler_corporate_actions_real
+I end up with 1502 bankruptcies in the corp_actions dataframe, and this is not far from correct if not completely correct.
+
+
+drop_indexes = []
+for index, row in actions.iterrows():
+    codes = [int(s) for s in str(row["eventcodes"]).split("|")]
+    if 13 in codes:
+        actions.loc[index, "eventcodes"] = 13
+    else:
+        drop_indexes.append(index)
+
+actions = actions.drop(drop_indexes, axis=0)
+actions.to_csv("./test_bundles/actions.csv", index=False)
+
+mask = actions.ticker.duplicated(keep=False)
+actions = actions[mask]
+actions = actions.sort_values(by=["ticker", "date"])
+actions.to_csv("./test_bundles/duplicated_actions.csv", index=False)
+"""
+
+""" Conclusion: There is no significant difference in ticker coverage
+ticker_difference = list(set(sep.ticker.unique()) - set(actions.ticker.unique()))
+ticker_df = pd.DataFrame(data={"ticker": ticker_difference})
+ticker_df.to_csv("./test_bundles/ticker_difference.csv", index=False)
+
+ticker_difference = list(set(actions.ticker.unique()) - set(sep.ticker.unique()))
+ticker_df = pd.DataFrame(data={"ticker": ticker_difference})
+ticker_df.to_csv("./test_bundles/ticker_difference_2.csv", index=False)
+
+sys.exit()
+"""
 
 
 """

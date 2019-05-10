@@ -5,57 +5,69 @@ The APIs are inspired by Quantopian/Zipline (https://github.com/quantopian/zipli
 
 """
 
-
 # I can read command line options and start the backtest in this file...
-
 # Make it possible to use the cross-validation method for backtesting???
-
-# Import dashboard and all compoentnsto set up a backtest
 
 import pytest
 import pandas as pd 
-import os
+import os, sys
 import shutil
 import threading
 from queue import Queue
 import time
 from dateutil.relativedelta import *
 
+myPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, myPath)
 
 from backtester import Backtester
 # from strategy import BuyAppleStrategy, RandomLongShortStrategy
-from portfolio import Portfolio, RandomLongShortStrategy
+from portfolio import Portfolio
+from simple_strategies import RandomLongShortStrategy
 from broker import Broker
 from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
-from utils import EquityCommissionModel, EquitySlippageModel
-from visualization.visualization import plot_data
-from errors import MarketDataNotAvailableError
+from utils.utils import EquityCommissionModel, EquitySlippageModel
+from utils.errors import MarketDataNotAvailableError
 
 if __name__ == "__main__":
     start_date = pd.to_datetime("2010-01-01")
     end_date = pd.to_datetime("2010-06-01")
 
-
+    # NOTE: add from_bundle classmethod?
+    # NOTE: cut off the datahandler to only load data for the relevant period (2010->)
+    """
     market_data_handler = DailyBarsDataHander( 
-        source_path="../../datasets/testing/sep.csv",
-        store_path="./test_bundles",
-        file_name_time_data="time_data",
-        file_name_ticker_data="ticker_data",
+        path_prices="../dataset_development/datasets/sharadar/SEP_PURGED.csv", # "../../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../dataset_development/datasets/macro/snp500.csv", # "../../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../dataset_development/datasets/macro/rf_rate.csv", # "../../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv", # "../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="./live_bundle",
+        start=start_date,
+        end=end_date,
+        rebuild=False
+    )
+    """
+    market_data_handler = DailyBarsDataHander( 
+        path_prices="../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="./tests/test_bundles",
         start=start_date,
         end=end_date
     )
 
+    # NOTE: TEST DATA, NEED TO UPDATE LATER
     feature_data_handler = MLFeaturesDataHandler(
-        source_path="../../datasets/testing/sep.csv",
-        store_path="./test_bundles",
-        file_name="feature_data",
+        path_features="../dataset_development/datasets/testing/ml_dataset.csv",
+        store_path="./tests/test_bundles",
+        start=pd.to_datetime("2001-02-12"),
+        end=pd.to_datetime("2002-05-14")
     )
 
-    def handle_data(bt): # perf, port, md, cur_date
-        portfolio_value = bt.portfolio.calculate_value()
-        bt.perf.at[bt.market_data.cur_date, "portfolio_value"] = portfolio_value
-        
-        bt.perf.at[bt.market_data.cur_date, "AAPL"] = bt.market_data.current_for_ticker("AAPL")["close"] # Shuold succeed allways
+
+    def handle_data(bt):
+        pass
 
     def initialize(bt):
         pass
@@ -76,7 +88,7 @@ if __name__ == "__main__":
         initialize_hook=initialize,
         handle_data_hook=handle_data,
         analyze_hook=analyze
-        )
+    )
 
 
     # strategy = BuyAppleStrategy(desc="Buy some apple every day!")
@@ -95,7 +107,6 @@ if __name__ == "__main__":
     # make sure to have sufficient balance to exploit big opportunities
 
 
-    backtester.set_portfolio(Portfolio, balance=100000, strategy=strategy)
 
     """
     backtester.set_constraints( # and then the backtester configures whatever other objects that need this information?
@@ -113,8 +124,8 @@ if __name__ == "__main__":
         maintenance_margin_requirement=0.30
     )
     
-    # Run this in thread?
-
+    backtester.set_portfolio(Portfolio, balance=100000, strategy=strategy)
+    
     performance = backtester.run()
 
     """

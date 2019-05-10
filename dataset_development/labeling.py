@@ -47,7 +47,7 @@ def add_labels_via_triple_barrier_method(sep_featured: pd.DataFrame, sep: pd.Dat
     stop_loss_barriers = ptSl[1] * events["ewmstd"]
     # print(stop_loss_barriers)
 
-    # NOTE: Use adjusted close
+    # NOTE: Use adjusted close if you end up doing tbm and trade exits properly
     for date, timeout in events["timeout"].fillna(sep.index[-1]).iteritems(): # If timeout is missing for an event (this should not be the case), we use the last date in sep (for the ticker) as timeout.
         path_of_prices = sep.loc[(sep.index >= date) & (sep.index <= timeout)][["close"]]
         path_of_returns = ((path_of_prices["close"] / path_of_prices.iloc[0]["close"]) - 1) * events.loc[events.index == date].iloc[0]["side"] # events.loc[date]["side"] # remember we are still allways long
@@ -67,7 +67,7 @@ def add_labels_via_triple_barrier_method(sep_featured: pd.DataFrame, sep: pd.Dat
 
     # out = pd.DataFrame(index=events.index)
 
-    # NOTE: Use adjusted close
+    # NOTE: Use adjusted close if you end up doing tbm and trade exits properly
     events["return"] = sep.loc[events["earliest_touch"]]["close"].values / sep.loc[events.index]["close"].values - 1
     events["primary_label"] = np.sign(events["return"])
 

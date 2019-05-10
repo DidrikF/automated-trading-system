@@ -1,28 +1,20 @@
-from abc import ABC, abstractmethod
+
 import pandas as pd
 import time
 import datetime as dt
 import sys
-
-class Strategy(ABC):
-    def generate_signals(self):
-        pass
-
-    # @staticmethod
-    def generate_orders_from_signals(self):
-        pass
-
-    def get_order_id(self):
-        pass
-
-    def get_signal_id(self):
-        pass
-
-
-
+from .types import CommissionModel, SlippageModel
 
 class Signal():
-    def __init__(self, signal_id, ticker, direction, certainty, ewmstd, ptSl):
+    def __init__(
+        self, 
+        signal_id: int, 
+        ticker: str, 
+        direction: int, 
+        certainty: float, 
+        ewmstd: float, 
+        ptSl: list
+    ):
         self.signal_id = signal_id
         self.ticker = ticker
         self.direction = direction
@@ -39,21 +31,9 @@ class Signal():
 
     @classmethod
     def from_nothing(cls):
-        return cls("NONE", "NONE", "NONE", "NONE", "NONE")
+        return cls(-1, "NONE", 1, 0.5, 0.15, [1, -1])
 
 
-class CommissionModel(ABC):
-    def __init__(self):
-        pass
-    def calculate(self, order):
-        pass
-
-class SlippageModel(ABC):
-    def __init__(self):
-        pass
-
-    def calculate(self, order):
-        pass
 
 
 class EquityCommissionModel(CommissionModel):
@@ -72,23 +52,25 @@ class EquityCommissionModel(CommissionModel):
 
         # Other fees
         self.us_clearing_fee_per_share = 0.00020
-        
         self.us_transaction_fees_per_dollar = 0.000175
         self.nyse_pass_through_fees_per_commission = 0.000175
         self.finra_pass_through_fees_per_commission = 0.00056
         self.finra_trading_activity_fee_per_share = 0.000119
 
-    def calculate(self, order, fill_price):
-        commission = min(max(self.minimum_per_order, self.per_share*abs(order.amount)), self.maximum_in_percent_of_order_value*abs(order.amount)*fill_price)
-
-        us_trasaction_fees = self.us_transaction_fees_per_dollar * abs(order.amount) * fill_price
+    def calculate(self, amount: int, price: float, info=None):
+        if price < 0:
+            if info is not None:
+                for key, val in info.items():
+                    print(key, ": ", val)
+            raise ValueError("Cannot calculate commission with a negative price. Price given: {}".format(price))
+        
+        commission = min(max(self.minimum_per_order, self.per_share*abs(amount)), self.maximum_in_percent_of_order_value*abs(amount)*price)
+        us_trasaction_fees = self.us_transaction_fees_per_dollar * abs(amount) * price
         nyse_pass_through_fees = self.nyse_pass_through_fees_per_commission * commission
         finra_pass_through_fees = self.finra_pass_through_fees_per_commission * commission
-        finra_trading_activity_fee = self.finra_trading_activity_fee_per_share * abs(order.amount)
+        finra_trading_activity_fee = self.finra_trading_activity_fee_per_share * abs(amount)
 
         return commission + us_trasaction_fees + nyse_pass_through_fees + finra_pass_through_fees + finra_trading_activity_fee
-
-
 
 
 
@@ -101,16 +83,17 @@ class EquitySlippageModel(SlippageModel):
         pass        
 
 
-    def calculate(self, order):
+    def calculate(self):
+        """
+        Returns slippage per share.
+        """
         # https://arxiv.org/pdf/1103.2214.pdf
         
         # ewmstd = order.signal.ewmsdt # Can this be used? have some percentage basis point slippage? 
-        
+
         # When exiting a short, the slippage should be biased towards positive values
         # When exiting a long, the slippage should be biased towards negative values
-        
         # Bid ask spread component (depends on volume)
-
         # Slippage component
 
 
@@ -126,7 +109,7 @@ def report_progress(cur_date: pd.datetime, start_date: pd.datetime, end_date: pd
     total_days = end_date - start_date
     days_completed = cur_date - start_date
 
-    ratio_of_jobs_completed = float(days_completed.days/total_days.days)
+    ratio_of_jobs_completed = float((days_completed.days+1)/total_days.days)
     minutes_elapsed = (time.time()-time0)/60
     minutes_remaining = minutes_elapsed*(1/ratio_of_jobs_completed - 1)
     time_stamp = str(dt.datetime.fromtimestamp(time.time()))
@@ -148,6 +131,7 @@ def report_progress(cur_date: pd.datetime, start_date: pd.datetime, end_date: pd
 
 
 
+# ____ Propably delete the below___
 
 class Transaction():
     """
@@ -158,7 +142,6 @@ class Transaction():
     and this class therefore becomes redundant and unnecessary.
     """
     pass
-
 
 
 class Asset():

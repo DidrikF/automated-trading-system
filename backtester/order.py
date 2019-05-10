@@ -1,4 +1,4 @@
-
+import numpy as np
 
 class Order(): # what is best, have long arg list or a class hierarchy
     """
@@ -11,16 +11,16 @@ class Order(): # what is best, have long arg list or a class hierarchy
     Returns:	
     order_id – The unique identifier for this order, or None if no order was placed.
     """
-    def __init__(self, order_id, ticker, amount, date, signal, stop_loss=None, take_profit=None, time_out=None):
+    def __init__(self, order_id, ticker, amount, date, signal, stop_loss=None, take_profit=None, timeout=None):
         self.id = order_id
         self.ticker = ticker
         self.amount = amount
-        self.direction = sign(amount)
+        self.direction = np.sign(amount)
         self.date = date
         self.signal = signal
         self.stop_loss = stop_loss # This needs to be a price that I can compare the open/close to
         self.take_profit = take_profit # This needs to be a price that I can compare the open/close to
-        self.time_out = time_out
+        self.timeout = timeout
         self.type = "MARKET ORDER"
 
     def __str__(self):

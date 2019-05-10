@@ -269,7 +269,7 @@ def feature_scaling(dataset: pd.DataFrame()):
 
 
 
-def finalize_dataset(sep, metadata, sep_featured=None, sf1_featured=None, num_processes=6):
+def finalize_dataset(metadata, sep_featured=None, sf1_featured=None, num_processes=6):
 
     sf1_featured = sf1_featured.drop_duplicates(subset=["ticker", "datekey"], keep="last")
 
@@ -355,7 +355,7 @@ def finalize_dataset(sep, metadata, sep_featured=None, sf1_featured=None, num_pr
 
 if __name__ == "__main__":
 
-    sep = pd.read_csv("./datasets/sharadar/SEP_PURGED.csv", parse_dates=["date"], index_col="date", low_memory=False)
+    # sep = pd.read_csv("./datasets/sharadar/SEP_PURGED.csv", parse_dates=["date"], index_col="date", low_memory=False) # What did I use this for?
 
     metadata = pd.read_csv("./datasets/sharadar/METADATA_PURGED.csv")
     
@@ -363,7 +363,7 @@ if __name__ == "__main__":
         
     sf1_featured = pd.read_csv("./datasets/completed/sf1_featured.csv", parse_dates=["calendardate", "datekey"])
 
-    dataset = finalize_dataset(sep=sep, metadata=metadata, sep_featured=sep_featured, sf1_featured=sf1_featured)
+    dataset = finalize_dataset(metadata=metadata, sep_featured=sep_featured, sf1_featured=sf1_featured)
 
     dataset.to_csv("./datasets/completed/ml_dataset.csv", index=False)
 
