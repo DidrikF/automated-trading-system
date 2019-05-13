@@ -65,14 +65,16 @@ class Portfolio(PortfolioBase):
 
     # ___________ STRATEGY RELATED _________________
 
-    def generate_signals(self, feature_data_event):
-        signals_event =  self.strategy.generate_signals(feature_data_event)
-        self.signals.extend(signals_event.data)
+    def generate_signals(self):
+        signals_event =  self.strategy.generate_signals(self.market_data.cur_date)
+        if signals_event is not None:
+            self.signals.extend(signals_event.data)
         return signals_event
 
     def generate_orders_from_signals(self, signals_event):
         orders_event = self.strategy.generate_orders_from_signals(self, signals_event)
-        self.order_history.extend(orders_event.data)
+        if orders_event is not None:
+            self.order_history.extend(orders_event.data)
         return orders_event
 
 
@@ -81,10 +83,10 @@ class Portfolio(PortfolioBase):
         for trade in trades:
             self.costs.loc[trade.date, "slippage"] += trade.get_total_slippage() # All other costs are recorded in their respective method
         
-        self.strategy.handle_event(event)
+        self.strategy.handle_event(self, event)
 
     def handle_cancelled_orders_event(self, event: Event):
-        self.strategy.handle_event(event)
+        self.strategy.handle_event(self, event)
 
 
     # ___________ RECEIVE MONEY __________________
@@ -244,7 +246,7 @@ class Portfolio(PortfolioBase):
         return total_value
 
     def calculate_return_over_period(self, start_date, end_date):
-        if start_date < self.market_data.start or (end_date > self.market_data.cur_date):
+        if (start_date < self.market_data.start) or (end_date > self.market_data.cur_date):
             raise ValueError("Attempted to calculate return over period where the start date was lower\
                  than backtest's start date or the end date was higher than the current date.")
 
@@ -267,12 +269,12 @@ class Portfolio(PortfolioBase):
                 return None
 
             if trade.direction == 1:
-                position_value = trade.amount * daily_data["close"]
+                trade_value = trade.amount * daily_data["close"]
 
             elif trade.direction == -1:
-                position_value = abs(trade.amount) * (trade.fill_price - daily_data["close"])
+                trade_value = abs(trade.amount) * (trade.fill_price - daily_data["close"])
 
-            portfolio_value += position_value
+            portfolio_value += trade_value
 
         return portfolio_value
 
@@ -306,17 +308,14 @@ class Portfolio(PortfolioBase):
 
 
     def signals_to_df(self):
-        df = pd.DataFrame(columns=["signal_id", "ticker", "direction", "certainty", "ewmstd", "upper_barrier", "lower_barrier", "vertical_barrier", "feature_data_index", "feature_data_date"])
+        df = pd.DataFrame(columns=["signal_id", "ticker", "direction", "certainty", "ewmstd", "features_date"])
         for index, signal in enumerate(self.signals):
             df.at[index, "signal_id"] = signal.signal_id
             df.at[index, "ticker"] = signal.ticker
             df.at[index, "direction"] = signal.direction
             df.at[index, "certainty"] = signal.certainty
-            df.at[index, "ewmstd"] = signal.ewmstd
-            df.at[index, "ptSl_0"] = signal.ptSl[0]
-            df.at[index, "ptSl_1"] = signal.ptSl[1]          
-            df.at[index, "feature_data_index"] = signal.feature_data_index
-            df.at[index, "feature_data_date"] = signal.feature_data_date
+            df.at[index, "ewmstd"] = signal.ewmstd      
+            df.at[index, "features_date"] = signal.features_date
 
         df = df.sort_values(by=["signal_id"])
         return df

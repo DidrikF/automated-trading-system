@@ -19,17 +19,17 @@ from metrics import calculate_frequency_of_bets, calculate_average_holding_perio
 
 
 
-class Backtester():
+class Backtester(object):
     def __init__(
         self, 
         market_data_handler: DataHandler, 
-        feature_data_handler: DataHandler, 
         start: pd.datetime, 
         end: pd.datetime, 
         output_path: str,
         initialize_hook: Callable=None, 
         handle_data_hook: Callable=None, 
         analyze_hook: Callable=None,
+        print_state: bool=False,
     ):
         """
         data_handler: DataHandler for price data.
@@ -42,7 +42,6 @@ class Backtester():
         analyze_hook: Called at the end of the backtest. Can be used to output performance statistics.
         """
         self.market_data = market_data_handler
-        self.feature_data = feature_data_handler
         self.start = start
         self.end = end
         self.output_path = output_path
@@ -55,6 +54,7 @@ class Backtester():
         self.initialize = initialize_hook
         self.handle_data = handle_data_hook
         self.analyze = analyze_hook
+        self.print = print_state
 
         self._event_queue = EventQueue()
 
@@ -122,29 +122,22 @@ class Backtester():
                     # maybe I should account for returned events may be None, and should not be added to the event_queue
                     if event.type == 'DAILY_MARKET_DATA':
 
-                        if (event.is_business_day == True): 
-                            # feature_data_event = self.feature_data.current(event.date)
-                            feature_data_event = self.feature_data.next_batch(event.date) # NOTE: Maybe have the portfolio/strategy pull feature data is it wishes
-                            if feature_data_event is not None:
-                                self._event_queue.add(feature_data_event) # The next iteration of the loop, the event queue is not empty.
-                            
-
-                    elif event.type == "FEATURE_DATA":
-                        signals_event = self.portfolio.generate_signals(event) # This controlls how often trades are executed
-
-                        if signals_event is not None:
-                            self._event_queue.add(signals_event)
-
-
+                        if (event.is_business_day == True):
+                            if self.print: print("Generating signals")
+                            signals_event = self.portfolio.generate_signals()
+                            if signals_event is not None:
+                                self._event_queue.add(signals_event)
+    
                     elif event.type == 'SIGNALS': 
+                        if self.print: print("Generating orders")
                         orders_event = self.portfolio.generate_orders_from_signals(event)
                         
                         if orders_event is not None:
-                            self.portfolio.order_history.extend(orders_event.data) # NOTE: Do I still want this? Need to hash out the broker...
                             self._event_queue.add(orders_event)
 
 
                     elif event.type == 'ORDERS':
+                        if self.print: print("processing orders")
                         trades_event, cancelled_orders_event = self.broker.process_orders(self.portfolio, event) # Might get no fills or cancelled orders
                         
                         if trades_event is not None:
@@ -163,14 +156,16 @@ class Backtester():
             """
             Here the day is over, before ending the day and starting a new one we want to update the margin account according 
             to latest close prices and update the balance and positions if any was liquidated throughout the day.
+            Here we also process bankruptices, delistings, dividends, interest payment and interest reception.
             """
             
             if self.market_data.is_business_day():
-
+                if self.print: print("manage active trades")
                 margin_account_update_event = self.broker.manage_active_trades(self.portfolio) 
 
                 if margin_account_update_event is not None:
                     # NOTE: # Now the mony from liquidated positions are available to update the margin account
+                    if self.print: print("Handle margin account update")
                     self.portfolio.handle_margin_account_update(margin_account_update_event) 
 
                 # NOTE: Process bankruptices and delistings at the open? 
@@ -179,17 +174,21 @@ class Backtester():
                 # At the same time, I don't want to trade in bankrupt companies...
                 # If a trade is made in a company that is delestied or bankrupt the same day, I just have to deal with this I guess...
                 # Conclusion: Process bankruptcies at the end of the day
+                if self.print: print("handle corp actions")
                 self.broker.handle_corp_actions(self.portfolio)
                 
                 # NOTE: Dividends are payed at the end of the day
+                if self.print: print("handle dividends")
                 self.broker.handle_dividends(self.portfolio)
 
 
 
             # NOTE: Pay interest
+            if self.print: print("handle interest on short positions")
             self.broker.handle_interest_on_short_positions(self.portfolio)
 
             # NOTE: Receive interest
+            if self.print: print("handle interest on cash and margin accounts")
             self.broker.handle_interest_on_cash_and_margin_accounts(self.portfolio)
 
 
@@ -224,9 +223,10 @@ class Backtester():
         Calculate various backtest statistics. These calculations are split into their 
         own function, but the work is sentralized here.
         """
-        portfolio_value = self.portfolio.calculate_portfolio_value()
-        self.perf.at[self.market_data.cur_date, "portfolio_value"] = portfolio_value        
-        
+        # portfolio_value = self.portfolio.calculate_portfolio_value()
+        # self.perf.at[self.market_data.cur_date, "portfolio_value"] = portfolio_value        
+
+
         self.portfolio.capture_state()
         self.broker.capture_state()
         
@@ -239,7 +239,7 @@ class Backtester():
                 # Cost Related:
         self.stats["total_slippage"] = self.portfolio.costs["slippage"].sum(),
         self.stats["total_commission"] = self.portfolio.costs["commission"].sum(),
-        self.stats["total_charged"] = self.portfolio.costs["account_interest"].sum(),
+        self.stats["total_charged"] = self.portfolio.costs["charged"].sum(),
         self.stats["total_margin_interest"] = self.portfolio.costs["margin_interest"].sum(),
         self.stats["total_account_interest"] = self.portfolio.costs["account_interest"].sum(),
         self.stats["total_short_dividends"] = self.portfolio.costs["short_dividends"].sum(),

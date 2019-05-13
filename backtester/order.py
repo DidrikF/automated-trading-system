@@ -18,8 +18,8 @@ class Order(): # what is best, have long arg list or a class hierarchy
         self.direction = np.sign(amount)
         self.date = date
         self.signal = signal
-        self.stop_loss = stop_loss # This needs to be a price that I can compare the open/close to
-        self.take_profit = take_profit # This needs to be a price that I can compare the open/close to
+        self.stop_loss = stop_loss
+        self.take_profit = take_profit
         self.timeout = timeout
         self.type = "MARKET ORDER"
 

@@ -1,5 +1,5 @@
 import logging
-
+import datetime
 
 
 def singleton(cls):
@@ -17,7 +17,7 @@ class Logger():
 
         logFormatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
         
-        fileHandler = logging.FileHandler("../logs/backtest.log")
+        fileHandler = logging.FileHandler("./logs/backtest{}.log".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S")))
         fileHandler.setFormatter(logFormatter)
         
         consoleHandler = logging.StreamHandler()

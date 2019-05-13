@@ -30,7 +30,7 @@ market_data = DailyBarsDataHander(
     path_snp500="./test_datasets/test_snp500.csv", # "../../dataset_development/datasets/macro/snp500.csv",
     path_interest="./test_datasets/test_rf_rate.csv", # "../../dataset_development/datasets/macro/t_bill_rate_3m.csv",
     path_corp_actions="./test_datasets/test_corp_actions.csv", # "../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
-    store_path="../test_bundles",
+    store_path="./test_bundles",
     start=start_date,
     end=end_date,
     rebuild=False
@@ -197,8 +197,8 @@ date,ticker,open,high,low,close,dividends
 2010-01-04,AAPL,10,10,10,10,0
 
 2010-01-01,MSFT,10,10.5,9.5,10,2
-2010-01-02,MSFT,10,11,9,10,1
-2010-01-03,MSFT,11,11,8,10,0
+2010-01-02,MSFT,11,14,11,13,1
+2010-01-03,MSFT,12,14,11,13,0
 
 rf_rate
 date,rate,      daily
@@ -256,7 +256,8 @@ def test_broker_LONG_manage_active_positions():
 
     assert closed_trade.close_date == pd.to_datetime("2010-01-03")
     assert closed_trade.close_price == pytest.approx(10*1.399999 - 3) # 3 in dividends, makes the 0.4 take_profit barrier trigger
-
+    assert closed_trade.dividends_per_share == 3
+    assert closed_trade.total_dividends == 6
 
 def test_exit_of_short_trade_due_to_dividend_payment():
     # FIRST ITERATION
@@ -451,9 +452,107 @@ def test_handle_interest_on_short_positions():
 
 
 def test_calculate_required_margin_account_size():
-    pass
+
+    # FIRST ITERATION
+    next(broker.market_data.tick)
+    order_date = pd.to_datetime("2010-01-01")
+    order_1 = Order(
+        order_id=1,
+        ticker="MSFT",
+        amount=-1,
+        date=order_date,
+        signal=Signal.from_nothing(),
+        stop_loss=-1, # Will not happen
+        take_profit=1, # Will not happen
+        timeout=pd.to_datetime("2010-01-06")
+    )
+
+    orders_event = Event(event_type="ORDERS", data=[order_1], date=order_date)
+    broker.process_orders(portfolio, orders_event)
+
+    margin_account0 = broker.calculate_required_margin_account_size("open")
+    assert margin_account0 == pytest.approx(10*1.5) 
+
+    margin_account_update_event = broker.manage_active_trades(portfolio) 
+    
+    margin_account1 = broker.calculate_required_margin_account_size("close")
+    assert margin_account1 == pytest.approx(10*1.5) # Initial margin requirement when in the money (even == in the money)
+
+
+    if margin_account_update_event is not None:
+        portfolio.handle_margin_account_update(margin_account_update_event) 
+    broker.handle_corp_actions(portfolio)
+    broker.handle_dividends(portfolio)
+    broker.handle_interest_on_short_positions(portfolio)
+    broker.handle_interest_on_cash_and_margin_accounts(portfolio)
+
+
+    # NEW TICK, where the position gets out of the money
+    market_data_event = next(broker.market_data.tick)
+    margin_account_update_event = broker.manage_active_trades(portfolio) 
+
+    # Calculte margin requriement
+    margin_account2 = broker.calculate_required_margin_account_size("close")
+    assert margin_account2 == pytest.approx(13 * 1.3) # Maintenance margin, when not in the money
+
+    if margin_account_update_event is not None:
+        portfolio.handle_margin_account_update(margin_account_update_event)
+
+    assert portfolio.margin_account == pytest.approx(margin_account2)    
+
+    broker.handle_corp_actions(portfolio)
+    broker.handle_dividends(portfolio)
+    broker.handle_interest_on_short_positions(portfolio)
+    broker.handle_interest_on_cash_and_margin_accounts(portfolio)
+
+
+
+    """
+    2010-01-01,MSFT,10,10.5,9.5,10,2
+    2010-01-02,MSFT,11,14,11,13,1
+    2010-01-03,MSFT,12,14,11,13,0
+    """
 
 def test_equity_commission_model():
+
+    def other_fees(amount, price, commission):
+        us_clearing_fee_per_share = 0.00020 # 0.0000207
+        us_transaction_fees_per_dollar = 0.0000207
+        nyse_pass_through_fees_per_commission = 0.000175
+        finra_pass_through_fees_per_commission = 0.00056
+        finra_trading_activity_fee_per_share = 0.000119
+        us_clearing_fees = us_clearing_fee_per_share * abs(amount)
+        us_trasaction_fees = us_transaction_fees_per_dollar * abs(amount) * price
+        nyse_pass_through_fees = nyse_pass_through_fees_per_commission * commission
+        finra_pass_through_fees = finra_pass_through_fees_per_commission * commission
+        finra_trading_activity_fee = finra_trading_activity_fee_per_share * abs(amount)
+
+        return us_clearing_fees + us_trasaction_fees + nyse_pass_through_fees + finra_pass_through_fees + finra_trading_activity_fee
+
+
+    # Test min
+    min_commission = 0.35 # > 90 * 0.0035
+    assert commission_model.calculate(90, 10) == pytest.approx(min_commission + other_fees(90, 10, min_commission))
+
+
+    # test max
+    max_commission = 0.1 # 1% of trade value, trade value = 10000 * 0.001 = 10 -> max commission = 0.1
+    # per share commission = 0.0035 * 10000 = 35 -> so max commission of 0.1.
+    assert commission_model.calculate(10000, 0.001) == pytest.approx(max_commission + other_fees(10000, 0.001, max_commission))
+
+    # test in between
+    normal_commission = 1000*0.0035
+    assert commission_model.calculate(1000, 15) == pytest.approx(normal_commission + other_fees(1000, 15, normal_commission))
+
+
+
+
+def test_dividend_payment_and_handling():
+    # Dealt with under test_exit_of_short_trade_due_to_dividend_payment
+ 
+    # Check return calculation
+
+    # Check dividend payment
     pass
 
 
@@ -465,7 +564,6 @@ def test_equity_slippage_model():
     pass
 
 
-
 """
 date,ticker,open,high,low,close,dividends
 2010-01-01,AAPL,10,10.5,9.5,10,2
@@ -474,15 +572,6 @@ date,ticker,open,high,low,close,dividends
 2010-01-04,AAPL,10,10,10,10,0
 """
 
-
-def test_dividend_payment_and_handling():
-
-    # Check 
-
-    # Check return calculation
-
-    # Check dividend payment
-    pass
 
 
 

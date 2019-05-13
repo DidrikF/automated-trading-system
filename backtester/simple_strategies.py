@@ -127,6 +127,7 @@ class RandomLongShortStrategy():
             take_profit = signal.ewmstd * signal.ptSl[0]
             stop_loss = signal.ewmstd * signal.ptSl[1]
             timeout = cur_date + relativedelta(months=1)
+            
             orders.append(Order(order_id=self.get_order_id(), ticker=signal.ticker, amount=amount, date=portfolio.market_data.cur_date, signal=signal, \
                 stop_loss=stop_loss , take_profit=take_profit, timeout=timeout))
 

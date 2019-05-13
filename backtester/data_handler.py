@@ -12,7 +12,6 @@ sys.path.insert(0, os.path.join(myPath, ".."))
 
 from event import Event, MarketDataEvent
 from utils.errors import MarketDataNotAvailableError
-from utils.logger import Logger
 from dataset_development.processing.engine import pandas_mp_engine
 
 """
@@ -31,12 +30,12 @@ data_handler.ticker_data = {
 """
 
 class DataHandler(ABC):
+
     def ingest_data(self):
         pass
 
     def current(self):
         pass
-
 """
 All data to have a complete datetime index and a "can_trade" bool column is used to find out if the data was forward filled or not. 
 
@@ -111,6 +110,7 @@ class DailyBarsDataHander(DataHandler):
     def ingest_data(self):
         print("Reading SEP")
         data: pd.DataFrame = pd.read_csv(self.path_prices, parse_dates=["date"], index_col="date", low_memory=False)
+        data = data.loc[data.index >= self.start]
         
         print("Ingesting SNP500")
         data = self.ingest_snp500(data)
@@ -178,7 +178,7 @@ class DailyBarsDataHander(DataHandler):
         """
         dateparse = lambda x: pd.datetime.strptime(x, "%d.%m.%Y")
         snp500: pd.DataFrame = pd.read_csv(self.path_snp500, parse_dates=["date"], date_parser=dateparse, index_col="date")
-
+        snp500 = snp500.loc[snp500.index >= self.start]
         # new_index: pd.DatetimeIndex = pd.date_range(snp500.index.min(), snp500.index.max())
         # snp500 = snp500.reindex(new_index)
         # snp500 = snp500.fillna(method="ffill", axis=0)
@@ -196,6 +196,7 @@ class DailyBarsDataHander(DataHandler):
         """
 
         rf_rate: pd.DataFrame = pd.read_csv(self.path_interest, parse_dates=["date"], index_col="date")
+        rf_rate = rf_rate.loc[rf_rate.index >= self.start]
 
         # Make daily, weekly, and 3m (not modified)
         rf_rate["daily"] = rf_rate["rate"] / 91 # Assumes 3-month T-bill reaches maturity after 13 weeks (13*7 = 91 days)
@@ -381,9 +382,12 @@ class DailyBarsDataHander(DataHandler):
         """
         Return data for ticker from the start to the end date.
         """
+        start = self.start.strftime("%Y-%m-%d")
+        end = self.end.strftime("%Y-%m-%d")
         try:
-            data = self.ticker_data.loc[ticker][self.start:self.end]
+            data = self.ticker_data.loc[ticker][start:end]
         except Exception as e:
+            print("Get Ticker data error: ", e)
             return pd.DataFrame(columns=self.ticker_data.iloc[[0]].columns)
         else:
             return data
@@ -425,13 +429,24 @@ class MLFeaturesDataHandler(DataHandler):
             outfile.close()
 
         self.feature_data = feature_data
-        
 
     def ingest_data(self):
-        """
-        Ingest feature data. The data can have model predictions with them. It is up to the user of this object
-        to avoid lookahead bias.
-        """
+        feature_data: pd.DataFrame = pd.read_csv(self.path_features, parse_dates=["date", "datekey", "timeout"], index_col="date", low_memory=False)
+
+        feature_data = feature_data.sort_index()
+        date = self.start - relativedelta(days=7)
+        feature_data = feature_data.loc[date:]
+
+        return feature_data
+    """
+    def ingest_data(self):
+        # Ingest feature data. The data can have model predictions with them. It is up to the user of this object
+        # to avoid lookahead bias.
+
+        # NOTE: I want to iterate over all the signals without having to worry about multiindex semantics
+        # NOTE: The features here must be complete with columns like date, ticker, ewmstd, ptsl
+        # timeout?
+
         data: pd.DataFrame = pd.read_csv(self.path_features, parse_dates=["date", "datekey", "timeout"], low_memory=False)
         feature_data = {}
         split_df = data.groupby("date")
@@ -446,7 +461,7 @@ class MLFeaturesDataHandler(DataHandler):
         feature_data = feature_data.sort_index()
 
         return feature_data
-
+    """
     def get_range(self, start, stop) -> Event:
         # make sure to only give new data that was released available the previous day.
         if isinstance(start, str):
@@ -454,7 +469,6 @@ class MLFeaturesDataHandler(DataHandler):
         if isinstance(stop, str):
             stop = pd.to_datetime(stop)
     
-        stop = stop - relativedelta(days=1)
         # NOTE: think the exception handling should be better, but maybe its fine
         try:
             data = self.feature_data.loc[start:stop]

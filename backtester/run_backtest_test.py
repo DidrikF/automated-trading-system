@@ -38,18 +38,28 @@ from simple_strategies import RandomLongShortStrategy
 
 if __name__ == "__main__":
     start_date = pd.to_datetime("2010-01-01")
-    end_date = pd.to_datetime("2012-12-12")
-    # end_date = pd.to_datetime("2019-02-01")
+    end_date = pd.to_datetime("2010-06-01")
 
     # NOTE: add from_bundle classmethod?
     # NOTE: cut off the datahandler to only load data for the relevant period (2010->)
-    print("Instantiating Market Data Handler")
+    """
     market_data_handler = DailyBarsDataHander( 
-        path_prices="../dataset_development/datasets/sharadar/SEP_PURGED.csv",
+        path_prices="../dataset_development/datasets/sharadar/SEP_PURGED.csv", # "../../dataset_development/datasets/testing/sep.csv",
+        path_snp500="../dataset_development/datasets/macro/snp500.csv", # "../../dataset_development/datasets/macro/snp500.csv",
+        path_interest="../dataset_development/datasets/macro/rf_rate.csv", # "../../dataset_development/datasets/macro/t_bill_rate_3m.csv",
+        path_corp_actions="../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv", # "../../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
+        store_path="./live_bundle",
+        start=start_date,
+        end=end_date,
+        rebuild=False
+    )
+    """
+    market_data_handler = DailyBarsDataHander( 
+        path_prices="../dataset_development/datasets/testing/sep.csv",
         path_snp500="../dataset_development/datasets/macro/snp500.csv",
         path_interest="../dataset_development/datasets/macro/t_bill_rate_3m.csv",
         path_corp_actions="../dataset_development/datasets/sharadar/SHARADAR_EVENTS.csv",
-        store_path="./live_bundles",
+        store_path="./test_bundles",
         start=start_date,
         end=end_date,
         rebuild=False,
@@ -89,10 +99,10 @@ if __name__ == "__main__":
         max_hold_period= relativedelta(months=1),
     )
     """
-    print("Instantiating ML Feature Data Handler")
+
     feature_handler = MLFeaturesDataHandler(
-        path_features="../dataset_development/datasets/completed/ml_dataset.csv", # NOTE: TEST DATA, NEED TO UPDATE LATER
-        store_path="./live_bundles",
+        path_features="../dataset_development/datasets/testing/ml_dataset.csv", # NOTE: TEST DATA, NEED TO UPDATE LATER
+        store_path="./test_bundles",
         start=start_date,
         end=end_date
     )
@@ -104,7 +114,7 @@ if __name__ == "__main__":
         rebalance_weekday=0, 
         side_classifier=side_classifier, 
         certainty_classifier=certainty_classifier,
-        ptSl=[1, -0.8],
+        ptSl=[1, -1],
         feature_handler=feature_handler,
         features=features,    
         initial_margin_requirement=0.5, 
@@ -112,15 +122,13 @@ if __name__ == "__main__":
     )
 
     strategy.set_order_restrictions(
-        max_position_size=0.05, # 0.05
-        max_positions=30, # 30
-        minimum_balance=100000, # 1% of initial balance?
+        max_position_size=0.3, # 0.05
+        max_positions=2, # 30
+        minimum_balance=10, # 2% of initial balance?
         max_percent_to_invest_each_period=0.33, # 0.33
-        max_orders_per_period=10, # 10
+        max_orders_per_period=1, # 10
     )
 
-    print("Computing predictions...")
-    strategy.compute_predictions()
 
     slippage_model = EquitySlippageModel()
     commission_model = EquityCommissionModel()
@@ -132,9 +140,8 @@ if __name__ == "__main__":
         maintenance_margin_requirement=0.30
     )
     
-    backtester.set_portfolio(Portfolio, balance=10000000, strategy=strategy)
+    backtester.set_portfolio(Portfolio, balance=10000, strategy=strategy)
     
-    print("Starting Backtest!")
     performance = backtester.run()
 
     """

@@ -13,26 +13,20 @@ class Signal():
         direction: int, 
         certainty: float, 
         ewmstd: float, 
-        ptSl: list
+        timeout: pd.datetime,
+        features_date: pd.datetime,
     ):
         self.signal_id = signal_id
         self.ticker = ticker
         self.direction = direction
         self.certainty = certainty
-
-        self.ewmstd = ewmstd # The variablity measure behind the barriers, may also be relevant
-        self.ptSl = ptSl
-        # I dont really have barriers for new predictions, but I have the ewmstd and ptSl which was used to generate barriers for training.
-        # self.barriers = (None, None, None) # Relevant for calculations of stop-loss, take-profit and also relevent for rebalancing
-
-        self.feature_data_index = None # Need to take this as arguments, makes it easier to track the data behind signals
-        self.feature_data_date = None # Need to take this as arguments, makes it easier to track the data behind signals
-
+        self.ewmstd = ewmstd
+        self.timeout = timeout
+        self.features_date = features_date
 
     @classmethod
     def from_nothing(cls):
-        return cls(-1, "NONE", 1, 0.5, 0.15, [1, -1])
-
+        return cls(-1, "NONE", 1, 0.5, 0.15, pd.to_datetime("2020-01-01"), pd.to_datetime("1995-01-01"))
 
 
 
@@ -51,8 +45,9 @@ class EquityCommissionModel(CommissionModel):
         self.maximum_in_percent_of_order_value = 0.01
 
         # Other fees
-        self.us_clearing_fee_per_share = 0.00020
-        self.us_transaction_fees_per_dollar = 0.000175
+        self.us_clearing_fee_per_share = 0.00020 # 0.0000207
+
+        self.us_transaction_fees_per_dollar = 0.0000207
         self.nyse_pass_through_fees_per_commission = 0.000175
         self.finra_pass_through_fees_per_commission = 0.00056
         self.finra_trading_activity_fee_per_share = 0.000119
@@ -65,12 +60,14 @@ class EquityCommissionModel(CommissionModel):
             raise ValueError("Cannot calculate commission with a negative price. Price given: {}".format(price))
         
         commission = min(max(self.minimum_per_order, self.per_share*abs(amount)), self.maximum_in_percent_of_order_value*abs(amount)*price)
+        
+        us_clearing_fees = self.us_clearing_fee_per_share * abs(amount)
         us_trasaction_fees = self.us_transaction_fees_per_dollar * abs(amount) * price
         nyse_pass_through_fees = self.nyse_pass_through_fees_per_commission * commission
         finra_pass_through_fees = self.finra_pass_through_fees_per_commission * commission
         finra_trading_activity_fee = self.finra_trading_activity_fee_per_share * abs(amount)
 
-        return commission + us_trasaction_fees + nyse_pass_through_fees + finra_pass_through_fees + finra_trading_activity_fee
+        return commission + us_clearing_fees + us_trasaction_fees + nyse_pass_through_fees + finra_pass_through_fees + finra_trading_activity_fee
 
 
 

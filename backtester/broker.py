@@ -40,6 +40,8 @@ class Trade():
         self.interest_expenses = 0
         self.dividends_per_share = 0
 
+        self.cur_value = None
+
         # Close related
         self.CLOSED = False
         self.close_price = None
@@ -133,7 +135,7 @@ class Blotter():
         return copy.deepcopy(self.active_trades)
 
     def get_closed_trades(self) -> list:
-        return copy.deepcopy(self.active_trades)
+        return copy.deepcopy(self.closed_trades)
 
 
 
@@ -394,11 +396,11 @@ class Broker():
                     if proceeds < 0:
                         portfolio.charge_margin_account(abs(proceeds))
                     continue
-                    
+        # After all trades have been checked for any exit conditions and the active trades have been updated, the margin account size is 
+        # updated. This is done every business day regardless of the active trades changing.
         # NOTE: When exiting a short, you cannot fail to adjust the margin account.
-        required_margin_account_size = self.calculate_required_margin_account_size("close") # Just use this to keep margin account at needed size, and not have calls to just increase it?
+        required_margin_account_size = self.calculate_required_margin_account_size("close")
 
-        # portfolio.update_margin_account(required_margin_account_size)
         return Event(event_type="MARGIN_ACCOUNT_UPDATE", data=required_margin_account_size, date=self.market_data.cur_date)
 
         
@@ -418,7 +420,7 @@ class Broker():
                         self.blotter.close(trade, close_price, self.market_data.cur_date, "BANKRUPT")
                     elif row["action"] == "delisted":
                         close_price = self.market_data.current_for_ticker(trade.ticker)["close"]
-                        self.blotter.close(trade, close_price, self.market_data.cur_date, "BANKRUPT")
+                        self.blotter.close(trade, close_price, self.market_data.cur_date, "DELISTED")
                         
 
     def handle_dividends(self, portfolio: PortfolioBase):
@@ -434,7 +436,7 @@ class Broker():
             for trade in self.blotter.active_trades:
                 if ticker == trade.ticker:
                     trade.dividends_per_share += row["dividends"]
-                    dividend_amount = row["dividends"] * abs(trade.amount)
+                    dividend_amount = row["dividends"] * abs(trade.amount) * (1 - self.tax_rate)
                     # print("dividend amount: ", dividend_amount)
                     if trade.direction == 1:
                         portfolio.receive_dividends(dividend_amount)
@@ -453,7 +455,7 @@ class Broker():
         total = (portfolio.balance + portfolio.margin_account) * daily_rate
         if total < 0:
             # NOTE: This should not be happen often
-            portfolio.charge_interest(total) # If accounts have negative net balance, the portfolio must pay interest at the risk free rate
+            portfolio.charge_interest(abs(total)) # If accounts have negative net balance, the portfolio must pay interest at the risk free rate
         if total > 0:
             portfolio.receive_interest(total)
 
@@ -561,9 +563,20 @@ class Broker():
         Call at the end of each rebalancing date.
         """
 
+        active_trades = self.blotter.get_active_trades()
+        for trade in active_trades:
+            # Get price
+            price = self.market_data.current_for_ticker(trade.ticker)["close"]
+            # Add value to trade
+            if trade.direction == 1:
+                trade.cur_value = trade.amount * price
+            elif trade.direction == -1:
+                trade.cur_value = abs(trade.amount) * (price - trade.fill_price)
+
+
         history_obj = {
             "date": self.market_data.cur_date,
-            "active_trades": self.blotter.get_active_trades(),
+            "active_trades": active_trades,
         }
         self.blotter_history.append(history_obj)
 
@@ -590,6 +603,7 @@ class Broker():
                 df.at[index, "slippage"] = trade.slippage
                 df.at[index, "interest_expenses"] = trade.interest_expenses
                 df.at[index, "dividends_per_share"] = trade.dividends_per_share
+                df.at[index, "cur_value"] = trade.cur_value # Added when capturing state
                 df.at[index, "CLOSED"] = trade.CLOSED
                 df.at[index, "close_price"] = trade.close_price
                 df.at[index, "close_date"] = trade.close_date
@@ -618,7 +632,7 @@ class Broker():
             df.at[index, "stop_loss"] = trade.stop_loss
             df.at[index, "take_profit"] = trade.take_profit
             df.at[index, "timeout"] = trade.timeout
-            df.at[index, "date"] = trade.date
+            df.at[index, "trade_date"] = trade.date
             df.at[index, "fill_price"] = trade.fill_price
             df.at[index, "commission"] = trade.commission
             df.at[index, "slippage"] = trade.slippage
