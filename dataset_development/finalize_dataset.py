@@ -134,6 +134,10 @@ selected_sep_features = [
     "return_2m",
     "return_3m",
 
+    "erp_1m",
+    # "erp_2m",
+    # "erp_3m",
+
     "timeout",
     "ewmstd_2y_monthly",
     "return_tbm",
@@ -298,7 +302,8 @@ def finalize_dataset(metadata, sep_featured=None, sf1_featured=None, num_process
     columns_to_drop = ["saleinv", "pchsale_pchinvt", "pchsaleinv", "rd", "herf"]
     dataset = dataset.drop(columns_to_drop, axis=1)
 
-    
+    dataset = dataset.replace([np.inf, -np.inf], np.nan)
+
     features = list(set(dataset.columns) - set(labels) - set(base_cols) - set(["industry"]))
 
     # 4. Calculate mean and var for each feature for each size category for the whole market

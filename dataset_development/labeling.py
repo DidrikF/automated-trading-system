@@ -12,6 +12,11 @@ import sys
 import numpy as np
 import math
 
+import sys, os
+
+myPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(myPath))
+
 from processing.engine import pandas_mp_engine
 """
 Step by step guide to labeling via the triple barrier method and meta-labeling.
@@ -20,10 +25,71 @@ Step by step guide to labeling via the triple barrier method and meta-labeling.
     deivation on monthly/weekly returns the past year.
 """
 
+def meta_labeling_via_triple_barrier_method(dataset: pd.DataFrame, sep: pd.DataFrame, ptSl: tuple, min_ret):
+    """
+    Based on side_predictions the dataset is labeld with {0, 1} based on whether the system profited of lost when
+    following the side predictions
+    """
 
 
-# Think this will be the last callback in the sep pipeline
-# How will this change when side is not allways long?
+    if ("ewmstd_2y_monthly" not in dataset.columns) or ("timeout" not in dataset.columns):
+        return dataset
+
+    ewmstd = dataset[["ewmstd_2y_monthly"]]
+
+    # I only consider the case there there is a timeout
+    timeout = dataset[["timeout"]]
+
+    side_long = pd.DataFrame(index=ewmstd.index)
+    side_long["side"] = dataset["side_prediction"] # NOTE: Requires side_prediction to be set by the primary ML model
+
+
+    # 3) form events objects, apply stop loss on t1
+    events = pd.concat({'timeout': timeout["timeout"], 'ewmstd': ewmstd["ewmstd_2y_monthly"], 'side': side_long["side"]}, axis=1) # .dropna(subset=["trgt"])
+    # print(events)
+    barrier_touch_dates = events[["timeout"]].copy(deep=True)
+
+    take_profit_barriers = ptSl[0] * events["ewmstd"] # I only consider the case where there is both horizontal barriers
+    stop_loss_barriers = ptSl[1] * events["ewmstd"]
+    # print(stop_loss_barriers)
+
+    # NOTE: Use adjusted close if you end up doing tbm and trade exits properly
+    for date, timeout in events["timeout"].fillna(sep.index[-1]).iteritems(): # If timeout is missing for an event (this should not be the case), we use the last date in sep (for the ticker) as timeout.
+        path_of_prices = sep.loc[(sep.index >= date) & (sep.index <= timeout)][["adj_close"]]
+        path_of_returns = ((path_of_prices["adj_close"] / path_of_prices.iloc[0]["adj_close"]) - 1) * events.loc[events.index == date].iloc[0]["side"] # side affects how the return series is calculated
+        barrier_touch_dates.loc[date, "earliest_take_profit_touch"] = path_of_returns[path_of_returns > take_profit_barriers[date]].index.min()
+        barrier_touch_dates.loc[date, "earliest_stop_loss_touch"] = path_of_returns[path_of_returns < stop_loss_barriers[date]].index.min()
+        
+
+    # print(barrier_touch_dates)
+    # print(events)
+    # drop those where none of the barrieres where touched (should be extremly rare, if not at all I think)
+    events["earliest_touch"] = barrier_touch_dates.dropna(how='all').min(axis=1) # pd.min ignores nan, here events["t1"] becomes the timesamp of the earliest barrier touch
+
+    # events = events.drop("side", axis=1)
+    # events_ = events.dropna(subset=["earliest_touch"]) # Does not do anything.
+    # sample_date__earliest_touch_date = events_.index.union(events_["earliest_touch"].values).drop_duplicates()
+    # close_reindexed = close.reindex(close_index, method="bfill")
+
+    # out = pd.DataFrame(index=events.index)
+
+    # NOTE: Use adjusted close if you end up doing tbm and trade exits properly
+    events["return"] = sep.loc[events["earliest_touch"]]["adj_close"].values / sep.loc[events.index]["adj_close"].values - 1
+    # events["primary_label"] = np.sign(events["return"]) # {0, 1}
+    events.loc[events["return"] <= 0, "primary_label"] = 0
+    events.loc[events["return"] > 0, "primary_label"] = 1
+
+
+    dataset[["m_return_tbm", "m_primary_label_tbm"]] = events[["return", "primary_label"]]
+    dataset["m_date_of_touch"] = events["earliest_touch"]
+    dataset["m_take_profit_barrier"] = take_profit_barriers
+    dataset["m_stop_loss_barrier"] = stop_loss_barriers
+
+    return dataset
+
+
+
+# NOTE: I HAVE UPDATED "close" to "adj_close", should be ready to rerun tbm labeling
 def add_labels_via_triple_barrier_method(sep_featured: pd.DataFrame, sep: pd.DataFrame, ptSl: tuple, min_ret):
     
     if ("ewmstd_2y_monthly" not in sep_featured.columns) or ("timeout" not in sep_featured.columns):
@@ -47,10 +113,9 @@ def add_labels_via_triple_barrier_method(sep_featured: pd.DataFrame, sep: pd.Dat
     stop_loss_barriers = ptSl[1] * events["ewmstd"]
     # print(stop_loss_barriers)
 
-    # NOTE: Use adjusted close if you end up doing tbm and trade exits properly
     for date, timeout in events["timeout"].fillna(sep.index[-1]).iteritems(): # If timeout is missing for an event (this should not be the case), we use the last date in sep (for the ticker) as timeout.
-        path_of_prices = sep.loc[(sep.index >= date) & (sep.index <= timeout)][["close"]]
-        path_of_returns = ((path_of_prices["close"] / path_of_prices.iloc[0]["close"]) - 1) * events.loc[events.index == date].iloc[0]["side"] # events.loc[date]["side"] # remember we are still allways long
+        path_of_prices = sep.loc[(sep.index >= date) & (sep.index <= timeout)][["adj_close"]]
+        path_of_returns = ((path_of_prices["adj_close"] / path_of_prices.iloc[0]["adj_close"]) - 1) * events.loc[events.index == date].iloc[0]["side"] # events.loc[date]["side"] # remember we are still allways long
         barrier_touch_dates.loc[date, "earliest_take_profit_touch"] = path_of_returns[path_of_returns > take_profit_barriers[date]].index.min()
         barrier_touch_dates.loc[date, "earliest_stop_loss_touch"] = path_of_returns[path_of_returns < stop_loss_barriers[date]].index.min()
         
@@ -67,8 +132,7 @@ def add_labels_via_triple_barrier_method(sep_featured: pd.DataFrame, sep: pd.Dat
 
     # out = pd.DataFrame(index=events.index)
 
-    # NOTE: Use adjusted close if you end up doing tbm and trade exits properly
-    events["return"] = sep.loc[events["earliest_touch"]]["close"].values / sep.loc[events.index]["close"].values - 1
+    events["return"] = sep.loc[events["earliest_touch"]]["adj_close"].values / sep.loc[events.index]["adj_close"].values - 1
     events["primary_label"] = np.sign(events["return"])
 
     sep_featured[["return_tbm", "primary_label_tbm"]] = events[["return", "primary_label"]]

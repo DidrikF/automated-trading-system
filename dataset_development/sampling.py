@@ -78,7 +78,7 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
     that samples are made as close to a relevant form 10 filings as possible.
 
     Because datekeys are set such that re-filings of reports for a calendardate (normalized report period) earlier than the current one 
-    is ignored, only re-filings of reports for the current period or a new period shows up as a new datekey when iterating over the 
+    reports for the current period or a new period shows up as a new datekey when iterating over the 
     observations. New datekeys is therefore allways grounds to rebase the sampling process.
 
     NOTE: This function assumes that all observations have a datekey. In other words: SEP dates before
