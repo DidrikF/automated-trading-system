@@ -77,12 +77,12 @@ if __name__ == "__main__":
         num_samples = len(train_set)
         # many estimators with few features, early stopping and limited depth
         parameter_space = {
-            "n_estimators": [100], # 50, 100, 200, 500, 1000 
+            "n_estimators": [300], # 50, 100, 200, 500, 1000 
             "min_weight_fraction_leaf": [0.20], # early stopping
             # "max_depth": [1, 2, 4, 8, 10, 15], # max depth should be set lower I think
             # "min_samples_split": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
             # "min_samples_leaf": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 
-            "max_features": ["auto"], # 1, 5, 10, 15, 20, 30 may even push it??
+            "max_features": [5], # 1, 5, 10, 15, 20, 30 may even push it??
             "class_weight": ["balanced_subsample"],
             "bootstrap": [True], # , False
             "criterion": ["entropy"] # , "gini"
@@ -350,7 +350,15 @@ Certainty Classifier Accuracy:  0.489347750536055
 """
 
 """
-{'side_model': {'accuracy': 0.5405986704631229, 'precision': 0.548164014385144, 'recall': 0.625687441419263, 'cv_results': {'mean_fit_time': array([2.5686957]), 'std_fit_time': array([2.39578189]), 'mean_score_time': array([0.25544715]), 'std_score_time': array([0.00885381]), 'param_n_estimators': masked_array(data=[20],
+{'side_model': {
+    'accuracy': 0.5405986704631229, 
+    'precision': 0.548164014385144, 
+    'recall': 0.625687441419263, 
+    'cv_results': {'mean_fit_time': array([2.5686957]), 
+    'std_fit_time': array([2.39578189]),
+     'mean_score_time': array([0.25544715]),
+      'std_score_time': array([0.00885381]), 
+      'param_n_estimators': masked_array(data=[20],
              mask=[False],
        fill_value='?',
             dtype=object), 'param_min_weight_fraction_leaf': masked_array(data=[0.1],
@@ -368,6 +376,80 @@ Certainty Classifier Accuracy:  0.489347750536055
             dtype=object), 'param_bootstrap': masked_array(data=[True],
              mask=[False],
        fill_value='?',
-            dtype=object), 'params': [{'n_estimators': 20, 'min_weight_fraction_leaf': 0.1, 'max_features': 20, 'criterion': 'entropy', 'class_weight': 'balanced_subsample', 'bootstrap': True}], 'split0_test_score': array([0.49030169]), 'split1_test_score': array([0.48618842]), 'split2_test_score': array([0.49347173]), 'mean_test_score': array([0.48998728]), 'std_test_score': array([0.0029817]), 'rank_test_score': array([1], dtype=int32), 'split0_train_score': array([0.95175938]), 'split1_train_score': array([0.92796616]), 'split2_train_score': array([0.74132879]), 'mean_train_score': array([0.87368478]), 'std_train_score': array([0.09409254])}, 'best_params': {'n_estimators': 20, 'min_weight_fraction_leaf': 0.1, 'max_features': 20, 'criterion': 'entropy', 'class_weight': 'balanced_subsample', 'bootstrap': True}}, 'certainty_model': {'accuracy': 0.5352420532339338, 'precision': 0.5452637819170709, 'recall': 0.6484847128340571}}
+            dtype=object), 'params':
+             [{'n_estimators': 20, 
+             'min_weight_fraction_leaf': 0.1, 
+             'max_features': 20, 'criterion': 
+             'entropy', 'class_weight': 
+             'balanced_subsample', 'bootstrap': True}],
+              'split0_test_score': array([0.49030169]), 
+              'split1_test_score': array([0.48618842]),
+               'split2_test_score': array([0.49347173]),
+                'mean_test_score': array([0.48998728]),
+                 'std_test_score': array([0.0029817]), 
+                 'rank_test_score': array([1], dtype=int32),
+                  'split0_train_score': array([0.95175938]),
+                   'split1_train_score': array([0.92796616]),
+                   'split2_train_score': array([0.74132879]), 
+                   'mean_train_score': array([0.87368478]),
+                    'std_train_score': array([0.09409254])},
+                     'best_params': {'n_estimators': 20,
+                      'min_weight_fraction_leaf': 0.1, 
+                      'max_features': 20, 'criterion': 
+                      'entropy', 'class_weight': 
+                      'balanced_subsample', 
+                      'bootstrap': True}}, 
+
+
+                'certainty_model': {
+                        'accuracy': 0.5352420532339338,
+                       'precision': 0.5452637819170709,
+                        'recall': 0.6484847128340571}}
+
+"""
+
+"""
+
+split0_test_score: [0.4968272]
+split1_test_score: [0.4878566]
+split2_test_score: [0.48547426]
+mean_test_score: [0.4900527]
+std_test_score: [0.00488804]
+rank_test_score: [1]
+split0_train_score: [0.90030569]
+split1_train_score: [0.90175316]
+split2_train_score: [0.71619287]
+mean_train_score: [0.83941724]
+std_train_score: [0.08713479]
+Saving Side Model...
+Reading SEP
+ml_strategy_models.py:155: SettingWithCopyWarning:
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+  train_set["side_prediction"] = pd.Series(side_predictions)
+Meta Labeling of train set
+Number of jobs:  8061
+2019-05-16 16:38:38.616784 100.0% 8061/8061 - meta_labeling_via_triple_barrier_method done after 1.41 minutes. Remaining 0.0 minutes..
+Training Certainty Classifier...
+Saving Certainty Model...
+Side Classifier Metrics:
+OOS Accuracy:  0.5404296368400039
+OOS Precision:  0.5473141915767823
+OOS Recall:  0.6340440188361772
+ml_strategy_models.py:222: SettingWithCopyWarning:
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+  test_set["side_prediction"] = test_side_predictions
+Running triple barrier search on test set with side set by side classifier... (Meta labeling on test set)
+Number of jobs:  6602
+2019-05-16 16:40:41.148306 100.0% 6602/6602 - meta_labeling_via_triple_barrier_method done after 0.85 minutes. Remaining 0.0 minutes..
+OOS Accuracy:  0.5327298638696459
+OOS Precision:  0.5445449447789941
+OOS Recall:  0.625282748426687
+
 
 """
