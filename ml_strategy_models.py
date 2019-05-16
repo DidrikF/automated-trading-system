@@ -77,12 +77,12 @@ if __name__ == "__main__":
         num_samples = len(train_set)
         # many estimators with few features, early stopping and limited depth
         parameter_space = {
-            "n_estimators": [100], # 50, 100, 200, 500, 1000 
-            "min_weight_fraction_leaf": [0.05],
+            "n_estimators": [20], # 50, 100, 200, 500, 1000 
+            "min_weight_fraction_leaf": [0.10],
             # "max_depth": [1, 2, 4, 8, 10, 15], # max depth should be set lower I think
             # "min_samples_split": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
             # "min_samples_leaf": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 
-            "max_features": [10], # 1, 5, 10, 15 30 may even push it??
+            "max_features": [20], # 1, 5, 10, 15 30 may even push it??
             "class_weight": ["balanced_subsample"],
             "bootstrap": [True], # , False
             "criterion": ["entropy"] # , "gini"
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     # Testing Side Classifier
     side_score = side_classifier.score(test_x, test_y)
     print("Side Classifier Metrics: ")
-    test_x_pred = side_classifier.predict(certainty_test_x)
+    test_x_pred = side_classifier.predict(test_x)
     side_accuracy = accuracy_score(test_y, test_x_pred)
     side_precision = precision_score(test_y, test_x_pred)
     side_recall = recall_score(test_y, test_x_pred)

@@ -294,14 +294,9 @@ class Portfolio(PortfolioBase):
         date_index = port_val.index
         # sep_filled = sep_filled.fillna(method="ffill")
 
-        snp500 = snp500.loc[date_index]
-        ahead_1m_snp500 = snp500.shift(periods=-30)
         ahead_1m_portfolio = port_val.shift(periods=-30)
 
-
-        returns = pd.DataFrame(index=date_index, columns=["portfolio, snp500"])
-
-        returns["snp_500"] = (ahead_1m_snp500["close"] / snp500["close"]) - 1
+        returns = pd.DataFrame(index=date_index, columns=["portfolio"])
         returns["portfolio"] = (ahead_1m_portfolio["total"] / port_val["total"]) - 1
         
         def custom_resample(array_like):
@@ -309,8 +304,10 @@ class Portfolio(PortfolioBase):
 
         returns = returns.resample('M', convention='end')# .apply(custom_resample)
 
-        return returns["portfolio"].corr(returns["snp500"])
+        std = returns["portfolio"].std()
+        mean = returns["portfolio"].mean()
 
+        return (mean - rf) / std
 
 
     # This got complicated, I think I can make it simpler by calculating everything from active_positions
