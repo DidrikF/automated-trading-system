@@ -75,13 +75,15 @@ if __name__ == "__main__":
 
         # Define parameter space:
         num_samples = len(train_set)
+        # many estimators with few features, early stopping and limited depth
         parameter_space = {
-            "n_estimators": [20], # 50, 100, 200, 500, 1000
-            "max_depth": [1, 2, 4, 8, 10, 15], # max depth should be set lower I think
-            "min_samples_split": [int(num_samples*0.02),int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
-            "min_samples_leaf": [int(num_samples*0.02),int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 
-            "max_features": [5, 10, 15, 20, 30], # 30 may even push it??
-            "class_weight": [None, "balanced_subsample"],
+            "n_estimators": [1000], # 50, 100, 200, 500, 1000 
+            "min_weight_fraction_leaf": [0.05],
+            # "max_depth": [1, 2, 4, 8, 10, 15], # max depth should be set lower I think
+            # "min_samples_split": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
+            # "min_samples_leaf": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 
+            "max_features": [10], # 1, 5, 10, 15 30 may even push it??
+            "class_weight": ["balanced_subsample"],
             "bootstrap": [True], # , False
             "criterion": ["entropy"] # , "gini"
         }
@@ -94,7 +96,7 @@ if __name__ == "__main__":
             param_distributions=parameter_space,
             n_iter=2, # NOTE: Need to update 
             #  NOTE: need to update to use the date and timout columns
-            cv=PurgedKFold(n_splits=5, t1=t1), # a CV splitter object implementing a split method yielding arrays of train and test indices
+            cv=PurgedKFold(n_splits=3, t1=t1), # a CV splitter object implementing a split method yielding arrays of train and test indices
             # Need to figure out if just using built in scorers will work with the custom PurgedKFold splitter
             scoring="accuracy", # a string or a callable to evaluate the predictions on the test set (use custom scoring function that works with PurgedKFold)
             n_jobs=n_jobs,
@@ -107,7 +109,9 @@ if __name__ == "__main__":
         print("Best Score (Accuracy): \n", random_search.best_score_)
         print("Best Params: \n", random_search.best_params_)
         print("Best Index: \n", random_search.best_index_)
-        print("CV Results: \n", random_search.cv_results_)
+        print("CV Results: \n")
+        for key, val in random_search.cv_results_.items():
+            print("{}: {}".format(key, val))
 
         best_params = random_search.best_params_
         side_classifier: RandomForestClassifier = random_search.best_estimator_
@@ -124,7 +128,7 @@ if __name__ == "__main__":
 
 
     print("Reading SEP")
-    adjust_sep = True # NOTE: set to false
+    adjust_sep = False
     if adjust_sep:
         sep = pd.read_csv("./dataset_development/datasets/sharadar/SEP_PURGED.csv", parse_dates=["date"], index_col="date")
         print("Adjusting prices for dividends")
@@ -247,7 +251,8 @@ if __name__ == "__main__":
         "side_model": {
             "accuracy": side_accuracy,
             "precision": side_precision,
-            "recall": side_recall
+            "recall": side_recall,
+            "cv_results": random_search.cv_results_
         },
         "certainty_model": {
             "accuracy": certainty_accuracy,
