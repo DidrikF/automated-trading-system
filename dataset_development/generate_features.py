@@ -309,7 +309,7 @@ if __name__ == "__main__":
         os.makedirs(cache_dir)
 
 
-    if True:
+    if False:
         
         tb_rate = pd.read_csv("./datasets/macro/t_bill_rate_3m.csv", parse_dates=["date"], index_col="date")
         sep_featured = generate_sep_featured(
@@ -325,7 +325,7 @@ if __name__ == "__main__":
         sep_featured.to_csv(save_path + "/sep_featured.csv")
 
 
-    if False:
+    if True:
         """ Do I need to do this? I've done this in the test sets???
         sf1_art.drop_duplicates(subset=["ticker", "calendardate", "datekey"], keep="last", inplace=True)
         sf1_arq.drop_duplicates(subset=["ticker", "calendardate", "datekey"], keep="last", inplace=True)
