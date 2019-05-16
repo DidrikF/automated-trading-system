@@ -82,7 +82,7 @@ if __name__ == "__main__":
             # "max_depth": [1, 2, 4, 8, 10, 15], # max depth should be set lower I think
             # "min_samples_split": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
             # "min_samples_leaf": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 
-            "max_features": "auto", # 1, 5, 10, 15, 20, 30 may even push it??
+            "max_features": ["auto"], # 1, 5, 10, 15, 20, 30 may even push it??
             "class_weight": ["balanced_subsample"],
             "bootstrap": [True], # , False
             "criterion": ["entropy"] # , "gini"
@@ -346,5 +346,28 @@ Running triple barrier search on test set with side set by side classifier... (M
 Number of jobs:  7261
 2019-05-12 17:48:19.853732 100.0% 7261/7261 - meta_labeling_via_triple_barrier_method done after 6.78 minutes. Remaining 0.0 minutes..
 Certainty Classifier Accuracy:  0.489347750536055
+
+"""
+
+"""
+{'side_model': {'accuracy': 0.5405986704631229, 'precision': 0.548164014385144, 'recall': 0.625687441419263, 'cv_results': {'mean_fit_time': array([2.5686957]), 'std_fit_time': array([2.39578189]), 'mean_score_time': array([0.25544715]), 'std_score_time': array([0.00885381]), 'param_n_estimators': masked_array(data=[20],
+             mask=[False],
+       fill_value='?',
+            dtype=object), 'param_min_weight_fraction_leaf': masked_array(data=[0.1],
+             mask=[False],
+       fill_value='?',
+            dtype=object), 'param_max_features': masked_array(data=[20],
+             mask=[False],
+       fill_value='?',
+            dtype=object), 'param_criterion': masked_array(data=['entropy'],
+             mask=[False],
+       fill_value='?',
+            dtype=object), 'param_class_weight': masked_array(data=['balanced_subsample'],
+             mask=[False],
+       fill_value='?',
+            dtype=object), 'param_bootstrap': masked_array(data=[True],
+             mask=[False],
+       fill_value='?',
+            dtype=object), 'params': [{'n_estimators': 20, 'min_weight_fraction_leaf': 0.1, 'max_features': 20, 'criterion': 'entropy', 'class_weight': 'balanced_subsample', 'bootstrap': True}], 'split0_test_score': array([0.49030169]), 'split1_test_score': array([0.48618842]), 'split2_test_score': array([0.49347173]), 'mean_test_score': array([0.48998728]), 'std_test_score': array([0.0029817]), 'rank_test_score': array([1], dtype=int32), 'split0_train_score': array([0.95175938]), 'split1_train_score': array([0.92796616]), 'split2_train_score': array([0.74132879]), 'mean_train_score': array([0.87368478]), 'std_train_score': array([0.09409254])}, 'best_params': {'n_estimators': 20, 'min_weight_fraction_leaf': 0.1, 'max_features': 20, 'criterion': 'entropy', 'class_weight': 'balanced_subsample', 'bootstrap': True}}, 'certainty_model': {'accuracy': 0.5352420532339338, 'precision': 0.5452637819170709, 'recall': 0.6484847128340571}}
 
 """
