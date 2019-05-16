@@ -8,21 +8,18 @@ from sklearn.model_selection import cross_val_predict # Don't know if I will use
 from sklearn.metrics import mean_squared_error, r2_score
 
 # Performance Metrics 
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import precision_score, recall_score
-from sklearn.metrics import f1_score
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 # Other
 import scipy
 from scipy.stats import randint
 import pandas as pd
-
+import pickle
 
 from cross_validation import PurgedKFold, cv_score
 from dataset_columns import features, labels, base_cols
 
+from performance_measurement import zero_benchmarked_r_squared
 
 # DATASET PREPARATION
 dataset = pd.read_csv("./dataset_development/datasets/completed/ml_dataset.csv", parse_dates=["date", "timeout"], index_col=["date"])
@@ -68,10 +65,22 @@ test_y = test_set["erp_1m"]
 regressor = linear_model.LinearRegression()
 regressor.fit(train_x, train_y)
 
-r_squared = regressor.score(test_x, test_y) # Returns the coefficient of determination R^2 of the prediction.
+# r_squared = regressor.score(test_x, test_y) # Returns the coefficient of determination R^2 of the prediction.
 
-print("Fit Intercept: \n", regressor.fit_intercept)
+# Calculate Performance measures
+test_x_pred = regressor.predict(test_x)
+r_squared = zero_benchmarked_r_squared(test_x_pred, test_y)
+print("OOS Zero Benchmarked R-Squared: ", r_squared)
+print("OOS MSE: ", mean_squared_error(test_x_pred, test_y))
+print("OOS MAE: ", mean_absolute_error(test_x_pred, test_y))
+
+# print("Fit Intercept: \n", regressor.fit_intercept)
 # print("Best Params: \n", regressor.)
 # print("Best Index: \n", regressor.)
 # print("CV Results: \n", regressor.)
+
+
+
+# save the model to disk
+pickle.dump(regressor, open("./models/lin_reg_model.pickle", 'wb'))
 

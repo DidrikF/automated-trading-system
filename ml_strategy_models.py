@@ -76,6 +76,7 @@ if __name__ == "__main__":
     # You can generate a plot for precition and recall, see chapter 3 in hands-on machine learning
     training_model = True
     if training_model:
+        # NOTE: USE THE SAME PARAMETERS THAT WAS FOUND TO BE OPTIMAL FOR rf_erp_classifier_model
         side_classifier = RandomForestClassifier(
             n_estimators = 200, # Nr of trees
             criterion = "entropy", # function to measure quality of split (impurity measure)
@@ -91,6 +92,8 @@ if __name__ == "__main__":
             # NOTE: Set to a sufficiently large value (e.g. 5%) such that out-of bag accuracy converges to out of sample (k-fold) accuracy.
             # min_weight_fraction_leaf = 0, # Not relevant unless samples are weighted unequally 
         )
+        
+        # NOTE: See AFML for tips on how to train side and certainty classifiers
         print("Training Side Classifier...")
         side_classifier.fit(train_x, train_y)
 

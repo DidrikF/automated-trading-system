@@ -1,4 +1,5 @@
 import pandas as pd
+import pickle
 
 # Algorithms
 from sklearn.ensemble import RandomForestClassifier, BaggingClassifier
@@ -8,7 +9,7 @@ from sklearn.model_selection import RandomizedSearchCV
 
 # Performance Metrics 
 from sklearn.metrics import confusion_matrix
-from sklearn.metrics import precision_score, recall_score
+from sklearn.metrics import precision_score, recall_score, accuracy_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import roc_curve, auc
@@ -19,6 +20,8 @@ from scipy.stats import randint
 
 from cross_validation import PurgedKFold, cv_score
 from dataset_columns import features, labels, base_cols
+
+from model_and_performance_visualization import plot_feature_importances
 
 """
 General approach for producing signals for automated trading system with ML:
@@ -54,9 +57,9 @@ dataset = dataset.sort_values(by=["date"]) # important for cross validation
 
 
 train_start = dataset.index.min() # Does Date index included in features when training a model?
-train_end = pd.to_datetime("2009-09-01")
+train_end = pd.to_datetime("2012-01-01")
 
-test_start = pd.to_datetime("2010-01-01")
+test_start = pd.to_datetime("2012-03-01")
 test_end = dataset.index.max()
 
 train_set = dataset.loc[(dataset.index >= train_start) & (dataset.index < train_end)] # NOTE: Use for labeling and constructing new train/test sets
@@ -64,7 +67,7 @@ test_set = dataset.loc[(dataset.index >= test_start) & (dataset.index <= test_en
 
 
 train_x = train_set[features]
-train_y = train_set["primary_label_tbm"] # maybe I don't need to update to erp_1m, this is also not adjuseted for dividends...
+train_y = train_set["primary_label_tbm"]
 
 test_x = test_set[features]
 test_y = test_set["primary_label_tbm"]
@@ -73,8 +76,66 @@ training_model = True
 
 if training_model:
     
-    rf_classifier = RandomForestClassifier()
+    rf_classifier = RandomForestClassifier(random_state=100)
     print(rf_classifier.get_params().keys())
+
+
+    # Define parameter space:
+    num_samples = len(train_set)
+    parameter_space = {
+        "n_estimators": [20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000],
+        "max_depth": [1, 2, 4, 8, 10, 15, 20, 25, 30], # max depth should be set lower I think
+        "min_samples_split": [int(num_samples*0.02),int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
+        "min_samples_leaf": [int(num_samples*0.02),int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 
+        "max_features": [1, 5, 8, 10, 15, 20, 30, 40, 50],
+        "class_weight": [None, "balanced_subsample"],
+        "bootstrap": [True, False],
+        "criterion": ["entropy", "gini"]
+    }
+
+    
+    t1 = pd.Series(index=train_set.index, data=train_set["timeout"])
+
+    random_search = RandomizedSearchCV(
+        estimator=rf_classifier,
+        param_distributions=parameter_space,
+        n_iter=2,
+        #  NOTE: need to update to use the date and timout columns
+        cv=PurgedKFold(n_splits=5, t1=t1), # a CV splitter object implementing a split method yielding arrays of train and test indices
+        # Need to figure out if just using built in scorers will work with the custom PurgedKFold splitter
+        scoring="accuracy", # a string or a callable to evaluate the predictions on the test set (use custom scoring function that works with PurgedKFold)
+        n_jobs=6,
+        verbose=1
+    )
+
+    random_search.fit(train_x, train_y) # Validation is part of the test set in this case....
+    
+    print("Best Score (Accuracy): \n", random_search.best_score_)
+    print("Best Params: \n", random_search.best_params_)
+    print("Best Index: \n", random_search.best_index_)
+    print("CV Results: \n", random_search.cv_results_)
+
+    # I need a better way to visualize the performance... I think
+
+    best_rf_classifier: RandomForestClassifier = random_search.best_estimator_
+    test_x_pred = best_rf_classifier.predict(test_x)
+    accuracy = accuracy_score(test_y, test_x_pred)
+    precision = precision_score(test_y, test_x_pred)
+    recall = recall_score(test_y, test_x_pred)
+
+    print("OOS Accuracy: ", accuracy)
+    print("OOS Precision: ", precision)
+    print("OOS Recall: ", recall)
+
+    plot_feature_importances(best_rf_classifier, train_x.columns)
+
+    # Store model:
+    pickle.dump(best_rf_classifier, open("./models/rf_erp_classifier_model.pickle", 'wb'))
+    
+
+
+
+
     """
     RandomForestClassifier(
         n_estimators = 1000, # Nr of trees
@@ -106,48 +167,6 @@ if training_model:
     # - min_samples_leaf ()
     # - max_features (constrain to generate discrepancy)
 
-    # Define parameter space:
-    num_samples = len(train_set)
-    parameter_space = {
-        "n_estimators": randint(100, 1000),
-        "max_depth": randint(1, 100),
-        "min_samples_split": randint(2, int(num_samples*0.16)), # I have 550,000 samples for training -> 5500
-        "min_samples_leaf": randint(int(num_samples*0.02), int(num_samples*0.08)), # 2-8% of samples 
-        "max_features": randint(1, len(train_x.columns)),
-        "class_weight": [None, "balanced_subsample"],
-        "criterion": ["entropy", "gini"]
-    }
-
-    
-    t1 = pd.Series(index=train_set.index, data=train_set["timeout"])
-
-    random_search = RandomizedSearchCV(
-        estimator=rf_classifier,
-        param_distributions=parameter_space,
-        n_iter=2,
-        #  NOTE: need to update to use the date and timout columns
-        cv=PurgedKFold(n_splits=5, t1=t1), # a CV splitter object implementing a split method yielding arrays of train and test indices
-        # Need to figure out if just using built in scorers will work with the custom PurgedKFold splitter
-        scoring="accuracy", # a string or a callable to evaluate the predictions on the test set (use custom scoring function that works with PurgedKFold)
-        n_jobs=6,
-        verbose=1
-    )
-
-    random_search.fit(train_x, train_y, ) # Validation is part of the test set in this case....
-    
-    print("Best Score: \n", random_search.best_score_)
-    print("Best Params: \n", random_search.best_params_)
-    print("Best Index: \n", random_search.best_index_)
-    print("CV Results: \n", random_search.cv_results_)
-
-    # Save this for use on test set
-    clf = random_search.best_estimator_
-
-
-    # Store model:
-
-
-
 
     """
     Using sequential bootstrapping instead of normal bootstraping:
@@ -172,29 +191,12 @@ if training_model:
     """
 
 
-else:
-
-    # Load model from memory
-    pass
-
-
-
-
-# Training new model for every year... (use same hyperparameters found when traning the first model) NO!
-
-
-
-
 # Model Testing:
-
-
 # Calculate Performance Metrics
 
 # false_positive_rate, true_positive_rate, thresholds = roc_curve(y_test, y_pred)
 # roc_auc = auc(false_positive_rate, true_positive_rate)
 # print(roc_auc)
-
-
 
 
 """
@@ -244,4 +246,77 @@ criterion = "mse"
 
 
 
+"""
+
+"""
+First output, need to do a better job of generalizing
+
+
+Best Score:
+ 0.5065522970590343
+Best Params:
+ {'class_weight': None, 'criterion': 'entropy', 'max_depth': 39, 'max_features': 57, 'min_samples_leaf': 22390, 'min_samples_split': 13637, 'n_estimators': 971}
+Best Index:
+ 1
+CV Results:
+ {
+    'mean_fit_time': array([2222.89805403, 3656.15981908]), 
+    'std_fit_time': array([1055.76469708, 1736.67012387]), 
+    'mean_score_time': array([5.66908627, 4.9568913 ]), 
+    'std_score_time': array([0.20852488, 0.65835138]), 
+    'param_class_weight': masked_array(data=['balanced_subsample', None],
+             mask=[False, False],
+       fill_value='?',
+            dtype=object), 'param_criterion': masked_array(data=['entropy', 'entropy'],
+             mask=[False, False],
+       fill_value='?',
+            dtype=object), 'param_max_depth': masked_array(data=[54, 39],
+             mask=[False, False],
+       fill_value='?',
+            dtype=object), 'param_max_features': masked_array(data=[29, 57],
+             mask=[False, False],
+       fill_value='?',
+            dtype=object), 'param_min_samples_leaf': masked_array(data=[18179, 22390],
+             mask=[False, False],
+       fill_value='?',
+            dtype=object), 'param_min_samples_split': masked_array(data=[26168, 13637],
+             mask=[False, False],
+       fill_value='?',
+            dtype=object), 'param_n_estimators': masked_array(data=[861, 971],
+             mask=[False, False],
+       fill_value='?',
+            dtype=object), 'params': [
+                {'class_weight': 'balanced_subsample', 
+                'criterion': 'entropy', 
+                'max_depth': 54, 
+                'max_features': 29, 
+                'min_samples_leaf': 18179, 
+                'min_samples_split': 26168, 
+                'n_estimators': 861
+                }, 
+                {
+                    'class_weight': None, 
+                    'criterion': 'entropy', 
+                    'max_depth': 39, 
+                    'max_features': 57, 
+                    'min_samples_leaf': 22390, 
+                    'min_samples_split': 13637, 
+                    'n_estimators': 971}
+                ], 
+                    'split0_test_score': array([0.34422877, 0.51496245]), 
+                    'split1_test_score': array([0.41051415, 0.5061814 ]), 
+                    'split2_test_score': array([0.40437897, 0.51146158]), 
+                    'split3_test_score': array([0.42644714, 0.51551704]), 
+                    'split4_test_score': array([0.37215912, 0.48463876]), 
+                    'mean_test_score': array([0.39154568, 0.5065523 ]), 
+                    'std_test_score': array([0.02952065, 0.0114502 ]), 
+                    'rank_test_score': array([2, 1]), 
+                    
+                    'split0_train_score': array([0.38461718, 0.53389197]), 
+                    'split1_train_score': array([0.44641139, 0.58192798]), 
+                    'split2_train_score': array([0.48507628, 0.60720768]), 
+                    'split3_train_score': array([0.56298404, 0.6538934 ]), 
+                    'split4_train_score': array([0.6378981 , 0.68455441]), 
+                    'mean_train_score': array([0.5033974 , 0.61229509]), 
+                    'std_train_score': array([0.08869365, 0.05300362])}
 """
