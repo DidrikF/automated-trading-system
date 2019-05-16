@@ -94,7 +94,7 @@ if __name__ == "__main__":
         random_search = RandomizedSearchCV(
             estimator=rf_classifier,
             param_distributions=parameter_space,
-            n_iter=2, # NOTE: Need to update 
+            n_iter=1, # NOTE: Need to update 
             #  NOTE: need to update to use the date and timout columns
             cv=PurgedKFold(n_splits=3, t1=t1), # a CV splitter object implementing a split method yielding arrays of train and test indices
             # Need to figure out if just using built in scorers will work with the custom PurgedKFold splitter
