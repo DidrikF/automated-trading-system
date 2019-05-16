@@ -137,6 +137,39 @@ class Blotter():
     def get_closed_trades(self) -> list:
         return copy.deepcopy(self.closed_trades)
 
+    def calculate_ratio_of_longs(self):
+        amount_long = 0
+        for trade in self.active_trades:
+            if trade.direction == 1:
+                amount_long += 1
+        for trade in self.closed_trades:
+            if trade.direction == 1:
+                amount_long += 1
+
+        total = len(self.active_trades) + len(self.closed_trades)
+
+        return amount_long / total
+
+    def calculate_hit_ratio(self):
+        hits = 0
+        for trade in self.closed_trades:
+            if trade.total_ret > 0:
+                hits += 1
+
+        total = len(self.closed_trades)
+        return hits / total
+
+    def calculate_frequency_of_bets(self):
+        return "NOT IMPLEMENTED"
+
+    def calculate_average_holding_period(self):
+        return "NOT IMPLEMENTED"
+
+    def calculate_pnl_short_positions(self):
+        return "NOT IMPLEMENTED"
+
+    def calculate_pnl_long_positions(self):
+        return "NOT IMPLEMENTED"
 
 
 

@@ -61,8 +61,8 @@ if __name__ == "__main__":
     log_lines = []
 
     files = [f for f in glob.glob(path + "**/*.log", recursive=True)]
-    for f in files:
-        with open(latest_log_file, "r") as f:
+    for file in files:
+        with open(file, "r") as f:
             log_lines = f.readlines()
         new_log_lines = [html.P(line.strip()) for line in log_lines]
         log_lines.extend(new_log_lines)
@@ -92,6 +92,8 @@ if __name__ == "__main__":
         end=end_date
     )
     
+    ml_model_results = pickle.load(open("./models/ml_strategy_models_results.pickle", "rb"))
+
 
     app = dash.Dash(__name__)
 
@@ -352,6 +354,16 @@ if __name__ == "__main__":
             html.H4(children="Backtest Stats"),
             html.Div(children=[
                 html.P("Time Range: {}  ".format(backtest["stats"]["time_range"])),
+            ]),
+            html.H4(children="ML Model Stats (2012-03-01 - 2019-02-01)"),
+            html.Div(children=[
+                html.P("Side Model Accuracy: {}  ".format(ml_model_results["side_model"]["accuracy"])),
+                html.P("Side Model Precision: {}  ".format(ml_model_results["side_model"]["precision"])),
+                html.P("Side Model Recall: {}   ".format(ml_model_results["side_model"]["recall"])),
+
+                html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["accuracy"])),
+                html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["precision"])),
+                html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["recall"])),
             ])
         ], style={
             'textAlign': 'center',

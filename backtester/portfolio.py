@@ -31,6 +31,7 @@ class Portfolio(PortfolioBase):
 
         self.logger = Logger("PORTFOLIO", log_path + "/portfolio.log")
         
+        self.initial_balance = balance
         self.balance = balance
         self.margin_account = 0
         

@@ -77,7 +77,7 @@ if __name__ == "__main__":
         num_samples = len(train_set)
         # many estimators with few features, early stopping and limited depth
         parameter_space = {
-            "n_estimators": [1000], # 50, 100, 200, 500, 1000 
+            "n_estimators": [100], # 50, 100, 200, 500, 1000 
             "min_weight_fraction_leaf": [0.05],
             # "max_depth": [1, 2, 4, 8, 10, 15], # max depth should be set lower I think
             # "min_samples_split": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
@@ -105,7 +105,8 @@ if __name__ == "__main__":
 
         print("Training Side Classifier...")
         random_search.fit(train_x, train_y) # Validation is part of the test set in this case....
-    
+        print("DONE TRAINING SIDE CLASSIFIER!")
+
         print("Best Score (Accuracy): \n", random_search.best_score_)
         print("Best Params: \n", random_search.best_params_)
         print("Best Index: \n", random_search.best_index_)
@@ -252,7 +253,8 @@ if __name__ == "__main__":
             "accuracy": side_accuracy,
             "precision": side_precision,
             "recall": side_recall,
-            "cv_results": random_search.cv_results_
+            "cv_results": random_search.cv_results_,
+            "best_params": random_search.best_params_,
         },
         "certainty_model": {
             "accuracy": certainty_accuracy,

@@ -259,15 +259,30 @@ class Backtester(object):
 
         # NOTE: Add all backtest statistic calculates to here. Probably contain calculations in their own functions (under utils.metrics ?)
         self.stats["time_range"] = [self.start, self.end]
+        self.stats["ratio_of_longs"] = self.broker.blotter.calculate_ratio_of_longs()
+        self.stats["correlation_to_underlying"] = calculate_correlation_of_monthly_returns(
+            self.portfolio.portfolio_value["total"], 
+            self.market_data.get_ticker_data("snp500")
+        )
+        self.stats["pnl"] = self.portfolio.portfolio_value["total"].iloc[-1] - self.portfolio.initial_balance
+        self.stats["hit_ratio"] = self.broker.blotter.calculate_hit_ratio()
+        # NOTE: Not implemented
+        self.stats["frequency_of_bets"] = self.broker.blotter.calculate_frequency_of_bets()
+        self.stats["average_holding_period"] = self.broker.blotter.calculate_average_holding_period()
+        self.stats["pnl_short_positions"] = self.broker.blotter.calculate_pnl_short_positions()
+        self.stats["pnl_long_positions"] = self.broker.blotter.calculate_pnl_long_positions()
+
+
         self.stats["average_aum"] = None # Not sure
         self.stats["capacity"] = None # Not sure
         self.stats["maximum_dollar_position_size"] = None # Not sure
         self.stats["frequency_of_bets"] = calculate_frequency_of_bets(self.broker.blotter)
-        self.stats["average_holding_period"] = calculate_average_holding_period(self.broker.blotter)
         self.stats["annualized_turnover"] = calculate_annualized_turnover(self.broker.blotter)
-
-
-
+        """
+        Ratio of longs, average holding period, frequency of bets, correlation to underlying market (s&p500), 
+        pnl from long and short trades, annualized rate of return, hit ratio (ratio of profitable trades),
+         return on execution costs, broker fees per turnover etc.
+        """
         # self.perf.at[self.market_data.cur_date, "max_trades_per_month"] = None
         # self.perf.at[self.market_data.cur_date, "min_trades_per_month"] = None      
 
@@ -336,3 +351,26 @@ def Performance():
         # ETC...
         pass
         
+def calculate_correlation_of_monthly_returns(port_val, snp500):
+    date_index = port_val.index
+    # sep_filled = sep_filled.fillna(method="ffill")
+
+    snp500 = snp500.loc[date_index]
+    ahead_1m_snp500 = snp500.shift(periods=-30)
+    ahead_1m_portfolio = port_val.shift(periods=-30)
+
+
+    returns = pd.DataFrame(index=date_index, colums=["portfolio, snp500"])
+
+    returns["snp_500"] = (ahead_1m_snp500["close"] / snp500["close"]) - 1
+    returns["portfolio"] = (ahead_1m_portfolio["total"] / port_val["total"]) - 1
+    
+    def custom_resample(array_like):
+        return array_like[0]
+
+    returns = returns.resample('M', convention='end')# .apply(custom_resample)
+
+    return returns["portfolio"].corr(returns["snp500"])
+
+
+    
