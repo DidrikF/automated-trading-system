@@ -77,12 +77,12 @@ if __name__ == "__main__":
         num_samples = len(train_set)
         # many estimators with few features, early stopping and limited depth
         parameter_space = {
-            "n_estimators": [20], # 50, 100, 200, 500, 1000 
-            "min_weight_fraction_leaf": [0.10],
+            "n_estimators": [100], # 50, 100, 200, 500, 1000 
+            "min_weight_fraction_leaf": [0.20], # early stopping
             # "max_depth": [1, 2, 4, 8, 10, 15], # max depth should be set lower I think
             # "min_samples_split": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
             # "min_samples_leaf": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 
-            "max_features": [20], # 1, 5, 10, 15 30 may even push it??
+            "max_features": "auto", # 1, 5, 10, 15, 20, 30 may even push it??
             "class_weight": ["balanced_subsample"],
             "bootstrap": [True], # , False
             "criterion": ["entropy"] # , "gini"

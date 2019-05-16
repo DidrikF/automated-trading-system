@@ -200,7 +200,7 @@ class DailyBarsDataHander(DataHandler):
 
         # Make daily, weekly, and 3m (not modified) - compounding interest
         rf_rate["daily"] = ((1+rf_rate["rate"])**(1/91))-1 # Assumes 3-month T-bill reaches maturity after 13 weeks (13*7 = 91 days)
-        rf_rate["weekly"] = ((1+rf_rate["rate"])**(1/13))-1
+        rf_rate["monthly"] = ((1+rf_rate["rate"])**(1/3))-1
         rf_rate["3_month"] = rf_rate["rate"]
 
         rf_rate = rf_rate.drop(columns=["rate"])

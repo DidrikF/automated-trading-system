@@ -286,18 +286,40 @@ class Portfolio(PortfolioBase):
 
         return portfolio_value
 
-    def normality_test_on_returns(self):
+    def normality_test_on_returns(self, alpha: float=0.05):
+        from scipy.stats import shapiro
+        date_index = self.portfolio.portfolio_value.index
+        # sep_filled = sep_filled.fillna(method="ffill")
 
+        ahead_1m_portfolio = self.portfolio.portfolio_value.shift(periods=-30)
+
+        returns = pd.DataFrame(index=date_index, columns=["portfolio"])
+        returns["portfolio"] = (ahead_1m_portfolio["total"] / self.portfolio.portfolio_value["total"]) - 1
+        
+        def custom_resample(array_like):
+            return array_like[0]
+
+        returns = returns.resample('M', convention='end')# .apply(custom_resample)
+        
+        W, p = shapiro(returns["portfolio"]) # H0: samples are from a gausian distribution
+        print('Statistics=%.3f, p=%.3f' % (W, p))
+
+        if p > alpha:
+            # High enough probability the samples are from a gausian distribution, failing to reject the null hypothesis
+            return "Shapiro-Wilk test: Returns are normal (tested at %.0f %% significance level), test-statistic W=%.3f" % (alpha*100, W)
+        else:
+            # Reject H0, returns are non-normal
+            return "Shapiro-Wilk test: Returns are non-normal (tested at %.0f %% significance level), test-statistic W=%.3f" % (alpha*100, W)
 
 
     def calculate_sharpe_ratio(self):
-        date_index = port_val.index
+        date_index = self.portfolio.portfolio_value.index
         # sep_filled = sep_filled.fillna(method="ffill")
 
-        ahead_1m_portfolio = port_val.shift(periods=-30)
+        ahead_1m_portfolio = self.portfolio.portfolio_value.shift(periods=-30)
 
         returns = pd.DataFrame(index=date_index, columns=["portfolio"])
-        returns["portfolio"] = (ahead_1m_portfolio["total"] / port_val["total"]) - 1
+        returns["portfolio"] = (ahead_1m_portfolio["total"] / self.portfolio.portfolio_value["total"]) - 1
         
         def custom_resample(array_like):
             return array_like[0]
@@ -306,6 +328,7 @@ class Portfolio(PortfolioBase):
 
         std = returns["portfolio"].std()
         mean = returns["portfolio"].mean()
+        rf = self.broker.market_data.rf_rate["monthly"].mean()
 
         return (mean - rf) / std
 
