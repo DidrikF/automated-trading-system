@@ -77,13 +77,11 @@ training_model = True
 if training_model:
     
     rf_classifier = RandomForestClassifier(random_state=100)
-    print(rf_classifier.get_params().keys())
-
 
     # Define parameter space:
     num_samples = len(train_set)
     parameter_space = {
-        "n_estimators": [20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000],
+        "n_estimators": [20, 50, 100, 200, 500, 1000],
         "max_depth": [1, 2, 4, 8, 10, 15, 20, 25, 30], # max depth should be set lower I think
         "min_samples_split": [int(num_samples*0.02),int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
         "min_samples_leaf": [int(num_samples*0.02),int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 

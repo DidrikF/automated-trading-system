@@ -61,10 +61,10 @@ test_set = dataset.loc[(dataset.index >= test_start) & (dataset.index <= test_en
 
 
 train_x = train_set[features]
-train_y = train_set["primary_label_tbm"] # maybe I don't need to update to erp_1m, this is also not adjuseted for dividends...
+train_y = train_set["erp_1m"]
 
 test_x = test_set[features]
-test_y = test_set["primary_label_tbm"]
+test_y = test_set["erp_1m"]
 
 training_model = True
 
@@ -85,7 +85,6 @@ if training_model:
         "criterion": ["mse"]
     }
 
-    
     t1 = pd.Series(index=train_set.index, data=train_set["timeout"])
 
     random_search = RandomizedSearchCV(

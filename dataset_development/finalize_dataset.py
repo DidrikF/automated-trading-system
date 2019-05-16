@@ -150,6 +150,9 @@ labels = [
     "return_1m",
     "return_2m",
     "return_3m",
+    "erp_1m",
+    # "erp_2m",
+    # "erp_3m",
     "timeout",
     "ewmstd_2y_monthly",
     "return_tbm",
@@ -170,7 +173,7 @@ def merge_datasets(sep_featured, sf1_featured, selected_features) -> pd.DataFram
     
     dataset = dataset[selected_features]
     
-    # Drop first two (one of calendardate) years
+    # Drop first two (one of calendardate) years 
     dataset.sort_values(by=["ticker", "calendardate"])
 
     return dataset
@@ -186,7 +189,7 @@ def fix_nans_and_drop_rows(dataset: pd.DataFrame, metadata: pd.DataFrame, featur
     """
     # 1. Drop all with less than two years of sep history (this will fix a lot, as a lot of missing values is due to too little history)
     # 2. Drop all without a label
-    dataset = dataset.dropna(axis=0, subset=["mom24m", "primary_label_tbm", "return_1m"]) # NOTE: illiquidity does not seem to work... no time to look into it
+    dataset = dataset.dropna(axis=0, subset=["mom24m", "primary_label_tbm", "return_1m", "erp_1m"]) # NOTE: illiquidity does not seem to work... no time to look into it
 
     # 3. Drop rows with outdated labels
     dataset = dataset.loc[dataset.age <= 180]
@@ -340,10 +343,21 @@ def finalize_dataset(metadata, sep_featured=None, sf1_featured=None, num_process
 
 
     # 5. Fix Nans and drop rows    
-    dataset = pandas_mp_engine(callback=fix_nans_and_drop_rows, atoms=dataset, data={"metadata": metadata}, molecule_key="dataset", \
-        split_strategy="industry_new", num_processes=num_processes, molecules_per_process=1, features=features, size_rvs=size_rvs)
+    dataset = pandas_mp_engine(
+        callback=fix_nans_and_drop_rows, 
+        atoms=dataset, 
+        data={"metadata": metadata}, 
+        molecule_key="dataset",
+        split_strategy="industry_new",
+        num_processes=num_processes, 
+        molecules_per_process=1, 
+        features=features, 
+        size_rvs=size_rvs
+    )
     
-    # dataset.to_csv("./datasets/ml_ready_live/dataset_without_nans.csv", index=False)
+    dataset["erp_1m_direction"] = np.sign(dataset["erp_1m"])
+
+    dataset = dataset.loc[dataset.primary_label_tbm != 0]
 
     """
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):

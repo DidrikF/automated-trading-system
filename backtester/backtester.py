@@ -24,7 +24,8 @@ class Backtester(object):
         self, 
         market_data_handler: DataHandler, 
         start: pd.datetime, 
-        end: pd.datetime, 
+        end: pd.datetime,
+        log_path: str,
         output_path: str,
         initialize_hook: Callable=None, 
         handle_data_hook: Callable=None, 
@@ -44,6 +45,7 @@ class Backtester(object):
         self.market_data = market_data_handler
         self.start = start
         self.end = end
+        self.log_path = log_path
         self.output_path = output_path
 
         start_end_index = self.market_data.date_index_to_iterate
@@ -61,7 +63,7 @@ class Backtester(object):
         # Need to be set via setter methods
         self.portfolio = None
         self.broker = None
-        
+        self.logger = Logger("BACKTESTER", log_path + "/backtester.log")
 
     def set_broker(self, broker_cls, **kwargs):
         """

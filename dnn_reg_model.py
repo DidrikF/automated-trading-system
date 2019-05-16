@@ -51,7 +51,7 @@ test_start = pd.to_datetime("2012-03-01")
 train_set = dataset.loc[dataset.index < validation_end]
 test_set = dataset.loc[dataset.index >= test_start]
 test_x = test_set[features]
-test_y = test_set["return_1m"]
+test_y = test_set["erp_1m"]
 """
 TODO:
 - Add dropout X
@@ -117,10 +117,10 @@ class KerasGridSearchCV(object):
             validation_set = self.train_set.loc[self.train_set.index >= validation_start]
 
             train_x = train_set[features]
-            train_y = train_set["return_1m"]
+            train_y = train_set["erp_1m"]
 
             validation_x = validation_set[features]
-            validation_y = validation_set["return_1m"]            
+            validation_y = validation_set["erp_1m"]            
 
             scores, model, history = model_trainer(train_x, train_y, validation_x, validation_y, params)
             
@@ -241,7 +241,7 @@ def model_trainer(train_x, train_y, validation_x, validation_y, params):
 parameter_space = {
     "initial_learning_rate": [0.1, 0.01], #, 0.001, 0.0001, 0.00001
     "activation": ["relu"],
-    "dropout": [[0.8, 0.5]],
+    "dropout": [[0.8, 0.5]], # A common value is a probability of 0.5 for retaining the output of each node in a hidden layer and a value close to 1.0, such as 0.8, for retaining inputs from the visible layer
     "lambd": [0.1, 0.5], # [0.01, 0.1, 0.3, 1] # https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/playground-exercise-examining-l2-regularization
     "epochs": [1], # 5,10 ,20,40     10, 100, 500, 1000 and larger....
     "patience": [2, 5], # 10
@@ -341,13 +341,13 @@ test_set = dataset.loc[(dataset.index >= test_start) & (dataset.index <= test_en
 
 
 train_x = train_set[features]
-train_y = train_set["return_1m"] # maybe I don't need to update to erp_1m, this is also not adjuseted for dividends...
+train_y = train_set["erp_1m"] # maybe I don't need to update to erp_1m, this is also not adjuseted for dividends...
 
 validation_x = validation_set[features]
-validation_y = validation_set["return_1m"]
+validation_y = validation_set["erp_1m"]
 
 test_x = test_set[features]
-test_y = test_set["return_1m"]
+test_y = test_set["erp_1m"]
 """
 
 

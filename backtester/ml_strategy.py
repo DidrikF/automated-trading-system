@@ -7,6 +7,7 @@ import sys
 from decimal import Decimal, ROUND_HALF_UP
 import pandas as pd
 
+from utils.logger import Logger
 from utils.types import Strategy
 from utils.utils import Signal
 from order import Order
@@ -37,6 +38,7 @@ class MLStrategy(Strategy):
         feature_handler: MLFeaturesDataHandler,
         features: list,
         initial_margin_requirement: float,
+        log_path: str,
         time_of_day: str="open",
         accepted_signal_age=relativedelta(days=7)
     
@@ -55,12 +57,16 @@ class MLStrategy(Strategy):
         self.signal_id_seed = 0
         self.order_id_seed = 0
 
+        self.logger = Logger("ML_STRATEGY", log_path + "/ml_strategy.log")
+
     def set_order_restrictions(self, 
         max_position_size: float, 
         max_positions: int, 
         minimum_balance: float,
         max_percent_to_invest_each_period: float,
         max_orders_per_period: int,
+        order_size_limit: float,
+        percentage_short: float,
         # max_orders_per_day: int, 
         # max_orders_per_month: int, 
         # max_hold_period: int # NOTE: set by the timeout...
@@ -79,6 +85,8 @@ class MLStrategy(Strategy):
         self.minimum_balance = minimum_balance
         self.max_percent_to_invest_each_period = max_percent_to_invest_each_period
         self.max_orders_per_period = max_orders_per_period
+        self.order_size_limit = order_size_limit
+        self.percentage_short = percentage_short
         # self.max_orders_per_month = max_orders_per_month
         # self.max_hold_period = max_hold_period
     
@@ -118,10 +126,19 @@ class MLStrategy(Strategy):
             # order feature_data
             # generate only signals for the top n-number of signlas (twice the number of allowed orders f eks)
             feature_data = feature_data.sort_values(by=["certainty_prediction"], ascending=False)
-            feature_data = feature_data.iloc[:self.max_orders_per_period*2]
             
-            for date, features in feature_data.iterrows():
+            # feature_data_best = feature_data[:self.max_orders_per_period*2]
+            feature_data_short  = feature_data.loc[feature_data.direction == -1]
+            feature_data_short = feature_data_short.iloc[:self.max_orders_per_period]
+            feature_data_long  = feature_data.loc[feature_data.direction == 1]  
+            feature_data_long = feature_data_long.iloc[:self.max_orders_per_period]
 
+            signals = {
+                "best": [], # NOTE: Not implemented
+                "short": [],
+                "long": [],
+            }
+            for date, features in feature_data_short.iterrows():
                 signal = Signal(
                     signal_id=self.get_signal_id(), 
                     ticker=features["ticker"], 
@@ -131,7 +148,20 @@ class MLStrategy(Strategy):
                     timeout=features["timeout"],
                     features_date=date
                 )
-                signals.append(signal)
+                signals["short"].append(signal)
+
+            for date, features in feature_data_long.iterrows():
+                signal = Signal(
+                    signal_id=self.get_signal_id(), 
+                    ticker=features["ticker"], 
+                    direction=features["side_prediction"], 
+                    certainty=features["certainty_prediction"], 
+                    ewmstd=features["ewmstd_2y_monthly"], 
+                    timeout=features["timeout"],
+                    features_date=date
+                )
+                signals["long"].append(signal)
+
 
             return Event(event_type="SIGNALS", data=signals, date=cur_date)
         else:
@@ -158,6 +188,30 @@ class MLStrategy(Strategy):
         
         signals = signals_event.data
 
+        long_signals = signals["long"]
+        short_signals = signals["short"]
+
+        if self.percentage_short != 0 or self.percentage_short is not None:
+            orders = self._generate_long_short_orders(portfolio, short_signals, long_signals, signals_event.date)
+        else:
+            signals = short_signals.copy()
+            signals.extend(long_signals)
+            signals.sort(key=lambda signal: signal.certainty, reverse=True)
+            best_signals = signals[:self.max_orders_per_period]
+            orders = self._generate_best_orders(portfolio, best_signals, signals_event.date)
+    
+        if len(orders) == 0:
+            return None
+        else:
+            return Event(event_type="ORDERS", data=orders, date=signals_event.date)
+
+
+    def _generate_best_orders(self, portfolio, signals: list, date: pd.datetime):
+        """
+        Generate the best orders irrespective of allocation to long or short positions.
+        # TODO: make it aware of what it has ordered when generating new orders.
+        # TODO: make it go short 25% of the time... but make this optional...
+        """
         stocks_with_position_in = set([trade.ticker for trade in portfolio.broker.blotter.active_trades])
         number_of_orders_to_generate = min(self.max_orders_per_period, self.max_positions - len(stocks_with_position_in)) # Will converge the number of positions towards self.max_positions
         
@@ -171,8 +225,13 @@ class MLStrategy(Strategy):
             portfolio.balance - self.minimum_balance
         )        
         orders = []
+        
+        # spent = 0
+
         for allocation, signal in zip(allocations, top_signals):
-            ticker_price = portfolio.broker.market_data.current_for_ticker(signal.ticker)[self.time_of_day] # we generate order at the open
+            prev_ticker_data = portfolio.broker.market_data.prev_for_ticker(signal.ticker) # TODO: implement
+            ticker_data = portfolio.broker.market_data.current_for_ticker(signal.ticker) # we generate order at the open
+            ticker_price = ticker_data[self.time_of_day]
             # direction = int(Decimal(signal.direction).quantize(0, ROUND_HALF_UP))
 
             if signal.direction == 1:
@@ -186,26 +245,112 @@ class MLStrategy(Strategy):
                     (available_funds * allocation) / (1 + self.initial_margin_requirement)
                 )
 
-            number_of_stocks = int(dollar_amount / ticker_price) # rounds down
+            number_of_stocks = int(dollar_amount / ticker_price)
+
+            prev_days_volume = prev_ticker_data["volume"]
+            number_of_stocks = min(prev_days_volume, number_of_stocks) # TODO: this may free up funds to use for other positions...
+
+            order_dollar_amount = number_of_stocks * ticker_price
+            if order_dollar_amount < self.order_size_limit:
+                continue
 
             order = Order(
                 order_id=self.get_order_id(),
                 ticker=signal.ticker,
                 amount=number_of_stocks * signal.direction,
-                date=signals_event.date,
+                date=date,
                 signal=signal,
                 take_profit=signal.ewmstd * self.ptSl[0],
                 stop_loss=signal.ewmstd * self.ptSl[1], # Can be set to stop out early
                 timeout=signal.timeout,
             )
             orders.append(order)
-        
-        if len(orders) == 0:
-            return None
-        else:
-            return Event(event_type="ORDERS", data=orders, date=signals_event.date)
 
+            # spent += order_dollar_amount
+        return orders
         
+    def _generate_long_short_orders(self, portfolio, short_signals, long_signals, date):
+        """
+        Generate orders such that a minimum percentage of the available capital is allocated to short trades.
+        The method does not take into consideration how large the current short position is.
+        # TODO: make it aware of what it has ordered when generating new orders.
+        # TODO: make it go short 25% of the time... but make this optional...
+        # NOTE: you don't have to consider cases where multiple trades happen in the same stock, because of the timeout on trades.
+        """
+        stocks_with_position_in = set([trade.ticker for trade in portfolio.broker.blotter.active_trades])
+        number_of_orders_to_generate = min(self.max_orders_per_period, self.max_positions - len(stocks_with_position_in)) # Will converge the number of positions towards self.max_positions
+        
+        # Number of shorts and longs
+        number_of_short = int(number_of_orders_to_generate*self.percentage_short)
+        number_of_long = number_of_orders_to_generate - number_of_short
+
+        # Get top short and long signals
+        top_short_signals = self._get_top_signals(short_signals, number_of_short)
+        top_long_signals = self._get_top_signals(short_signals, number_of_long)
+
+        # Get allocations for long and short signals
+        short_allocations = self._get_allocation_between_signals(top_short_signals)
+        long_allocations = self._get_allocation_between_signals(top_long_signals)
+
+        allocations = short_allocations.copy()
+        allocations.extend(long_allocations)
+        top_signals = short_signals.copy()
+        top_signals.extend(long_signals)
+
+        portfolio_value = portfolio.calculate_portfolio_value()
+        # Available funds for going both long and short, but short "costs" more
+        available_funds = min(
+            portfolio_value*self.max_percent_to_invest_each_period, # Max 33% of port value can be invested each week
+            portfolio.balance - self.minimum_balance
+        )
+        available_funds_for_short = available_funds * self.percentage_short
+        available_funds_for_long = available_funds - available_funds_for_short
+
+        orders = []
+        # Generate orders for long and short signals
+        for allocation, signal in zip(allocations, top_signals):
+            ticker_data = portfolio.broker.market_data.current_for_ticker(signal.ticker) # we generate order at the open
+            ticker_price = ticker_data[self.time_of_day]
+            # direction = int(Decimal(signal.direction).quantize(0, ROUND_HALF_UP))
+
+            if signal.direction == 1:
+                dollar_amount = min( 
+                    portfolio_value * self.max_position_size_percentage,
+                    available_funds_for_long * allocation
+                )
+            elif signal.direction == -1: # Short trades require more money as 150% or order size must be put in a margin account
+                dollar_amount = min( 
+                    (portfolio_value * self.max_position_size_percentage) / (1 + self.initial_margin_requirement),
+                    (available_funds_for_short * allocation) / (1 + self.initial_margin_requirement)
+                )
+
+            prev_ticker_data = portfolio.broker.market_data.prev_for_ticker(signal.ticker) # TODO: implement
+            prev_days_volume = prev_ticker_data["volume"]
+            number_of_stocks = min(int(prev_days_volume*self.volume_limit), int(dollar_amount / ticker_price)) # TODO: this may free up funds to use for other positions...
+            
+            if number_of_stocks == int(prev_days_volume*self.volume_limit):
+                self.logger.logr.warning("Was restricted to order only {} percent of last days volume for ticker {} at date {} given signal {}.".format(self.volume_limit*100, signal.ticker, date, signal.signal_id))
+
+            order_dollar_amount = number_of_stocks * ticker_price
+            if order_dollar_amount < self.order_size_limit:
+                self.logger.logr.warning("Order generation was aborted because order size was too low for ticker {} on date {} given signal {}.".format(signal.ticker, date, signal.signal_id))
+                continue
+
+            order = Order(
+                order_id=self.get_order_id(),
+                ticker=signal.ticker,
+                amount=number_of_stocks * signal.direction,
+                date=date,
+                signal=signal,
+                take_profit=signal.ewmstd * self.ptSl[0],
+                stop_loss=signal.ewmstd * self.ptSl[1], # Can be set to stop out early
+                timeout=signal.timeout,
+            )
+            orders.append(order)
+
+        # NOTE: We may not have used all available capital if some restriction was met, see if this is a problem
+
+        return orders
 
     def _get_top_signals(self, signals: list, amount: int, current_positions_tickers: list):
         """

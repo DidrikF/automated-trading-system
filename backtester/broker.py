@@ -147,8 +147,9 @@ class Broker():
     def __init__(
         self, 
         market_data: DataHandler, 
-        commission_model: CommissionModel, 
+        commission_model: CommissionModel,
         slippage_model: SlippageModel, 
+        log_path: str,
         annual_margin_interest_rate: float,
         initial_margin_requirement: float, 
         maintenance_margin_requirement: float,
@@ -158,6 +159,8 @@ class Broker():
         self.commission_model = commission_model
         self.slippage_model = slippage_model
         self.market_data = market_data
+        self.log_path = log_path
+        self.logger = Logger("BROKER", log_path + "/broker.log")
 
         self.annual_margin_interest_rate = annual_margin_interest_rate
         self.initial_margin_requirement = initial_margin_requirement

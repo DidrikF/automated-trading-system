@@ -19,15 +19,17 @@ class Portfolio(PortfolioBase):
         market_data: DataHandler, 
         broker: BrokerBase, 
         strategy: Strategy, 
+        log_path: str,
         balance: float, 
-        initial_margin_requirement: float=0.5, 
-        maintenance_margin_requirement: float=0.3
+        initial_margin_requirement: float=0.5,
+        maintenance_margin_requirement: float=0.3,
     ):
     
         self.market_data = market_data # Shared with backtester and broker
         self.broker = broker # this makes it possible for the portfolio to query the broker for active trades.
-
         self.strategy = strategy
+
+        self.logger = Logger("PORTFOLIO", log_path + "/portfolio.log")
         
         self.balance = balance
         self.margin_account = 0

@@ -37,12 +37,13 @@ from simple_strategies import RandomLongShortStrategy
 
 
 if __name__ == "__main__":
-    start_date = pd.to_datetime("2010-01-01")
-    end_date = pd.to_datetime("2012-12-12")
+    start_date = pd.to_datetime("2012-03-01")
+    end_date = pd.to_datetime("2015-01-01")
     # end_date = pd.to_datetime("2019-02-01")
 
-    # NOTE: add from_bundle classmethod?
-    # NOTE: cut off the datahandler to only load data for the relevant period (2010->)
+    log_path = "./logs_{}".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+
+
     print("Instantiating Market Data Handler")
     market_data_handler = DailyBarsDataHander( 
         path_prices="../dataset_development/datasets/sharadar/SEP_PURGED.csv",
@@ -61,10 +62,7 @@ if __name__ == "__main__":
     def initialize(bt):
         pass
 
-
     def analyze(bt):
-        # print(bt.perf.head())
-        # plot_data(bt.perf.index, bt.perf["portfolio_value"], xlabel="Time", ylabel="Value ($)", title="Portfolio Value")
         pass
 
 
@@ -72,6 +70,7 @@ if __name__ == "__main__":
         market_data_handler=market_data_handler, 
         start=start_date,  # REDUNDANT
         end=end_date, # REDUNDANT
+        log_path=log_path,
         output_path="./backtests",
         initialize_hook=initialize,
         handle_data_hook=handle_data,
@@ -89,9 +88,10 @@ if __name__ == "__main__":
         max_hold_period= relativedelta(months=1),
     )
     """
+
     print("Instantiating ML Feature Data Handler")
     feature_handler = MLFeaturesDataHandler(
-        path_features="../dataset_development/datasets/completed/ml_dataset.csv", # NOTE: TEST DATA, NEED TO UPDATE LATER
+        path_features="../dataset_development/datasets/completed/ml_dataset.csv",
         store_path="./live_bundles",
         start=start_date,
         end=end_date
@@ -127,12 +127,13 @@ if __name__ == "__main__":
     backtester.set_broker(Broker,
         slippage_model=slippage_model,
         commission_model=commission_model,
+        log_path=log_path,
         annual_margin_interest_rate=0.06,
         initial_margin_requirement=0.50,
         maintenance_margin_requirement=0.30
     )
     
-    backtester.set_portfolio(Portfolio, balance=10000000, strategy=strategy)
+    backtester.set_portfolio(Portfolio, log_path=log_path, balance=10000000, strategy=strategy)
     
     print("Starting Backtest!")
     performance = backtester.run()

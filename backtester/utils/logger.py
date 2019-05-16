@@ -11,7 +11,7 @@ def singleton(cls):
     return get_instance()
 
 @singleton
-class Logger():
+class SingletonLogger():
     def __init__(self):
         logr = logging.getLogger(__name__)
 
@@ -25,5 +25,19 @@ class Logger():
         
         logr.addHandler(fileHandler)
         logr.addHandler(consoleHandler)
+
+        self.logr = logr
+
+
+class Logger():
+    def __init__(self, user: str, file_path: str):
+        logr = logging.getLogger(__name__)
+
+        logFormatter = logging.Formatter("{}: %(asctime)s [%(levelname)-5.5s]  %(message)s".format(user))
+        
+        fileHandler = logging.FileHandler(file_path)
+        fileHandler.setFormatter(logFormatter)
+        
+        logr.addHandler(fileHandler)
 
         self.logr = logr

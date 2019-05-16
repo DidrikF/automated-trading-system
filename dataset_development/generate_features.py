@@ -148,6 +148,7 @@ def generate_sep_featured(num_processes, cache_dir, tb_rate, sep_path, sf1_art_p
             "cache_result": True,
             "disk_name": "sep_extended_divadj_ret_market",
         },
+        # NOTE: need to start here because of needing to add result to molecules dict for later tasks
         {
             "name": "Add industry momentum",
             "callback": add_indmom,
