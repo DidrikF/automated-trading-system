@@ -185,7 +185,7 @@ if __name__ == "__main__":
         # min_samples_split=best_params["min_samples_split"], # minimum number of samples required to split an internal node
         # min_samples_leaf=best_params["min_samples_leaf"], # The minimum number of samples required to be at a leaf node, may cause smoothing in regression models
         # NOTE: Set to a lower value to force discrepancy between trees
-        min_weight_fraction_leaf=best_params["min_weight_fraction_leaf"]
+        min_weight_fraction_leaf=best_params["min_weight_fraction_leaf"],
         max_features=best_params["max_features"], # the number of features to consider when looking for the best split (auto = sqrt(n_features))
         # NOTE: Need to read up on
         class_weight=best_params["class_weight"], # use this attribute to set weight of different feature columns
