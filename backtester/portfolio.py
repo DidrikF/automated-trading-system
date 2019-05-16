@@ -200,6 +200,11 @@ class Portfolio(PortfolioBase):
 
 
     def handle_margin_account_update(self, margin_account_update_event):
+        """
+        Update the margin account size to the new required size. If the balance is insufficient the money still gets moved
+        and no error will occur. The new balance will restrict the portfolio going forward and any negative balance will get
+        charged interests. 
+        """
         required_margin_account_size = margin_account_update_event.data
 
         if self.margin_account < required_margin_account_size:

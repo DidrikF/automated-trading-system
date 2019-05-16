@@ -198,9 +198,9 @@ class DailyBarsDataHander(DataHandler):
         rf_rate: pd.DataFrame = pd.read_csv(self.path_interest, parse_dates=["date"], index_col="date")
         rf_rate = rf_rate.loc[rf_rate.index >= self.start]
 
-        # Make daily, weekly, and 3m (not modified)
-        rf_rate["daily"] = rf_rate["rate"] / 91 # Assumes 3-month T-bill reaches maturity after 13 weeks (13*7 = 91 days)
-        rf_rate["weekly"] = rf_rate["rate"] / 13
+        # Make daily, weekly, and 3m (not modified) - compounding interest
+        rf_rate["daily"] = ((1+rf_rate["rate"])**(1/91))-1 # Assumes 3-month T-bill reaches maturity after 13 weeks (13*7 = 91 days)
+        rf_rate["weekly"] = ((1+rf_rate["rate"])**(1/13))-1
         rf_rate["3_month"] = rf_rate["rate"]
 
         rf_rate = rf_rate.drop(columns=["rate"])
@@ -368,6 +368,8 @@ class DailyBarsDataHander(DataHandler):
             raise MarketDataNotAvailableError("No market data for ticker {} on date {}".format(ticker, self.cur_date))
         else:
             return data
+
+    def prev_for_ticker(self, ticker):
 
 
     def continue_backtest(self):

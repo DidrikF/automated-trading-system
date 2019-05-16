@@ -187,7 +187,7 @@ class Broker():
             try:
                 trade_object = self._process_order(portfolio, order)
             except OrderProcessingError as e:
-                Logger.logr.warning("Failed processing order with error: {}".format(e)) # Show log from backtest in the dashboard...
+                self.logger.logr.warning("Failed processing order with error: {}".format(e)) # Show log from backtest in the dashboard...
 
                 cancelled_order = CancelledOrder(order, e)
                 cancelled_orders.append(cancelled_order)
@@ -213,19 +213,19 @@ class Broker():
 
     def _process_order(self, portfolio, order):
         if not self.market_data.cur_date == order.date:
-            Logger.logr.warning("When processing an order; it could not be completed, because order.date == market_data.cur_date.")
+            self.logger.logr.warning("When processing an order; it could not be completed, because order.date == market_data.cur_date.")
             raise OrderProcessingError("Cannot complete order, because order.date == market_data.cur_date.")
 
         # To process an order we must be able to trade the stock, which means data is available on the date and not bankrupt or delisted.
         if not self.market_data.can_trade(order.ticker):
-            Logger.logr.warning("When processing an order; it could not be completed, because market_data.can_trade() returned False for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
+            self.logger.logr.warning("When processing an order; it could not be completed, because market_data.can_trade() returned False for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
             raise OrderProcessingError("Cannot complete order, because market_data.can_trade() returned False.")
 
         try: 
             stock_price = self.market_data.current_for_ticker(order.ticker)["open"]
         except:
             # NOTE: Should  not be possible if can_trade returns true...but still for consistency I code it this way.
-            Logger.logr.warning("When processing an order; market data was not available for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
+            self.logger.logr.warning("When processing an order; market data was not available for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
             raise OrderProcessingError("Cannot complete order, because market data is not available.")
 
 
@@ -242,7 +242,7 @@ class Broker():
             try:
                 portfolio.charge(cost)
             except BalanceTooLowError as e:
-                Logger.logr.warning("Balance too low! Balance: {}, wanted to charge {} for the stock".format(portfolio.balance, cost))
+                self.logger.logr.warning("Balance too low! Balance: {}, wanted to charge {} for the stock".format(portfolio.balance, cost))
                 raise OrderProcessingError("Cannot complete order, with error: {}".format(e))
 
             portfolio.charge_commission(commission) # Does not fail
@@ -265,7 +265,7 @@ class Broker():
             try:
                 portfolio.update_margin_account(new_required_margin_account_size)
             except BalanceTooLowError as e:
-                Logger.logr.warning("Balance too low! Balance: {}, Margin Account: {}, wanted to update margin account to {}".format(
+                self.logger.logr.warning("Balance too low! Balance: {}, Margin Account: {}, wanted to update margin account to {}".format(
                         portfolio.balance, portfolio.margin_account, new_required_margin_account_size
                     )
                 )
@@ -304,7 +304,7 @@ class Broker():
             try:
                 ticker_data = self.market_data.current_for_ticker(ticker) # NOTE: need to decide how to manage when we cannot deal in a stock (can_trade...)
             except MarketDataNotAvailableError:
-                Logger.logr.warning("Failed to manage active position, because market data not available for ticker {} on date {}".format(ticker, self.market_data.cur_date))
+                self.logger.logr.warning("Failed to manage active position, because market data not available for ticker {} on date {}".format(ticker, self.market_data.cur_date))
                 continue
 
             price_direction_for_the_day = 1 if (ticker_data["open"] <= ticker_data["close"]) else -1
@@ -527,6 +527,7 @@ class Broker():
         later be bought back to close the trade.
         """
         amount_borrowed = 0
+
         daily_rate = self.annual_margin_interest_rate / 360
 
         for trade in self.blotter.active_trades:

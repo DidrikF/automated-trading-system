@@ -76,14 +76,14 @@ if __name__ == "__main__":
         # Define parameter space:
         num_samples = len(train_set)
         parameter_space = {
-            "n_estimators": [20, 50, 100, 200, 500, 1000],
-            "max_depth": [1, 2, 4, 8, 10, 15, 20, 25, 30], # max depth should be set lower I think
+            "n_estimators": [20], # 50, 100, 200, 500, 1000
+            "max_depth": [1, 2, 4, 8, 10, 15], # max depth should be set lower I think
             "min_samples_split": [int(num_samples*0.02),int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
             "min_samples_leaf": [int(num_samples*0.02),int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 
-            "max_features": [1, 5, 8, 10, 15, 20, 30], # 30 may even push it
+            "max_features": [5, 10, 15, 20, 30], # 30 may even push it??
             "class_weight": [None, "balanced_subsample"],
-            "bootstrap": [True, False],
-            "criterion": ["entropy", "gini"]
+            "bootstrap": [True], # , False
+            "criterion": ["entropy"] # , "gini"
         }
 
         
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         random_search = RandomizedSearchCV(
             estimator=rf_classifier,
             param_distributions=parameter_space,
-            n_iter=2,
+            n_iter=2, # NOTE: Need to update 
             #  NOTE: need to update to use the date and timout columns
             cv=PurgedKFold(n_splits=5, t1=t1), # a CV splitter object implementing a split method yielding arrays of train and test indices
             # Need to figure out if just using built in scorers will work with the custom PurgedKFold splitter
@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
 
     print("Reading SEP")
-    adjust_sep = False
+    adjust_sep = True # NOTE: set to false
     if adjust_sep:
         sep = pd.read_csv("./dataset_development/datasets/sharadar/SEP_PURGED.csv", parse_dates=["date"], index_col="date")
         print("Adjusting prices for dividends")
@@ -200,13 +200,13 @@ if __name__ == "__main__":
     side_score = side_classifier.score(test_x, test_y)
     print("Side Classifier Metrics: ")
     test_x_pred = side_classifier.predict(certainty_test_x)
-    accuracy = accuracy_score(test_y, test_x_pred)
-    precision = precision_score(test_y, test_x_pred)
-    recall = recall_score(test_y, test_x_pred)
+    side_accuracy = accuracy_score(test_y, test_x_pred)
+    side_precision = precision_score(test_y, test_x_pred)
+    side_recall = recall_score(test_y, test_x_pred)
 
-    print("OOS Accuracy: ", accuracy)
-    print("OOS Precision: ", precision)
-    print("OOS Recall: ", recall)
+    print("OOS Accuracy: ", side_accuracy)
+    print("OOS Precision: ", side_precision)
+    print("OOS Recall: ", side_recall)
 
 
     # Testing Certainty Classifier
@@ -234,14 +234,28 @@ if __name__ == "__main__":
     certainty_test_y = test_set_meta_labeled["m_primary_label_tbm"]
 
     certainty_test_x_pred = certainty_classifier.predict(certainty_test_x)
-    accuracy = accuracy_score(certainty_test_y, certainty_test_x_pred)
-    precision = precision_score(certainty_test_y, certainty_test_x_pred)
-    recall = recall_score(certainty_test_y, certainty_test_x_pred)
+    certainty_accuracy = accuracy_score(certainty_test_y, certainty_test_x_pred)
+    certainty_precision = precision_score(certainty_test_y, certainty_test_x_pred)
+    certainty_recall = recall_score(certainty_test_y, certainty_test_x_pred)
 
-    print("OOS Accuracy: ", accuracy)
-    print("OOS Precision: ", precision)
-    print("OOS Recall: ", recall)
+    print("OOS Accuracy: ", certainty_accuracy)
+    print("OOS Precision: ", certainty_precision)
+    print("OOS Recall: ", certainty_recall)
 
+
+    results = {
+        "side_model": {
+            "accuracy": side_accuracy,
+            "precision": side_precision,
+            "recall": side_recall
+        },
+        "certainty_model": {
+            "accuracy": certainty_accuracy,
+            "precision": certainty_precision,
+            "recall": certainty_recall,
+        }
+    }
+    pickle.dump(results, open("./models/ml_strategy_models_results.pickle", "wb"))
 
 """
 Output of basic model training: Training with -1 lower barrier and -1, 1 labeling

@@ -97,8 +97,9 @@ if __name__ == "__main__":
         end=end_date
     )
 
-    side_classifier = pickle.load(open("../models/simple_side_classifier.pickle", "rb"))
-    certainty_classifier = pickle.load(open("../models/simple_certainty_classifier.pickle", "rb"))
+    # NOTE: Need to get from aws compute node or train locally with parameters found
+    side_classifier = pickle.load(open("../models/side_classifier.pickle", "rb"))
+    certainty_classifier = pickle.load(open("../models/certainty_classifier.pickle", "rb"))
 
     strategy = MLStrategy(
         rebalance_weekday=0, 
@@ -108,6 +109,7 @@ if __name__ == "__main__":
         feature_handler=feature_handler,
         features=features,    
         initial_margin_requirement=0.5, 
+        log_path=log_path,
         # accepted_signal_age: dt.relativedelta=relativedelta(days=7)
     )
 
@@ -117,6 +119,8 @@ if __name__ == "__main__":
         minimum_balance=100000, # 1% of initial balance?
         max_percent_to_invest_each_period=0.33, # 0.33
         max_orders_per_period=10, # 10
+        min_order_size_limit=5000,
+        percentage_short=0.30,
     )
 
     print("Computing predictions...")

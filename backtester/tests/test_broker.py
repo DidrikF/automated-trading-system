@@ -90,6 +90,9 @@ def run_around_tests():
     yield
 
 
+def test_data_handler_interest():
+    print(market_data.rf_rate)
+
 def test_broker():
     global broker
     assert isinstance(broker, Broker)

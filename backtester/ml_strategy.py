@@ -65,7 +65,7 @@ class MLStrategy(Strategy):
         minimum_balance: float,
         max_percent_to_invest_each_period: float,
         max_orders_per_period: int,
-        order_size_limit: float,
+        min_order_size_limit: float,
         percentage_short: float,
         # max_orders_per_day: int, 
         # max_orders_per_month: int, 
@@ -85,7 +85,7 @@ class MLStrategy(Strategy):
         self.minimum_balance = minimum_balance
         self.max_percent_to_invest_each_period = max_percent_to_invest_each_period
         self.max_orders_per_period = max_orders_per_period
-        self.order_size_limit = order_size_limit
+        self.min_order_size_limit = min_order_size_limit
         self.percentage_short = percentage_short
         # self.max_orders_per_month = max_orders_per_month
         # self.max_hold_period = max_hold_period
@@ -98,7 +98,6 @@ class MLStrategy(Strategy):
         # sys.exit()
         self.feature_handler.feature_data["certainty_prediction"] = self.certainty_classifier.predict_proba(self.feature_handler.feature_data[self.features])[:,1]
 
-
         """
         # print(features[self.features])
         # side_prediction = self.side_classifier.predict_proba(np.array(features[self.features]).reshape(1, -1))
@@ -109,6 +108,14 @@ class MLStrategy(Strategy):
         # print("certainty_prediction", certainty_prediction)
         """
 
+    def compute_ml_model_statistics(self):
+
+        # Calculate precision, recall and accuracy for both models over the backtested period
+        # test_x_pred = side_classifier.predict(certainty_test_x)
+        # accuracy = accuracy_score(test_y, test_x_pred)
+        # precision = precision_score(test_y, test_x_pred)
+        # recall = recall_score(test_y, test_x_pred)
+        pass
 
     def generate_signals(self, cur_date):
         """
@@ -251,7 +258,7 @@ class MLStrategy(Strategy):
             number_of_stocks = min(prev_days_volume, number_of_stocks) # TODO: this may free up funds to use for other positions...
 
             order_dollar_amount = number_of_stocks * ticker_price
-            if order_dollar_amount < self.order_size_limit:
+            if order_dollar_amount < self.min_order_size_limit:
                 continue
 
             order = Order(
@@ -332,7 +339,7 @@ class MLStrategy(Strategy):
                 self.logger.logr.warning("Was restricted to order only {} percent of last days volume for ticker {} at date {} given signal {}.".format(self.volume_limit*100, signal.ticker, date, signal.signal_id))
 
             order_dollar_amount = number_of_stocks * ticker_price
-            if order_dollar_amount < self.order_size_limit:
+            if order_dollar_amount < self.min_order_size_limit:
                 self.logger.logr.warning("Order generation was aborted because order size was too low for ticker {} on date {} given signal {}.".format(signal.ticker, date, signal.signal_id))
                 continue
 

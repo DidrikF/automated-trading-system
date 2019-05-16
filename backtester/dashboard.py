@@ -48,13 +48,25 @@ if __name__ == "__main__":
     backtest["broker"]["all_trades"]["close_date"] = pd.to_datetime(backtest["broker"]["all_trades"]["close_date"])
     backtest["broker"]["all_trades"]["timeout"] = pd.to_datetime(backtest["broker"]["all_trades"]["timeout"])
 
-    list_of_files = glob.glob('./logs/*') # * means all if need specific format then *.csv
-    latest_log_file = max(list_of_files, key=os.path.getctime)
-
-    with open(latest_log_file, "r") as f:
-        log_lines = f.readlines()
+    # list_of_files = glob.glob('./logs/*') # * means all if need specific format then *.csv
+    # latest_log_file = max(list_of_files, key=os.path.getctime)
+    # with open(latest_log_file, "r") as f:
+    #     log_lines = f.readlines()
     # you may also want to remove whitespace characters like `\n` at the end of each line
-    log_lines = [html.P(line.strip()) for line in log_lines]
+    # log_lines = [html.P(line.strip()) for line in log_lines]
+
+    all_log_dirs = all_subdirs = [d for d in os.listdir('./logs') if os.path.isdir(d)]
+    latest_log_dir = max(all_log_dirs, key=os.path.getmtime)
+    
+    log_lines = []
+
+    files = [f for f in glob.glob(path + "**/*.log", recursive=True)]
+    for f in files:
+        with open(latest_log_file, "r") as f:
+            log_lines = f.readlines()
+        new_log_lines = [html.P(line.strip()) for line in log_lines]
+        log_lines.extend(new_log_lines)
+
 
 
     start_date = pd.to_datetime(backtest["settings"]["start"])
