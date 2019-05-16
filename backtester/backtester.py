@@ -258,6 +258,9 @@ class Backtester(object):
 
 
         # NOTE: Add all backtest statistic calculates to here. Probably contain calculations in their own functions (under utils.metrics ?)
+        self.stats["normality_test_result"] = self.portfolio.normality_test_on_returns()
+        self.stats["sharpe_ratio"] = self.portfolio.calculate_sharpe_ratio()
+
         self.stats["time_range"] = [self.start, self.end]
         self.stats["ratio_of_longs"] = self.broker.blotter.calculate_ratio_of_longs()
         self.stats["correlation_to_underlying"] = calculate_correlation_of_monthly_returns(
@@ -266,18 +269,26 @@ class Backtester(object):
         )
         self.stats["pnl"] = self.portfolio.portfolio_value["total"].iloc[-1] - self.portfolio.initial_balance
         self.stats["hit_ratio"] = self.broker.blotter.calculate_hit_ratio()
+        
+
+
         # NOTE: Not implemented
+        self.stats["average_aum"] = self.broker.blotter.calculate_average_aum()
+        self.stats["capacity"] = self.broker.blotter.calculate_capacity()
+        self.stats["maximum_dollar_position_size"] = self.broker.blotter.calculate_maximum_dollar_position_size()
+
         self.stats["frequency_of_bets"] = self.broker.blotter.calculate_frequency_of_bets()
         self.stats["average_holding_period"] = self.broker.blotter.calculate_average_holding_period()
         self.stats["pnl_short_positions"] = self.broker.blotter.calculate_pnl_short_positions()
         self.stats["pnl_long_positions"] = self.broker.blotter.calculate_pnl_long_positions()
 
+        self.stats["average_return_from_hits"] = self.broker.blotter.calculate_average_return_from_hits()
+        self.stats["average_return_from_misses"] = self.broker.blotter.calculate_average_return_from_misses()
+        self.stats["highest_return_from_hit"] = self.broker.blotter.calculate_highest_return_from_hit()
+        self.stats["lowest_return_from_miss"] = self.broker.blotter.calculate_lowest_return_from_miss()
+        self.stats["broker_fees_per_turnover"] = self.portfolio.broker_fees_per_turnover()
 
-        self.stats["average_aum"] = None # Not sure
-        self.stats["capacity"] = None # Not sure
-        self.stats["maximum_dollar_position_size"] = None # Not sure
-        self.stats["frequency_of_bets"] = calculate_frequency_of_bets(self.broker.blotter)
-        self.stats["annualized_turnover"] = calculate_annualized_turnover(self.broker.blotter)
+        self.stats["annualized_turnover"] = self.broker.blotter.calculate_annualized_turnover()
         """
         Ratio of longs, average holding period, frequency of bets, correlation to underlying market (s&p500), 
         pnl from long and short trades, annualized rate of return, hit ratio (ratio of profitable trades),
@@ -360,7 +371,7 @@ def calculate_correlation_of_monthly_returns(port_val, snp500):
     ahead_1m_portfolio = port_val.shift(periods=-30)
 
 
-    returns = pd.DataFrame(index=date_index, colums=["portfolio, snp500"])
+    returns = pd.DataFrame(index=date_index, columns=["portfolio, snp500"])
 
     returns["snp_500"] = (ahead_1m_snp500["close"] / snp500["close"]) - 1
     returns["portfolio"] = (ahead_1m_portfolio["total"] / port_val["total"]) - 1

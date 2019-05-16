@@ -181,10 +181,11 @@ if __name__ == "__main__":
     certainty_classifier = RandomForestClassifier(
         n_estimators=best_params["n_estimators"], # Nr of trees
         criterion=best_params["criterion"], # function to measure quality of split (impurity measure)
-        max_depth=best_params["max_depth"], # depth of each tree
-        min_samples_split=best_params["min_samples_split"], # minimum number of samples required to split an internal node
-        min_samples_leaf=best_params["min_samples_leaf"], # The minimum number of samples required to be at a leaf node, may cause smoothing in regression models
+        # max_depth=best_params["max_depth"], # depth of each tree
+        # min_samples_split=best_params["min_samples_split"], # minimum number of samples required to split an internal node
+        # min_samples_leaf=best_params["min_samples_leaf"], # The minimum number of samples required to be at a leaf node, may cause smoothing in regression models
         # NOTE: Set to a lower value to force discrepancy between trees
+        min_weight_fraction_leaf=best_params["min_weight_fraction_leaf"]
         max_features=best_params["max_features"], # the number of features to consider when looking for the best split (auto = sqrt(n_features))
         # NOTE: Need to read up on
         class_weight=best_params["class_weight"], # use this attribute to set weight of different feature columns
@@ -193,6 +194,7 @@ if __name__ == "__main__":
         # NOTE: Set to a sufficiently large value (e.g. 5%) such that out-of bag accuracy converges to out of sample (k-fold) accuracy.
         # min_weight_fraction_leaf = 0, # Not relevant unless samples are weighted unequally 
     )
+
 
     print("Training Certainty Classifier...")
     certainty_classifier.fit(certainty_train_x, certainty_train_y)

@@ -171,6 +171,34 @@ class Blotter():
     def calculate_pnl_long_positions(self):
         return "NOT IMPLEMENTED"
 
+    def calculate_average_return_from_hits(self):
+        return "NOT IMPLEMENTED"
+
+    def calculate_average_return_from_misses(self):
+        return "NOT IMPLEMENTED"
+
+    def calculate_highest_return_from_hit(self):
+        return "NOT IMPLEMENTED"
+
+    def calculate_lowest_return_from_miss(self):
+        return "NOT IMPLEMENTED"
+
+    def broker_fees_per_turnover(self):
+        return "NOT IMPLEMENTED"
+
+    def calculate_annualized_turnover(self):
+        return "NOT IMPLEMENTED"
+
+    def calculate_average_aum(self):
+        return "NOT IMPLEMENTED"
+        
+    def calculate_capacity(self):
+        return "NOT IMPLEMENTED"
+        
+    def calculate_maximum_dollar_position_size(self):
+        return "NOT IMPLEMENTED"
+        
+
 
 
 class Broker():

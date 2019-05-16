@@ -286,6 +286,32 @@ class Portfolio(PortfolioBase):
 
         return portfolio_value
 
+    def normality_test_on_returns(self):
+
+
+
+    def calculate_sharpe_ratio(self):
+        date_index = port_val.index
+        # sep_filled = sep_filled.fillna(method="ffill")
+
+        snp500 = snp500.loc[date_index]
+        ahead_1m_snp500 = snp500.shift(periods=-30)
+        ahead_1m_portfolio = port_val.shift(periods=-30)
+
+
+        returns = pd.DataFrame(index=date_index, columns=["portfolio, snp500"])
+
+        returns["snp_500"] = (ahead_1m_snp500["close"] / snp500["close"]) - 1
+        returns["portfolio"] = (ahead_1m_portfolio["total"] / port_val["total"]) - 1
+        
+        def custom_resample(array_like):
+            return array_like[0]
+
+        returns = returns.resample('M', convention='end')# .apply(custom_resample)
+
+        return returns["portfolio"].corr(returns["snp500"])
+
+
 
     # This got complicated, I think I can make it simpler by calculating everything from active_positions
     def capture_state(self):
