@@ -82,7 +82,16 @@ if training_model:
     # Store model:
     pickle.dump(rf_classifier, open("./models/rf_erp_classifier_model.pickle", 'wb'))
     
-
+    """ RESULT:
+    OOS Accuracy:  0.5404167140271572
+    OOS Precision:  0.5455320336761093
+    OOS Recall:  0.6219836551904432
+    OOS F1 score:  0.5812547301334395
+    Prediction distribution:
+    1.0    200617
+    -1.0    142496
+    dtype: int64
+    """
 
 
 
