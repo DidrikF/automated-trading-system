@@ -140,4 +140,3 @@ rf_side_classifier: BaseEstimator = pickle.load(open("./models/rf_side_classifie
 
 rf_certainty_classifier: BaseEstimator = pickle.load(open("./models/rf_certainty_classifier.pickle"))
 
-

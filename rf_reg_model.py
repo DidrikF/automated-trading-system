@@ -14,7 +14,7 @@ from scipy.stats import randint
 
 from cross_validation import PurgedKFold, cv_score
 from dataset_columns import features, labels, base_cols
-from model_performance_reporting import zero_benchmarked_r_squared
+from performance_measurement import zero_benchmarked_r_squared
 
 n_jobs = 64
 
