@@ -49,7 +49,6 @@ if training_model:
         n_estimators=1000,
         min_weight_fraction_leaf=0.2,
         max_features=5,
-        class_weight="balanced_subsample",
         bootstrap=True,
         criterion="mse",
         n_jobs=n_jobs,
