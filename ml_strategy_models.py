@@ -78,7 +78,7 @@ if __name__ == "__main__":
             class_weight=None,
             bootstrap=True,
             criterion="entropy",
-            n_jobs=7,
+            n_jobs=n_jobs,
         )
         
         print("Training Side Classifier...")
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         class_weight=None,
         bootstrap=True,
         criterion="entropy",
-        n_jobs=7,
+        n_jobs=n_jobs,
     )
 
 
