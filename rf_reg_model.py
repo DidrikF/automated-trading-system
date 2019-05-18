@@ -54,6 +54,7 @@ if training_model:
         n_jobs=n_jobs,
     )
 
+    rf_regressor.fit(train_x, train_y)
 
     # Measure performance
     test_x_pred = rf_regressor.predict(test_x)
