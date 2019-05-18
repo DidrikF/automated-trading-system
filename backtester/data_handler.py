@@ -370,7 +370,13 @@ class DailyBarsDataHander(DataHandler):
             return data
 
     def prev_for_ticker(self, ticker):
-
+        try:
+            prev_date = self.cur_date - relativedelta(days=1)
+            data = self.ticker_data.loc[ticker, prev_date]
+        except:
+            raise MarketDataNotAvailableError("No market data for ticker {} on date {}".format(ticker, prev_date))
+        else:
+            return data
 
     def continue_backtest(self):
         """Checks if there are more ticks to be processed"""

@@ -1,7 +1,7 @@
 import logging
 import datetime
 
-
+"""
 def singleton(cls):
     instances = {}
     def get_instance():
@@ -27,13 +27,14 @@ class SingletonLogger():
         logr.addHandler(consoleHandler)
 
         self.logr = logr
+"""
 
 
 class Logger():
-    def __init__(self, user: str, file_path: str):
+    def __init__(self, file_path: str):
         logr = logging.getLogger(__name__)
 
-        logFormatter = logging.Formatter("{}: %(asctime)s [%(levelname)-5.5s]  %(message)s".format(user))
+        logFormatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
         
         fileHandler = logging.FileHandler(file_path)
         fileHandler.setFormatter(logFormatter)

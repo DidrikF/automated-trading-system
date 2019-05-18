@@ -1,6 +1,7 @@
 import pandas as pd
 import copy
 import sys, os
+import numpy as np
 
 myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(myPath, ".."))
@@ -51,11 +52,11 @@ class Trade():
         self.total_ret = None
         self.total_dividends = None
         
-    def close(self, close_price: float, close_date: pd.datetime, close_cause: str=""):
+    def close(self, close_price: float, close_date: pd.datetime, close_cause: str="", commission:float=0):
         self.close_price = close_price
         self.close_date = close_date
         self.close_cause = close_cause
-
+        self.commission += commission
         self.ret = ((self.close_price / self.fill_price) - 1) * self.direction
         self.total_ret = (((self.close_price + self.dividends_per_share) / self.fill_price) - 1) * self.direction
         self.total_dividends = self.dividends_per_share * self.amount
@@ -121,10 +122,15 @@ class Blotter():
         self.active_trades = []
         self.closed_trades = []
         self.cancelled_orders = []
-    
+        self.used_signal_ids = set()
+
+    def add(self, trade_object):
+        self.active_trades.append(trade_object)
+        self.used_signal_ids.add(trade_object.order.signal.signal_id)
+
     # NOTE: Needs improvement, no not
-    def close(self, trade: Trade, close_price: float, close_date: pd.datetime, close_cause: str=""):
-        trade.close(close_price, close_date, close_cause)
+    def close(self, trade: Trade, close_price: float, close_date: pd.datetime, close_cause: str="", commission: float=0):
+        trade.close(close_price, close_date, close_cause, commission)
         try:
             self.active_trades.remove(trade)
             self.closed_trades.append(trade)
@@ -147,8 +153,10 @@ class Blotter():
                 amount_long += 1
 
         total = len(self.active_trades) + len(self.closed_trades)
-
-        return amount_long / total
+        if total == 0:
+            return "NO TRADES CONDUCTED"
+        else:
+            return amount_long / total
 
     def calculate_hit_ratio(self):
         hits = 0
@@ -157,47 +165,129 @@ class Blotter():
                 hits += 1
 
         total = len(self.closed_trades)
-        return hits / total
+        if total == 0:
+            return "NO CLOSED TRADES"
+        else:
+            return hits / total
 
     def calculate_frequency_of_bets(self):
-        return "NOT IMPLEMENTED"
+        """
+        Avg number of bets per month
+        """
+        dates = []
+        for trades in self.closed_trades:
+            dates.append(trades.date)
+
+        dates = pd.Series(index=dates).resample("M").apply(lambda array_like: len(array_like))
+
+        return str(dates.mean()) + " Trades/Month"
+
 
     def calculate_average_holding_period(self):
-        return "NOT IMPLEMENTED"
+        dates = []
+        close_dates = []
+        for trades in self.closed_trades:
+            dates.append(trades.date)
+            close_dates.append(trades.close_date)
+
+        dates = pd.DataFrame(index=dates, data={"date": dates, "close_date": close_dates})
+        
+        dates["diff"] = (dates["close_date"] - dates["date"]).apply(lambda delta: delta.days)
+
+        return str(dates["diff"].mean()) + " Days"
 
     def calculate_pnl_short_positions(self):
-        return "NOT IMPLEMENTED"
+        short_pnl = 0
+        for trade in self.closed_trades:
+            if trade.direction == -1:
+                short_pnl += trade.calculate_pnl()
+        return str(short_pnl) + "$"
 
     def calculate_pnl_long_positions(self):
-        return "NOT IMPLEMENTED"
+        long_pnl = 0
+        for trade in self.closed_trades:
+            if trade.direction == 1:
+                long_pnl += trade.calculate_pnl()
+        return str(long_pnl) + "$"
 
     def calculate_average_return_from_hits(self):
-        return "NOT IMPLEMENTED"
+        returns = []
+        for trade in self.closed_trades:
+            if trade.total_ret > 0:
+                returns.append(trade.total_ret)
+
+        
+        return str(np.array(returns).mean()) + "%%"
 
     def calculate_average_return_from_misses(self):
-        return "NOT IMPLEMENTED"
+        returns = []
+        for trade in self.closed_trades:
+            if trade.total_ret <= 0:
+                returns.append(trade.total_ret)
+
+        return str(np.array(returns).mean()) + "%%"
 
     def calculate_highest_return_from_hit(self):
-        return "NOT IMPLEMENTED"
+        returns = []
+        for trade in self.closed_trades:
+            if trade.total_ret > 0:
+                returns.append(trade.total_ret)
+
+        
+        return str(max(returns)) + "%%"
 
     def calculate_lowest_return_from_miss(self):
-        return "NOT IMPLEMENTED"
+        returns = []
+        for trade in self.closed_trades:
+            if trade.total_ret <= 0:
+                returns.append(trade.total_ret)
 
-    def broker_fees_per_turnover(self):
-        return "NOT IMPLEMENTED"
+        return str(min(returns)) + "%%"
+
+    def calculate_broker_fees_per_dollar(self): # TODO: not good
+        total = 0
+        total_commission = 0
+        for trade in self.closed_trades:
+            total += trade.fill_price * abs(trade.amount)
+            total_commission += trade.commission
+            
+        return str(total_commission/total) + " ($ commission per $ invested and sold)"
+
+
+    def calculate_broker_fees_per_stock(self):
+        stocks = 0
+        for trade in self.closed_trades:
+            stocks += abs(trade.amount)
+            commission += trade.commission
+
+        return str(commission / stocks) + " $/amount"
+
+
+    def count_closed_trades_by_cause(self):
+        counts = {}
+        for trade in self.closed_trades:
+            if trade.close_cause not in counts.keys():
+                counts[trade.close_cause] = 0
+            counts[trade.close_cause] += 1
+
+        report = ""
+        for key, val in counts.items():
+            report += "{}: {}, ".format(key, str(val))
+
+        return report
 
     def calculate_annualized_turnover(self):
         return "NOT IMPLEMENTED"
 
     def calculate_average_aum(self):
         return "NOT IMPLEMENTED"
-        
+
     def calculate_capacity(self):
         return "NOT IMPLEMENTED"
-        
+
     def calculate_maximum_dollar_position_size(self):
         return "NOT IMPLEMENTED"
-        
+
 
 
 
@@ -210,7 +300,7 @@ class Broker():
         market_data: DataHandler, 
         commission_model: CommissionModel,
         slippage_model: SlippageModel, 
-        log_path: str,
+        logger: Logger,
         annual_margin_interest_rate: float,
         initial_margin_requirement: float, 
         maintenance_margin_requirement: float,
@@ -221,7 +311,7 @@ class Broker():
         self.slippage_model = slippage_model
         self.market_data = market_data
         self.log_path = log_path
-        self.logger = Logger("BROKER", log_path + "/broker.log")
+        self.logger = logger
 
         self.annual_margin_interest_rate = annual_margin_interest_rate
         self.initial_margin_requirement = initial_margin_requirement
@@ -230,7 +320,7 @@ class Broker():
         
         # The broker gets orders, if it gets filled a Trade object is created and added to the Blotter
         # if the order is cancelled/fails then a CancelledOrder object is created and appended to cancelled_orders
-        self.cancelled_orders = [] # This is more relevant for the portfolio maybe?
+        # self.cancelled_orders = [] # This is more relevant for the portfolio maybe?
         
         # The broker needs to have a record of active position, because he needs to check this for exit rules
         self.blotter = Blotter()
@@ -248,14 +338,15 @@ class Broker():
             try:
                 trade_object = self._process_order(portfolio, order)
             except OrderProcessingError as e:
-                self.logger.logr.warning("Failed processing order with error: {}".format(e)) # Show log from backtest in the dashboard...
+                self.logger.logr.warning("BROKER: Failed processing order with error: {}".format(e)) # Show log from backtest in the dashboard...
 
                 cancelled_order = CancelledOrder(order, e)
                 cancelled_orders.append(cancelled_order)
             else:
                 trade_objects.append(trade_object)
-
-                self.blotter.active_trades.append(trade_object)
+                
+                self.blotter.add(trade_object)
+                
 
         self.blotter.cancelled_orders.extend(cancelled_orders)
 
@@ -274,20 +365,20 @@ class Broker():
 
     def _process_order(self, portfolio, order):
         if not self.market_data.cur_date == order.date:
-            self.logger.logr.warning("When processing an order; it could not be completed, because order.date == market_data.cur_date.")
-            raise OrderProcessingError("Cannot complete order, because order.date == market_data.cur_date.")
+            self.logger.logr.warning("BROKER: When processing an order; it could not be completed, because order.date == market_data.cur_date.")
+            raise OrderProcessingError("BROKER: Cannot complete order, because order.date == market_data.cur_date.")
 
         # To process an order we must be able to trade the stock, which means data is available on the date and not bankrupt or delisted.
         if not self.market_data.can_trade(order.ticker):
-            self.logger.logr.warning("When processing an order; it could not be completed, because market_data.can_trade() returned False for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
-            raise OrderProcessingError("Cannot complete order, because market_data.can_trade() returned False.")
+            self.logger.logr.warning("BROKER: When processing an order; it could not be completed, because market_data.can_trade() returned False for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
+            raise OrderProcessingError("BROKER: Cannot complete order, because market_data.can_trade() returned False.")
 
         try: 
             stock_price = self.market_data.current_for_ticker(order.ticker)["open"]
         except:
             # NOTE: Should  not be possible if can_trade returns true...but still for consistency I code it this way.
-            self.logger.logr.warning("When processing an order; market data was not available for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
-            raise OrderProcessingError("Cannot complete order, because market data is not available.")
+            self.logger.logr.warning("BROKER: When processing an order; market data was not available for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
+            raise OrderProcessingError("BROKER: Cannot complete order, because market data is not available.")
 
 
         if order.direction == 1:
@@ -303,8 +394,8 @@ class Broker():
             try:
                 portfolio.charge(cost)
             except BalanceTooLowError as e:
-                self.logger.logr.warning("Balance too low! Balance: {}, wanted to charge {} for the stock".format(portfolio.balance, cost))
-                raise OrderProcessingError("Cannot complete order, with error: {}".format(e))
+                self.logger.logr.warning("BROKER: Balance too low! Balance: {}, wanted to charge {} for the stock".format(portfolio.balance, cost))
+                raise OrderProcessingError("BROKER: Cannot complete order, with error: {}".format(e))
 
             portfolio.charge_commission(commission) # Does not fail
             
@@ -326,11 +417,11 @@ class Broker():
             try:
                 portfolio.update_margin_account(new_required_margin_account_size)
             except BalanceTooLowError as e:
-                self.logger.logr.warning("Balance too low! Balance: {}, Margin Account: {}, wanted to update margin account to {}".format(
+                self.logger.logr.warning("BROKER: Balance too low! Balance: {}, Margin Account: {}, wanted to update margin account to {}".format(
                         portfolio.balance, portfolio.margin_account, new_required_margin_account_size
                     )
                 )
-                raise OrderProcessingError("Cannot complete order, with error: {}".format(e))
+                raise OrderProcessingError("BROKER: Cannot complete order, with error: {}".format(e))
 
             portfolio.charge_commission(commission) # Does not fail
 
@@ -365,7 +456,7 @@ class Broker():
             try:
                 ticker_data = self.market_data.current_for_ticker(ticker) # NOTE: need to decide how to manage when we cannot deal in a stock (can_trade...)
             except MarketDataNotAvailableError:
-                self.logger.logr.warning("Failed to manage active position, because market data not available for ticker {} on date {}".format(ticker, self.market_data.cur_date))
+                self.logger.logr.warning("BROKER: Failed to manage active position, because market data not available for ticker {} on date {}".format(ticker, self.market_data.cur_date))
                 continue
 
             price_direction_for_the_day = 1 if (ticker_data["open"] <= ticker_data["close"]) else -1
@@ -405,7 +496,7 @@ class Broker():
 
                 if exited:
                     commission = self.commission_model.calculate(amount=order.amount, price=close_price)
-                    self.blotter.close(trade, close_price, self.market_data.cur_date, close_cause)
+                    self.blotter.close(trade, close_price, self.market_data.cur_date, close_cause, commission)
                     portfolio.charge_commission(commission)
                     portfolio.receive_proceeds(trade.get_proceeds())
                     continue
@@ -451,7 +542,7 @@ class Broker():
                         "price_at_exit_stop_loss": trade.price_at_exit("stop_loss"),
                     })
                     portfolio.charge_commission(commission)
-                    self.blotter.close(trade, close_price, self.market_data.cur_date, close_cause)
+                    self.blotter.close(trade, close_price, self.market_data.cur_date, close_cause, commission)
                     proceeds = trade.get_proceeds()
                     # if in profit -> give return to balance
                     if proceeds >= 0:
@@ -589,7 +680,7 @@ class Broker():
         """
         amount_borrowed = 0
 
-        daily_rate = self.annual_margin_interest_rate / 360
+        daily_rate = ((1+self.annual_margin_interest_rate)**(1/360)) - 1
 
         for trade in self.blotter.active_trades:
             if trade.direction == -1:
@@ -656,6 +747,7 @@ class Broker():
             for j, trade in enumerate(history_obj["active_trades"]):
                 df.at[index, "date"] = history_obj["date"]
                 df.at[index, "order_id"] = trade.order_id
+                df.at[index, "signal_id"] = trade.order.signal.signal_id
                 df.at[index, "ticker"] = trade.ticker
                 df.at[index, "direction"] = trade.direction
                 df.at[index, "amount"] = trade.amount
@@ -691,6 +783,7 @@ class Broker():
         index = 0
         for trade in trades:
             df.at[index, "order_id"] = trade.order_id
+            df.at[index, "signal_id"] = trade.order.signal.signal_id
             df.at[index, "ticker"] = trade.ticker
             df.at[index, "direction"] = trade.direction
             df.at[index, "amount"] = trade.amount
@@ -725,7 +818,7 @@ class Broker():
     def cancelled_orders_to_df(self):
         df = pd.DataFrame(columns=["order_id", "ticker", "date", "error", "amount", "direction", "stop_loss", "take_profit", "timeout", "type"])
         
-        for index, c_ord in enumerate(self.cancelled_orders):
+        for index, c_ord in enumerate(self.blotter.cancelled_orders):
             df.at[index, "order_id"] = c_ord.order_id
             df.at[index, "date"] = c_ord.date
             df.at[index, "ticker"] = c_ord.ticker

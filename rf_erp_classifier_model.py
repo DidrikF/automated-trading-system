@@ -46,7 +46,7 @@ This makes it so that more and more data is available for training and validatio
 
 # DATASET PREPARATION
 dataset = pd.read_csv("./dataset_development/datasets/completed/ml_dataset.csv", parse_dates=["date", "timeout"], index_col=["date"])
-dataset = dataset.loc[dataset.primary_label_tbm != 0]
+dataset = dataset.loc[dataset.erp_1m != 0]
 
 dataset = dataset.sort_values(by=["date"]) # important for cross validation
 
@@ -67,10 +67,10 @@ test_set = dataset.loc[(dataset.index >= test_start) & (dataset.index <= test_en
 
 
 train_x = train_set[features]
-train_y = train_set["primary_label_tbm"]
+train_y = train_set["erp_1m"]
 
 test_x = test_set[features]
-test_y = test_set["primary_label_tbm"]
+test_y = test_set["erp_1m"]
 
 training_model = True
 

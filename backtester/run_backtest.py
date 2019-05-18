@@ -8,15 +8,14 @@ The APIs are inspired by Quantopian/Zipline (https://github.com/quantopian/zipli
 # I can read command line options and start the backtest in this file...
 # Make it possible to use the cross-validation method for backtesting???
 
-import pytest
 import pandas as pd 
 import os, sys
 import shutil
-import threading
 from queue import Queue
 import time
 from dateutil.relativedelta import *
 import pickle
+import datetime
 
 from sklearn.ensemble import RandomForestClassifier
 
@@ -31,6 +30,7 @@ from broker import Broker
 from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
 from utils.utils import EquityCommissionModel, EquitySlippageModel
 from utils.errors import MarketDataNotAvailableError
+from utils.logger import Logger
 from ml_strategy_models import features
 # Not needed
 from simple_strategies import RandomLongShortStrategy 
@@ -38,11 +38,12 @@ from simple_strategies import RandomLongShortStrategy
 
 if __name__ == "__main__":
     start_date = pd.to_datetime("2012-03-01")
-    end_date = pd.to_datetime("2015-01-01")
+    end_date = pd.to_datetime("2012-07-01")
     # end_date = pd.to_datetime("2019-02-01")
 
-    log_path = "./logs_{}".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-
+    log_path = "./logs/log_{}".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    os.mkdir(log_path)
+    logger = Logger(log_path + "/backtest.log")
 
     print("Instantiating Market Data Handler")
     market_data_handler = DailyBarsDataHander( 
@@ -74,7 +75,8 @@ if __name__ == "__main__":
         output_path="./backtests",
         initialize_hook=initialize,
         handle_data_hook=handle_data,
-        analyze_hook=analyze
+        analyze_hook=analyze,
+        logger=logger
     )
 
     """
@@ -98,29 +100,30 @@ if __name__ == "__main__":
     )
 
     # NOTE: Need to get from aws compute node or train locally with parameters found
-    side_classifier = pickle.load(open("../models/side_classifier.pickle", "rb"))
-    certainty_classifier = pickle.load(open("../models/certainty_classifier.pickle", "rb"))
+    side_classifier = pickle.load(open("../models/simple_side_classifier.pickle", "rb"))
+    certainty_classifier = pickle.load(open("../models/simple_certainty_classifier.pickle", "rb"))
 
     strategy = MLStrategy(
-        rebalance_weekday=0, 
+        rebalance_weekdays=[0,1,2,3,4,5], 
         side_classifier=side_classifier, 
         certainty_classifier=certainty_classifier,
         ptSl=[1, -0.8],
         feature_handler=feature_handler,
         features=features,    
         initial_margin_requirement=0.5, 
-        log_path=log_path,
+        logger=logger
         # accepted_signal_age: dt.relativedelta=relativedelta(days=7)
     )
 
     strategy.set_order_restrictions(
         max_position_size=0.05, # 0.05
         max_positions=30, # 30
-        minimum_balance=100000, # 1% of initial balance?
-        max_percent_to_invest_each_period=0.33, # 0.33
-        max_orders_per_period=10, # 10
-        min_order_size_limit=5000,
-        percentage_short=0.30,
+        minimum_balance=10000, # 1% of initial balance?
+        max_percent_to_invest_each_period=0.25, # 0.33
+        max_orders_per_period=7, # 10
+        min_order_size_limit=5000, # Dollar amount
+        num_short_positions=0,
+        volume_limit=0.1
     )
 
     print("Computing predictions...")
@@ -131,13 +134,13 @@ if __name__ == "__main__":
     backtester.set_broker(Broker,
         slippage_model=slippage_model,
         commission_model=commission_model,
-        log_path=log_path,
+        logger=logger,
         annual_margin_interest_rate=0.06,
         initial_margin_requirement=0.50,
         maintenance_margin_requirement=0.30
     )
     
-    backtester.set_portfolio(Portfolio, log_path=log_path, balance=10000000, strategy=strategy)
+    backtester.set_portfolio(Portfolio, logger=logger, balance=1000000, strategy=strategy)
     
     print("Starting Backtest!")
     performance = backtester.run()

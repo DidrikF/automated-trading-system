@@ -54,18 +54,20 @@ if __name__ == "__main__":
     #     log_lines = f.readlines()
     # you may also want to remove whitespace characters like `\n` at the end of each line
     # log_lines = [html.P(line.strip()) for line in log_lines]
-
-    all_log_dirs = all_subdirs = [d for d in os.listdir('./logs') if os.path.isdir(d)]
+    all_log_dirs = ["./logs/" + d for d in os.listdir('./logs') if os.path.isdir("./logs/" + d)]
     latest_log_dir = max(all_log_dirs, key=os.path.getmtime)
+    print("Loading log dir: ", latest_log_dir)
     
     log_lines = []
 
-    files = [f for f in glob.glob(path + "**/*.log", recursive=True)]
+    files = [f for f in glob.glob(latest_log_dir + "/*.log", recursive=True)]
+    print("Loading log files: ", files)
     for file in files:
         with open(file, "r") as f:
-            log_lines = f.readlines()
-        new_log_lines = [html.P(line.strip()) for line in log_lines]
-        log_lines.extend(new_log_lines)
+            lines = f.readlines()
+        formatted_log_lines = [html.P(line.strip()) for line in lines]
+        
+        log_lines.extend(formatted_log_lines)
 
 
 
@@ -92,7 +94,8 @@ if __name__ == "__main__":
         end=end_date
     )
     
-    ml_model_results = pickle.load(open("./models/ml_strategy_models_results.pickle", "rb"))
+    # NOTE: Need to create the strategy model result pickle
+    # ml_model_results = pickle.load(open("./models/ml_strategy_models_results.pickle", "rb"))
 
 
     app = dash.Dash(__name__)
@@ -344,27 +347,59 @@ if __name__ == "__main__":
             ]),
             html.H4(children="Cost Related Stats"),
             html.Div(children=[
-                html.P("Total Slippage: {}  ".format(backtest["stats"]["total_slippage"][0])),
+                html.P("Total Commission: {}  ".format(backtest["stats"]["total_commission"][0])),
+                html.P("Broker Fees Per Dollar: {}  ".format(backtest["stats"]["broker_fees_per_dollar"])),
+                html.P("Broker Fees Per Stock: {}  ".format(backtest["stats"]["broker_fees_per_stock"])),
                 html.P("Total Charged to Enter Trades: {}  ".format(backtest["stats"]["total_charged"][0])),
                 html.P("Total Margin Interest Payed: {}  ".format(backtest["stats"]["total_margin_interest"][0])),
                 html.P("Total Interest on Accounts: {}  ".format(backtest["stats"]["total_account_interest"][0])),
                 html.P("Total Dividends covered on Short Trades: {}  ".format(backtest["stats"]["total_short_dividends"][0])),
                 html.P("Total Losses on Closed Short Trades: {}  ".format(backtest["stats"]["total_short_losses"][0])),  
+                html.P("Total Slippage: {}  ".format(backtest["stats"]["total_slippage"][0])),
+
             ]),
             html.H4(children="Backtest Stats"),
             html.Div(children=[
                 html.P("Time Range: {}  ".format(backtest["stats"]["time_range"])),
-            ]),
-            html.H4(children="ML Model Stats (2012-03-01 - 2019-02-01)"),
-            html.Div(children=[
-                html.P("Side Model Accuracy: {}  ".format(ml_model_results["side_model"]["accuracy"])),
-                html.P("Side Model Precision: {}  ".format(ml_model_results["side_model"]["precision"])),
-                html.P("Side Model Recall: {}   ".format(ml_model_results["side_model"]["recall"])),
+                html.P("End Value: {}  ".format(backtest["stats"]["end_value"])),
+                html.P("Total Return: {}  ".format(backtest["stats"]["total_return"])),
+                html.P("Annualized Turover: {}  ".format(backtest["stats"]["annualized_turnover"])),
 
-                html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["accuracy"])),
-                html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["precision"])),
-                html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["recall"])),
-            ])
+                html.P("Normality Test Results: {}  ".format(backtest["stats"]["normality_test_result"])),
+                html.P("Sharpe Ratio: {}  ".format(backtest["stats"]["sharpe_ratio"])),
+                html.P("T-test on Excess Return: {}  ".format(backtest["stats"]["t_test_on_excess_return"])),
+                html.P("Correlation to Underlying (S&P500): {}  ".format(backtest["stats"]["correlation_to_underlying"])),
+                html.P("Ratio of Longs: {}  ".format(backtest["stats"]["ratio_of_longs"])),
+                html.P("PnL: {}  ".format(backtest["stats"]["pnl"])),
+                html.P("PnL from Short Positions: {}  ".format(backtest["stats"]["pnl_short_positions"])),
+                html.P("PnL form Long Positions: {}  ".format(backtest["stats"]["pnl_long_positions"])),
+                html.P("Hit Ratio: {}  ".format(backtest["stats"]["hit_ratio"])),
+                html.P("Average AUM: {}  ".format(backtest["stats"]["average_aum"])),
+
+                html.P("Capacity: {}  ".format(backtest["stats"]["capacity"])),
+                html.P("Maximum Dollar Position Size: {}  ".format(backtest["stats"]["maximum_dollar_position_size"])),
+                html.P("Frequency of Bets: {}  ".format(backtest["stats"]["frequency_of_bets"])),
+                html.P("Average Holding Period: {}  ".format(backtest["stats"]["average_holding_period"])),
+                html.P("Average Return from Hits: {}  ".format(backtest["stats"]["average_return_from_hits"])),
+                html.P("Average Return from Misses: {}  ".format(backtest["stats"]["average_return_from_misses"])),
+                html.P("Highest Return from Hit: {}  ".format(backtest["stats"]["highest_return_from_hit"])),
+                html.P("Lowest Return from Miss: {}  ".format(backtest["stats"]["lowest_return_from_miss"])),
+                html.P("Closed trade counts by cause: {}  ".format(backtest["stats"]["closed_trades_by_cause"])),
+
+            ]),
+            # html.H4(children="ML Model Stats (2012-03-01 - 2019-02-01)"),
+            # html.Div(children=[
+            #     html.P("Side Model Accuracy: {}  ".format(ml_model_results["side_model"]["accuracy"])),
+            #     html.P("Side Model Precision: {}  ".format(ml_model_results["side_model"]["precision"])),
+            #     html.P("Side Model Recall: {}   ".format(ml_model_results["side_model"]["recall"])),
+            #     html.P("Side Model F1: {}   ".format(ml_model_results["side_model"]["f1"])),
+
+
+            #     html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["accuracy"])),
+            #     html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["precision"])),
+            #     html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["recall"])),
+            #     html.P("Side Model F1: {}  ".format(ml_model_results["certainty_model"]["f1"])),
+            # ])
         ], style={
             'textAlign': 'center',
         }),
@@ -520,7 +555,6 @@ if __name__ == "__main__":
             navigation="page",
         ),
         dcc.Graph(id="rf-rate-graph", figure=rf_rate_figure),
-
         html.H3(children="Feature/ML Algorithm Data"),
         dash_table.DataTable(
             id='features-table',

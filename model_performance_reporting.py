@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.base import BaseEstimator
 
 from dataset_columns import features, labels, base_cols
-from performance_measurement import zero_benchmarked_r_squared
+from performance_measurement import zero_benchmarked_r_squared, sample_binary_predictor, single_sample_t_test
 
 
 # Load Dataset
@@ -118,10 +118,15 @@ try:
     rf_classifier: BaseEstimator = pickle.load(open("./models/rf_erp_classifier_model.pickle"))
     
     test_x_pred = best_rf_classifier.predict(test_x)
+    
+    observations = sample_binary_predictor(test_x_pred, test_y, 300, 1000)
+    t_test_res = single_sample_t_test(observations, 0.5, 0.05)
+
     accuracy = accuracy_score(test_y, test_x_pred)
     precision = precision_score(test_y, test_x_pred)
     recall = recall_score(test_y, test_x_pred)
 
+    print("T-test of accuracy compared to random model result: ", t_test_res)
     print("OOS Accuracy: ", accuracy)
     print("OOS Precision: ", precision)
     print("OOS Recall: ", recall)
@@ -134,7 +139,5 @@ except:
 rf_side_classifier: BaseEstimator = pickle.load(open("./models/rf_side_classifier.pickle"))
 
 rf_certainty_classifier: BaseEstimator = pickle.load(open("./models/rf_certainty_classifier.pickle"))
-
-
 
 

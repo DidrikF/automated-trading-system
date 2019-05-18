@@ -19,13 +19,14 @@ from metrics import calculate_frequency_of_bets, calculate_average_holding_perio
 
 
 
+
 class Backtester(object):
     def __init__(
         self, 
         market_data_handler: DataHandler, 
         start: pd.datetime, 
         end: pd.datetime,
-        log_path: str,
+        logger: Logger,
         output_path: str,
         initialize_hook: Callable=None, 
         handle_data_hook: Callable=None, 
@@ -45,7 +46,7 @@ class Backtester(object):
         self.market_data = market_data_handler
         self.start = start
         self.end = end
-        self.log_path = log_path
+        self.logger = logger
         self.output_path = output_path
 
         start_end_index = self.market_data.date_index_to_iterate
@@ -63,7 +64,6 @@ class Backtester(object):
         # Need to be set via setter methods
         self.portfolio = None
         self.broker = None
-        self.logger = Logger("BACKTESTER", log_path + "/backtester.log")
 
     def set_broker(self, broker_cls, **kwargs):
         """
@@ -233,9 +233,8 @@ class Backtester(object):
         self.broker.capture_state()
         
 
-
     def calculate_statistics(self):
-        self.stats["sharpe_ratio"] = None # https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551
+        # self.stats["sharpe_ratio"] = None # https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551
         
                 
                 # Cost Related:
@@ -260,17 +259,14 @@ class Backtester(object):
         # NOTE: Add all backtest statistic calculates to here. Probably contain calculations in their own functions (under utils.metrics ?)
         self.stats["normality_test_result"] = self.portfolio.normality_test_on_returns()
         self.stats["sharpe_ratio"] = self.portfolio.calculate_sharpe_ratio()
-
+    
         self.stats["time_range"] = [self.start, self.end]
         self.stats["ratio_of_longs"] = self.broker.blotter.calculate_ratio_of_longs()
-        self.stats["correlation_to_underlying"] = calculate_correlation_of_monthly_returns(
-            self.portfolio.portfolio_value["total"], 
-            self.market_data.get_ticker_data("snp500")
-        )
+        self.stats["correlation_to_underlying"] = self.portfolio.calculate_correlation_of_monthly_returns()
+        self.stats["t_test_on_excess_return"] = self.portfolio.calculate_statistical_significance_of_outperformance()
+
         self.stats["pnl"] = self.portfolio.portfolio_value["total"].iloc[-1] - self.portfolio.initial_balance
         self.stats["hit_ratio"] = self.broker.blotter.calculate_hit_ratio()
-        
-
 
         # NOTE: Not implemented
         self.stats["average_aum"] = self.broker.blotter.calculate_average_aum()
@@ -286,9 +282,10 @@ class Backtester(object):
         self.stats["average_return_from_misses"] = self.broker.blotter.calculate_average_return_from_misses()
         self.stats["highest_return_from_hit"] = self.broker.blotter.calculate_highest_return_from_hit()
         self.stats["lowest_return_from_miss"] = self.broker.blotter.calculate_lowest_return_from_miss()
-        self.stats["broker_fees_per_turnover"] = self.portfolio.broker_fees_per_turnover()
-
+        self.stats["broker_fees_per_dollar"] = self.broker.blotter.calculate_broker_fees_per_dollar()
+        self.stats["broker_fees_per_stock"] = self.broker.blotter.calculate_broker_fees_per_stock()
         self.stats["annualized_turnover"] = self.broker.blotter.calculate_annualized_turnover()
+        self.stats["closed_trades_by_cause"] = self.broker.blotter.count_closed_trades_by_cause()
         """
         Ratio of longs, average holding period, frequency of bets, correlation to underlying market (s&p500), 
         pnl from long and short trades, annualized rate of return, hit ratio (ratio of profitable trades),
@@ -362,26 +359,6 @@ def Performance():
         # ETC...
         pass
         
-def calculate_correlation_of_monthly_returns(port_val, snp500):
-    date_index = port_val.index
-    # sep_filled = sep_filled.fillna(method="ffill")
-
-    snp500 = snp500.loc[date_index]
-    ahead_1m_snp500 = snp500.shift(periods=-30)
-    ahead_1m_portfolio = port_val.shift(periods=-30)
-
-
-    returns = pd.DataFrame(index=date_index, columns=["portfolio, snp500"])
-
-    returns["snp_500"] = (ahead_1m_snp500["close"] / snp500["close"]) - 1
-    returns["portfolio"] = (ahead_1m_portfolio["total"] / port_val["total"]) - 1
-    
-    def custom_resample(array_like):
-        return array_like[0]
-
-    returns = returns.resample('M', convention='end')# .apply(custom_resample)
-
-    return returns["portfolio"].corr(returns["snp500"])
 
 
     

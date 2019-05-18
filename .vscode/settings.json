@@ -1,4 +1,4 @@
 {
   "python.linting.pylintEnabled": true,
-  "python.pythonPath": "C:\\Anaconda3\\envs\\master-tf\\python.exe"
+  "python.pythonPath": "C:\\Anaconda3\\envs\\master\\python.exe"
 }

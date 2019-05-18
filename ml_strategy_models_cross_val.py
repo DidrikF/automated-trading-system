@@ -11,7 +11,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import roc_curve, auc
-from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score
+from sklearn.metrics import precision_score, recall_score, accuracy_score
 
 # Other
 import scipy
@@ -71,27 +71,61 @@ if __name__ == "__main__":
     # You can generate a plot for precition and recall, see chapter 3 in hands-on machine learning
     training_model = True
     if training_model:
-        side_classifier = RandomForestClassifier(
-            n_estimators=1000,
-            min_weight_fraction_leaf=0.2,
-            max_features=5,
-            class_weight=None,
-            bootstrap=True,
-            criterion="entropy",
-            n_jobs=7,
-        )
+        rf_classifier = RandomForestClassifier(random_state=100)
+
+        # Define parameter space:
+        num_samples = len(train_set)
+        # many estimators with few features, early stopping and limited depth
+        parameter_space = {
+            "n_estimators": [300], # 50, 100, 200, 500, 1000 
+            "min_weight_fraction_leaf": [0.20], # early stopping
+            # "max_depth": [1, 2, 4, 8, 10, 15], # max depth should be set lower I think
+            # "min_samples_split": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
+            # "min_samples_leaf": [int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 
+            "max_features": [5], # 1, 5, 10, 15, 20, 30 may even push it??
+            "class_weight": ["balanced_subsample"],
+            "bootstrap": [True], # , False
+            "criterion": ["entropy"] # , "gini"
+        }
+
         
+        t1 = pd.Series(index=train_set.index, data=train_set["timeout"])
+
+        random_search = RandomizedSearchCV(
+            estimator=rf_classifier,
+            param_distributions=parameter_space,
+            n_iter=1, # NOTE: Need to update 
+            #  NOTE: need to update to use the date and timout columns
+            cv=PurgedKFold(n_splits=3, t1=t1), # a CV splitter object implementing a split method yielding arrays of train and test indices
+            # Need to figure out if just using built in scorers will work with the custom PurgedKFold splitter
+            scoring="accuracy", # a string or a callable to evaluate the predictions on the test set (use custom scoring function that works with PurgedKFold)
+            n_jobs=n_jobs,
+            verbose=1
+        )
+
         print("Training Side Classifier...")
-        side_classifier.fit(train_x, train_y) # Validation is part of the test set in this case....
+        random_search.fit(train_x, train_y) # Validation is part of the test set in this case....
         print("DONE TRAINING SIDE CLASSIFIER!")
+
+        print("Best Score (Accuracy): \n", random_search.best_score_)
+        print("Best Params: \n", random_search.best_params_)
+        print("Best Index: \n", random_search.best_index_)
+        print("CV Results: \n")
+        for key, val in random_search.cv_results_.items():
+            print("{}: {}".format(key, val))
+
+        best_params = random_search.best_params_
+        side_classifier: RandomForestClassifier = random_search.best_estimator_
 
         # Save
         print("Saving Side Model...")
         pickle.dump(side_classifier, open("./models/side_classifier.pickle", "wb"))
+        pickle.dump(best_params, open("./models/side_classifier_best_params.pickle", "wb"))
 
     else:
         print("Reading inn side model")
         side_classifier = pickle.load(open("./models/side_classifier.pickle", "rb"))
+        best_params = pickle.load(open("./models/side_classifier_best_params.pickle", "rb"))
 
 
     print("Reading SEP")
@@ -143,14 +177,22 @@ if __name__ == "__main__":
     certainty_train_x = train_set_with_meta_labels[features] 
     certainty_train_y = train_set_with_meta_labels["m_primary_label_tbm"]
 
+    # NOTE: Use the same params as the best side classifier? Ideally not... but for now...
     certainty_classifier = RandomForestClassifier(
-        n_estimators=1000,
-        min_weight_fraction_leaf=0.2,
-        max_features=5,
-        class_weight=None,
-        bootstrap=True,
-        criterion="entropy",
-        n_jobs=7,
+        n_estimators=best_params["n_estimators"], # Nr of trees
+        criterion=best_params["criterion"], # function to measure quality of split (impurity measure)
+        # max_depth=best_params["max_depth"], # depth of each tree
+        # min_samples_split=best_params["min_samples_split"], # minimum number of samples required to split an internal node
+        # min_samples_leaf=best_params["min_samples_leaf"], # The minimum number of samples required to be at a leaf node, may cause smoothing in regression models
+        # NOTE: Set to a lower value to force discrepancy between trees
+        min_weight_fraction_leaf=best_params["min_weight_fraction_leaf"],
+        max_features=best_params["max_features"], # the number of features to consider when looking for the best split (auto = sqrt(n_features))
+        # NOTE: Need to read up on
+        class_weight=best_params["class_weight"], # use this attribute to set weight of different feature columns
+        bootstrap=best_params["bootstrap"], # Whether bootstrap samples are used when building trees. If False, the whole datset is used to build each tree.
+        n_jobs=n_jobs, # Number of jobs to run in parallell during fit and predict (-1 means to use all available)
+        # NOTE: Set to a sufficiently large value (e.g. 5%) such that out-of bag accuracy converges to out of sample (k-fold) accuracy.
+        # min_weight_fraction_leaf = 0, # Not relevant unless samples are weighted unequally 
     )
 
 
@@ -168,12 +210,10 @@ if __name__ == "__main__":
     side_accuracy = accuracy_score(test_y, test_x_pred)
     side_precision = precision_score(test_y, test_x_pred)
     side_recall = recall_score(test_y, test_x_pred)
-    side_f1_score = f1_score(test_y, test_x_pred)
 
     print("OOS Accuracy: ", side_accuracy)
     print("OOS Precision: ", side_precision)
     print("OOS Recall: ", side_recall)
-    print("OOS F1 score: ", side_f1_score)
 
 
     # Testing Certainty Classifier
@@ -204,13 +244,10 @@ if __name__ == "__main__":
     certainty_accuracy = accuracy_score(certainty_test_y, certainty_test_x_pred)
     certainty_precision = precision_score(certainty_test_y, certainty_test_x_pred)
     certainty_recall = recall_score(certainty_test_y, certainty_test_x_pred)
-    certainty_f1_score = f1_score(certainty_test_y, certainty_test_x_pred)
 
     print("OOS Accuracy: ", certainty_accuracy)
     print("OOS Precision: ", certainty_precision)
     print("OOS Recall: ", certainty_recall)
-    print("OOS F1 score: ", certainty_f1_score)
-
 
 
     results = {
@@ -218,13 +255,13 @@ if __name__ == "__main__":
             "accuracy": side_accuracy,
             "precision": side_precision,
             "recall": side_recall,
-            "f1": side_f1_score,
+            "cv_results": random_search.cv_results_,
+            "best_params": random_search.best_params_,
         },
         "certainty_model": {
             "accuracy": certainty_accuracy,
             "precision": certainty_precision,
             "recall": certainty_recall,
-            "f1": certainty_f1_score,
         }
     }
     pickle.dump(results, open("./models/ml_strategy_models_results.pickle", "wb"))
