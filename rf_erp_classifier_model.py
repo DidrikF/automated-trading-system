@@ -23,37 +23,13 @@ from dataset_columns import features, labels, base_cols
 
 from model_and_performance_visualization import plot_feature_importances
 
-"""
-General approach for producing signals for automated trading system with ML:
-
-
-I need to have a model for every year from 2008 (2010) - 20019 (might only end up backtesting from 2010-2018).
-
-Each time a new model is made, I run validation with the last 30% of the data that is available at the time. This leaves 70% of data for training.
-
-Once the optimal hyperparameters are found, I train each model on all the data that is available at the given time.
-
-I might later run more advanced validation schemes (custom cross validation).
-
-The model is tested on data from the end of the validation set and to the end of the dataset.
-This makes it so that more and more data is available for training and validation and less and less is available for testing
-
-"""
-
-
-# You can generate a plot for precition and recall, see chapter 3 in hands-on machine learning
-
+n_jobs = 64
 
 # DATASET PREPARATION
 dataset = pd.read_csv("./dataset_development/datasets/completed/ml_dataset.csv", parse_dates=["date", "timeout"], index_col=["date"])
 dataset = dataset.loc[dataset.erp_1m != 0]
 
 dataset = dataset.sort_values(by=["date"]) # important for cross validation
-
-# Feature scaling not needed
-
-# Encoding Categorical Features:
-# Not using industry now
 
 
 train_start = dataset.index.min() # Does Date index included in features when training a model?
@@ -67,68 +43,44 @@ test_set = dataset.loc[(dataset.index >= test_start) & (dataset.index <= test_en
 
 
 train_x = train_set[features]
-train_y = train_set["erp_1m"]
+train_y = train_set["erp_1m_direction"]
 
 test_x = test_set[features]
-test_y = test_set["erp_1m"]
+test_y = test_set["erp_1m_direction"]
 
 training_model = True
 
 if training_model:
     
-    rf_classifier = RandomForestClassifier(random_state=100)
-
-    # Define parameter space:
-    num_samples = len(train_set)
-    parameter_space = {
-        "n_estimators": [20, 50, 100, 200, 500, 1000],
-        "max_depth": [1, 2, 4, 8, 10, 15, 20, 25, 30], # max depth should be set lower I think
-        "min_samples_split": [int(num_samples*0.02),int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # I have 550,000 samples for training -> 5500
-        "min_samples_leaf": [int(num_samples*0.02),int(num_samples*0.04),int(num_samples*0.06),int(num_samples*0.08)], # 2-8% of samples 
-        "max_features": [1, 5, 8, 10, 15, 20, 30, 40, 50],
-        "class_weight": [None, "balanced_subsample"],
-        "bootstrap": [True, False],
-        "criterion": ["entropy", "gini"]
-    }
-
-    
-    t1 = pd.Series(index=train_set.index, data=train_set["timeout"])
-
-    random_search = RandomizedSearchCV(
-        estimator=rf_classifier,
-        param_distributions=parameter_space,
-        n_iter=2,
-        #  NOTE: need to update to use the date and timout columns
-        cv=PurgedKFold(n_splits=5, t1=t1), # a CV splitter object implementing a split method yielding arrays of train and test indices
-        # Need to figure out if just using built in scorers will work with the custom PurgedKFold splitter
-        scoring="accuracy", # a string or a callable to evaluate the predictions on the test set (use custom scoring function that works with PurgedKFold)
-        n_jobs=6,
-        verbose=1
+    rf_classifier = RandomForestClassifier(
+        n_estimators=1000,
+        min_weight_fraction_leaf=0.2,
+        max_features=5,
+        class_weight="balanced_subsample",
+        bootstrap=True,
+        criterion="entropy",
+        n_jobs=n_jobs,
     )
 
-    random_search.fit(train_x, train_y) # Validation is part of the test set in this case....
-    
-    print("Best Score (Accuracy): \n", random_search.best_score_)
-    print("Best Params: \n", random_search.best_params_)
-    print("Best Index: \n", random_search.best_index_)
-    print("CV Results: \n", random_search.cv_results_)
 
-    # I need a better way to visualize the performance... I think
+    rf_classifier.fit(train_x, train_y)
 
-    best_rf_classifier: RandomForestClassifier = random_search.best_estimator_
-    test_x_pred = best_rf_classifier.predict(test_x)
+    test_x_pred = rf_classifier.predict(test_x)
     accuracy = accuracy_score(test_y, test_x_pred)
     precision = precision_score(test_y, test_x_pred)
     recall = recall_score(test_y, test_x_pred)
+    f1 = f1_score(test_y, test_x_pred)
 
     print("OOS Accuracy: ", accuracy)
     print("OOS Precision: ", precision)
     print("OOS Recall: ", recall)
+    print("OOS F1 score: ", f1)
+    print("Prediction distribution: \n", pd.Series(test_x_pred).value_counts())
 
-    plot_feature_importances(best_rf_classifier, train_x.columns)
+    plot_feature_importances(rf_classifier, train_x.columns)
 
     # Store model:
-    pickle.dump(best_rf_classifier, open("./models/rf_erp_classifier_model.pickle", 'wb'))
+    pickle.dump(rf_classifier, open("./models/rf_erp_classifier_model.pickle", 'wb'))
     
 
 
