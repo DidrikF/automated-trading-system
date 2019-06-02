@@ -84,7 +84,7 @@ if training_model:
 
     grid_search.fit(train_x, train_y)
 
-    print("Best Score (Accuracy): \n", grid_search.best_score_)
+    print("Best Score (F1): \n", grid_search.best_score_)
     print("Best Params: \n", grid_search.best_params_)
     print("Best Index: \n", grid_search.best_index_)
     print("CV Results: \n")
@@ -109,7 +109,6 @@ if training_model:
 
     plot_feature_importances(best_classifier, train_x.columns)
 
-
     # T-test
     observations = sample_binary_predictor(y_pred=test_x_pred, y_true=test_y, n_samples=200, sample_size=3000)
     t_test_results = single_sample_t_test(observations, mean0=0.5, alpha=0.05)
@@ -121,7 +120,21 @@ if training_model:
 
     print("Saving Model...")
     pickle.dump(best_classifier, open("./models/rf_erp_classifier_model.pickle", 'wb'))
-    pickle.dump(best_params, open("./models/rf_erp_classifier_best_params.pickle", "wb"))
+    
+    results = {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "t_test_results": t_test_results, 
+        "sample_mean": observations.mean(),
+        "sample_std": observations.std(),
+        "prediction_distribution": pd.Series(test_x_pred).value_counts(),
+        "best_params": grid_search.best_params_,
+        "cv_results": grid_search.cv_results_,
+    }
+    
+    pickle.dump(results, open("./models/rf_erp_classifier_results.pickle", "wb"))
     
 
 
