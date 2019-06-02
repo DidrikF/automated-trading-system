@@ -285,16 +285,18 @@ class DailyBarsDataHander(DataHandler):
         Use can_trade column the date being outside min/max date index for the ticker.
         Important to check this for all tickers the strategy/portfolio/broker that should be traded.
         """
+        res = True
+
         if date is None:
             date = self.cur_date
 
         if self.is_bankrupt_or_delisted(ticker, date):
-            return False
+            return "Bankrupt or Delisted"
 
         try:
             res = self.ticker_data.loc[ticker, date]["can_trade"]
         except:
-            res = False
+            res = "Can Trade False (no sep data)"
 
         return res
 

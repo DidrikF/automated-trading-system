@@ -217,7 +217,7 @@ class Blotter():
                 returns.append(trade.total_ret)
 
         
-        return str(np.array(returns).mean()) + "%%"
+        return str(np.array(returns).mean()*100) + "%"
 
     def calculate_average_return_from_misses(self):
         returns = []
@@ -225,7 +225,7 @@ class Blotter():
             if trade.total_ret <= 0:
                 returns.append(trade.total_ret)
 
-        return str(np.array(returns).mean()) + "%%"
+        return str(np.array(returns).mean()*100) + "%"
 
     def calculate_highest_return_from_hit(self):
         returns = []
@@ -234,7 +234,7 @@ class Blotter():
                 returns.append(trade.total_ret)
 
         
-        return str(max(returns)) + "%%"
+        return str(max(returns)*100) + "%"
 
     def calculate_lowest_return_from_miss(self):
         returns = []
@@ -242,7 +242,7 @@ class Blotter():
             if trade.total_ret <= 0:
                 returns.append(trade.total_ret)
 
-        return str(min(returns)) + "%%"
+        return str(min(returns)*100) + "%"
 
     def calculate_broker_fees_per_dollar(self): # TODO: not good
         total = 0
@@ -251,16 +251,17 @@ class Blotter():
             total += trade.fill_price * abs(trade.amount)
             total_commission += trade.commission
             
-        return str(total_commission/total) + " ($ commission per $ invested and sold)"
+        return str(total_commission/total) + " ($ commission per $ invested and sold (based on fill price))"
 
 
     def calculate_broker_fees_per_stock(self):
         stocks = 0
+        commission = 0
         for trade in self.closed_trades:
             stocks += abs(trade.amount)
             commission += trade.commission
 
-        return str(commission / stocks) + " $/amount"
+        return str(commission / stocks) + " $/amount (bought and sold)"
 
 
     def count_closed_trades_by_cause(self):
@@ -276,19 +277,28 @@ class Blotter():
 
         return report
 
-    def calculate_annualized_turnover(self):
-        return "NOT IMPLEMENTED"
+    def count_unique_stocks(self):
+        tickers = set()
+        for trade in self.closed_trades:
+            tickers.add(trade.ticker)
+        return len(tickers)
+    
+    def count_trades(self):
+        return len(self.closed_trades) + len(self.active_trades)
 
-    def calculate_average_aum(self):
+    def calculate_annualized_turnover(self):
         return "NOT IMPLEMENTED"
 
     def calculate_capacity(self):
         return "NOT IMPLEMENTED"
 
     def calculate_maximum_dollar_position_size(self):
-        return "NOT IMPLEMENTED"
-
-
+        max_size = 0
+        for trade in self.closed_trades:
+            size = abs(trade.amount) * trade.fill_price
+            if size > max_size:
+                max_size = size
+        return max_size
 
 
 class Broker():
@@ -310,7 +320,6 @@ class Broker():
         self.commission_model = commission_model
         self.slippage_model = slippage_model
         self.market_data = market_data
-        self.log_path = log_path
         self.logger = logger
 
         self.annual_margin_interest_rate = annual_margin_interest_rate
@@ -365,20 +374,18 @@ class Broker():
 
     def _process_order(self, portfolio, order):
         if not self.market_data.cur_date == order.date:
-            self.logger.logr.warning("BROKER: When processing an order; it could not be completed, because order.date == market_data.cur_date.")
-            raise OrderProcessingError("BROKER: Cannot complete order, because order.date == market_data.cur_date.")
+            raise OrderProcessingError("Cannot complete order, because order.date == market_data.cur_date.")
 
         # To process an order we must be able to trade the stock, which means data is available on the date and not bankrupt or delisted.
-        if not self.market_data.can_trade(order.ticker):
-            self.logger.logr.warning("BROKER: When processing an order; it could not be completed, because market_data.can_trade() returned False for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
-            raise OrderProcessingError("BROKER: Cannot complete order, because market_data.can_trade() returned False.")
+        can_trade_res = self.market_data.can_trade(order.ticker)
+        if (isinstance(can_trade_res, str)) or (can_trade_res != True):
+            raise OrderProcessingError("Cannot complete order, because market_data.can_trade returned: {}.".format(can_trade_res))
 
         try: 
             stock_price = self.market_data.current_for_ticker(order.ticker)["open"]
         except:
             # NOTE: Should  not be possible if can_trade returns true...but still for consistency I code it this way.
-            self.logger.logr.warning("BROKER: When processing an order; market data was not available for ticker {} on date {}.".format(order.ticker, self.market_data.cur_date))
-            raise OrderProcessingError("BROKER: Cannot complete order, because market data is not available.")
+            raise OrderProcessingError("Cannot complete order, because market data is not available.")
 
 
         if order.direction == 1:
@@ -394,8 +401,7 @@ class Broker():
             try:
                 portfolio.charge(cost)
             except BalanceTooLowError as e:
-                self.logger.logr.warning("BROKER: Balance too low! Balance: {}, wanted to charge {} for the stock".format(portfolio.balance, cost))
-                raise OrderProcessingError("BROKER: Cannot complete order, with error: {}".format(e))
+                raise OrderProcessingError("Cannot complete order, with error: {}".format(e))
 
             portfolio.charge_commission(commission) # Does not fail
             
@@ -417,11 +423,9 @@ class Broker():
             try:
                 portfolio.update_margin_account(new_required_margin_account_size)
             except BalanceTooLowError as e:
-                self.logger.logr.warning("BROKER: Balance too low! Balance: {}, Margin Account: {}, wanted to update margin account to {}".format(
+                raise OrderProcessingError("Balance too low! Balance: {}, Margin Account: {}, wanted to update margin account to {}".format(
                         portfolio.balance, portfolio.margin_account, new_required_margin_account_size
-                    )
-                )
-                raise OrderProcessingError("BROKER: Cannot complete order, with error: {}".format(e))
+                    ))
 
             portfolio.charge_commission(commission) # Does not fail
 
@@ -445,10 +449,6 @@ class Broker():
         summed together like is done with portfolio.portfolio)
         """
         
-        # NOTE: Deal with bankruptices and delistings and dividends?
-        
-        closed_trades = []
-
         for _, trade in enumerate(self.blotter.active_trades):
             order = trade.order
             ticker = trade.ticker
@@ -551,6 +551,9 @@ class Broker():
                     if proceeds < 0:
                         portfolio.charge_margin_account(abs(proceeds))
                     continue
+
+
+                    
         # After all trades have been checked for any exit conditions and the active trades have been updated, the margin account size is 
         # updated. This is done every business day regardless of the active trades changing.
         # NOTE: When exiting a short, you cannot fail to adjust the margin account.
@@ -582,7 +585,8 @@ class Broker():
         """
         Handle dividends for both short and long trades.
         Long trades results in dividends being payed to the portfolios balance.
-        Short trades results in the portfolio having to pay the dividend amount.
+        Short trades results in the portfolio having to pay the dividend amount to 
+        the real owner of the stock.
         """
         dividends = self.market_data.current_dividends()
 

@@ -28,7 +28,7 @@ def sample_binary_predictor(y_pred: pd.Series, y_true: pd.Series, n_samples: int
         accuracy = sample.sum() / sample.shape[0]
         observations.append(accuracy)
     
-    return observations
+    return np.array(observations)
 
 def single_sample_t_test(observations: np.array, mean0, alpha):
     """
@@ -45,15 +45,17 @@ def single_sample_t_test(observations: np.array, mean0, alpha):
 
     #  test if t_statistic > t(alpha, n-1)
     # ppf(q, df, loc=0, scale=1)	Percent point function (inverse of cdf — percentiles).
-    t_val = t.ppf(1 - alpha, df=len(observations)-1)
+    critical_value = t.ppf(1 - alpha, df=len(observations)-1)
+    p_value = (1.0 - t.cdf(t_statistic, df=len(observations)-1))
 
-    if t_statistic > t_val:
-        return "Reject H0 with t_statistic={}, t_val={} and alpha={}".format(t_statistic, t_val, alpha)
+    if t_statistic > critical_value:
+        return "Reject H0 (mean of observations are greater) with t_statistic={}, p-value={}, critical_value={} and alpha={}".format(t_statistic, p_value, critical_value, alpha)
 
     else:
-        return "Filed to reject H0 with t_statistic={}, t_val={} and alpha={}".format(t_statistic, t_val, alpha)
-
+        return "Filed to reject H0 (mean of observation are not greater) with t_statistic={}, p-value={}, critical_value={} and alpha={}".format(t_statistic, p_value, critical_value, alpha)
 
 
 def two_sample_t_test_with_unknown_variance(observations, benchmark):
+    """ Probably wont implement """
     pass
+

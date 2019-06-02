@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection._split import _BaseKFold
+from dataset_columns import features, labels, base_cols
 """
 How to address cross validation in finance:
 1. Avoid overlapping labels in the test and training sets
@@ -36,7 +37,7 @@ def get_embargo_times(times, pct_embargo):
         embargo = pd.Series(times, index=times)
     else:
         embargo = pd.Series(times[step:], index=times[:-step])
-        embargo = embargo.append(pd.Series(times[-1], index=tiems[-step:]))
+        embargo = embargo.append(pd.Series(times[-1], index=times[-step:]))
     return embargo
 
 """
@@ -50,7 +51,7 @@ test_times = t1.loc[dt0:dt1].index
 # From the dataset we want the date and the timeout or date_of_touch 
 
 class PurgedKFold(_BaseKFold):
-    """ NOTE: Reference to Advances in Financial Machine Learning, de Prado 2018
+    """ NOTE: Reference to source of code: Advances in Financial Machine Learning, de Prado 2018
     Extend KFold class to work with labels that span intervals.
     The train is purged of observations overlapping test-label intervals.
     Test set is assumed contiguous (shuffle=False), w/o training samples in between.
@@ -84,7 +85,7 @@ class PurgedKFold(_BaseKFold):
             latest_end_date_of_observations_in_test_set = self.t1[test_indices].max() # observations starting after this date will not overlap with the test set
             # Find the first observation with a start date after the test sets last end date
             last_index_of_test_set_in_dataset = self.t1.index.searchsorted(latest_end_date_of_observations_in_test_set) # get the highest date from t1 values (observation end dates)
-            
+            print(latest_end_date_of_observations_in_test_set, last_index_of_test_set_in_dataset)
             # ensures the trining data does not overlap with the start of the test set
             # get the indexes/start dates of observations with end dates less than the start date of the train set
             train_indices = self.t1.index.searchsorted(self.t1[self.t1<=t0].index) 
@@ -115,7 +116,7 @@ def cv_score(clf, X, y, sample_weight, scoring="neg_log_loss", t1=None, cv=None,
         if scoring == "neg_log_loss":
             prob = fit.predict_proba(X.iloc[test, :])
             # need to negate because scores are evaluated such that higher numbers are better
-            score_ = - log_loss(y_true=y.iloc[test], y_pred=prob, sample_weight=sample_weight.iloc[test].values, labels=clf.classes_) 
+            score_ = -log_loss(y_true=y.iloc[test], y_pred=prob, sample_weight=sample_weight.iloc[test].values, labels=clf.classes_) 
         else: # accuracy_score
             pred = fit.predict(X.iloc[test, :])
             score_ = accuracy_score(y_true=y.iloc[test], y_pred=pred, sample_weight=sample_weight.iloc[test].values)
@@ -129,3 +130,48 @@ def purged_cv_score(ground_truth, predictions):
     May not be needed
     """
     pass
+
+
+if __name__ == "__main__":
+    print("Reading inn Dataset")
+    dataset = pd.read_csv("./dataset_development/datasets/completed/ml_dataset.csv", parse_dates=["date", "timeout"], index_col="date")
+    dataset = dataset.loc[dataset.primary_label_tbm != 0]
+    dataset = dataset.sort_values(by="date")
+    print("Labels After dropping zero labels")
+    print(dataset["primary_label_tbm"].value_counts())
+
+    """
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
+        print(dataset.isnull().sum())
+        print(dataset.columns)
+    """
+
+
+    # train_start = dataset.index.min()
+    train_start = pd.to_datetime("2010-01-01")
+    train_end = pd.to_datetime("2012-01-01")
+
+    test_start = pd.to_datetime("2012-03-01")
+    # test_end = dataset.index.max()
+    test_end = pd.to_datetime("2013-01-01")
+
+    train_set = dataset.loc[(dataset.index >= train_start) & (dataset.index < train_end)] # NOTE: Use for labeling and constructing new train/test sets
+    test_set = dataset.loc[(dataset.index >= test_start) & (dataset.index <= test_end)] # NOTE: Use for labeling and constructing new train/test sets
+
+    print("Shapes: ", train_set.shape, test_set.shape)
+
+    train_x = train_set[features]
+    train_y = train_set["primary_label_tbm"]
+
+    test_x = test_set[features]
+    test_y = test_set["primary_label_tbm"]
+
+    t1 = pd.Series(index=train_set.index, data=train_set["timeout"])
+
+    kfold = PurgedKFold(n_splits=3, t1=t1)
+
+    iterator = kfold.split(X=train_x)
+    print(next(iterator))
+    print(next(iterator))
+    print(next(iterator))
+    print(next(iterator))

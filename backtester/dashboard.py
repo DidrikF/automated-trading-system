@@ -48,6 +48,10 @@ if __name__ == "__main__":
     backtest["broker"]["all_trades"]["close_date"] = pd.to_datetime(backtest["broker"]["all_trades"]["close_date"])
     backtest["broker"]["all_trades"]["timeout"] = pd.to_datetime(backtest["broker"]["all_trades"]["timeout"])
 
+    # ML model results
+    ml_model_results = pickle.load(open("../models/ml_strategy_models_results.pickle", "rb"))
+    print(ml_model_results)
+
     # list_of_files = glob.glob('./logs/*') # * means all if need specific format then *.csv
     # latest_log_file = max(list_of_files, key=os.path.getctime)
     # with open(latest_log_file, "r") as f:
@@ -336,9 +340,19 @@ if __name__ == "__main__":
         # SUMMARY STATISTICS
         html.H2(children="Summary Statistics", style={'textAlign': 'center'}),
         html.Div(children=[
-            html.P("Total Return: {}%".format(round(backtest["stats"]["total_return"]*100, 4))),    
-            html.P("S&P500 Return: {}%  ".format(round(snp500["return"].iloc[-1]*100, 4))),    
+            html.P("Total Return: {}%".format(round(backtest["stats"]["total_return"]*100, 4))), 
+            html.P("Annualized Rate of Return: {}  ".format(backtest["stats"]["annualized_rate_of_return"])),
+            html.P("Portfolio Standard Deviation of Returns: {} ".format(backtest["stats"]["std_portfolio_returns"])),
+            html.P("S&P500 Return: {}%  ".format(round(snp500["return"].iloc[-1]*100, 4))),
+            html.P("Annualized Rate of S&P500 Return: {}  ".format(backtest["stats"]["annualized_rate_of_index_return"])),
+            html.P("S&P500 Standard Deviation of Returns: {} ".format(backtest["stats"]["std_snp500_returns"])),
+
+            html.P("Normality of Returns Test Results: {}  ".format(backtest["stats"]["normality_test_result"])),
+            html.P("Sharpe Ratio: {}  ".format(backtest["stats"]["sharpe_ratio"])),
+            html.P("T-test on Excess Return: {}  ".format(backtest["stats"]["t_test_on_excess_return"])),
+            html.P("Correlation to Underlying (S&P500): {}  ".format(backtest["stats"]["correlation_to_underlying"])),   
             
+
             html.H4(children="Received Money Related Stats"),
             html.Div(children=[
                 html.P("Total Dividends Received: {}  ".format(backtest["stats"]["total_dividends"][0])),
@@ -365,10 +379,9 @@ if __name__ == "__main__":
                 html.P("Total Return: {}  ".format(backtest["stats"]["total_return"])),
                 html.P("Annualized Turover: {}  ".format(backtest["stats"]["annualized_turnover"])),
 
-                html.P("Normality Test Results: {}  ".format(backtest["stats"]["normality_test_result"])),
-                html.P("Sharpe Ratio: {}  ".format(backtest["stats"]["sharpe_ratio"])),
-                html.P("T-test on Excess Return: {}  ".format(backtest["stats"]["t_test_on_excess_return"])),
-                html.P("Correlation to Underlying (S&P500): {}  ".format(backtest["stats"]["correlation_to_underlying"])),
+                html.P("Number of Unique Stocks: {}  ".format(backtest["stats"]["number_of_unique_stocks"])),
+                html.P("Number of Trades: {}  ".format(backtest["stats"]["number_of_trades"])),
+
                 html.P("Ratio of Longs: {}  ".format(backtest["stats"]["ratio_of_longs"])),
                 html.P("PnL: {}  ".format(backtest["stats"]["pnl"])),
                 html.P("PnL from Short Positions: {}  ".format(backtest["stats"]["pnl_short_positions"])),
@@ -387,19 +400,20 @@ if __name__ == "__main__":
                 html.P("Closed trade counts by cause: {}  ".format(backtest["stats"]["closed_trades_by_cause"])),
 
             ]),
-            # html.H4(children="ML Model Stats (2012-03-01 - 2019-02-01)"),
-            # html.Div(children=[
-            #     html.P("Side Model Accuracy: {}  ".format(ml_model_results["side_model"]["accuracy"])),
-            #     html.P("Side Model Precision: {}  ".format(ml_model_results["side_model"]["precision"])),
-            #     html.P("Side Model Recall: {}   ".format(ml_model_results["side_model"]["recall"])),
-            #     html.P("Side Model F1: {}   ".format(ml_model_results["side_model"]["f1"])),
+            html.H4(children="ML Model Stats (2012-03-01 - 2019-02-01)"),
+            html.Div(children=[
+                html.P("Side Model Accuracy: {}  ".format(ml_model_results["side_model"]["accuracy"])),
+                html.P("Side Model Precision: {}  ".format(ml_model_results["side_model"]["precision"])),
+                html.P("Side Model Recall: {}   ".format(ml_model_results["side_model"]["recall"])),
+                html.P("Side Model F1: {}   ".format(ml_model_results["side_model"]["f1"])),
+                html.P("Certainty Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["accuracy"])),
+                html.P("Certainty Model Precision: {}  ".format(ml_model_results["certainty_model"]["precision"])),
+                html.P("Certainty Model Recall: {}  ".format(ml_model_results["certainty_model"]["recall"])),
+                html.P("Certainty Model F1: {}  ".format(ml_model_results["certainty_model"]["f1"])),
+                html.P("Statistical Significance of Models: {}  ".format(backtest["stats"]["statistical_significance_of_classification_models"])),
 
-
-            #     html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["accuracy"])),
-            #     html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["precision"])),
-            #     html.P("Side Model Accuracy: {}  ".format(ml_model_results["certainty_model"]["recall"])),
-            #     html.P("Side Model F1: {}  ".format(ml_model_results["certainty_model"]["f1"])),
-            # ])
+                
+            ])
         ], style={
             'textAlign': 'center',
         }),

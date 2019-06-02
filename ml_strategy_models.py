@@ -46,7 +46,6 @@ if __name__ == "__main__":
         print(dataset.columns)
     """
 
-
     train_start = dataset.index.min()
     train_end = pd.to_datetime("2012-01-01")
 
@@ -73,7 +72,7 @@ if __name__ == "__main__":
     if training_model:
         side_classifier = RandomForestClassifier(
             n_estimators=1000,
-            min_weight_fraction_leaf=0.2,
+            min_weight_fraction_leaf=0.2, # 0,1
             max_features=5,
             class_weight="balanced_subsample",
             bootstrap=True,
@@ -210,8 +209,6 @@ if __name__ == "__main__":
     print("OOS Precision: ", certainty_precision)
     print("OOS Recall: ", certainty_recall)
     print("OOS F1 score: ", certainty_f1_score)
-
-
 
     results = {
         "side_model": {

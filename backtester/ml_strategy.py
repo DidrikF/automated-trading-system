@@ -124,7 +124,7 @@ class MLStrategy(Strategy):
         # recall = recall_score(test_y, test_x_pred)
         pass
 
-    def generate_signals(self, cur_date):
+    def generate_signals(self, cur_date, market_data):
         """
         Only generate signals on days where we rebalance. By controlling emition of signals, one controls 
         invocation of other strategy methods.
@@ -151,6 +151,9 @@ class MLStrategy(Strategy):
             signal_features = features_data_long.append(feature_data_short, sort=True)
 
             for date, features in signal_features.iterrows():
+                can_trade_res = market_data.can_trade(features["ticker"])
+                if (isinstance(can_trade_res, str)) or (can_trade_res != True): continue
+
                 signal = Signal(
                     signal_id=features["signal_id"],
                     ticker=features["ticker"], 
@@ -254,7 +257,7 @@ class MLStrategy(Strategy):
                 signal=signal,
                 take_profit=signal.ewmstd * self.ptSl[0],
                 stop_loss=signal.ewmstd * self.ptSl[1], # Can be set to stop out early
-                timeout=signal.timeout,
+                timeout=date+relativedelta(months=1), # signal.timeout
             )
             orders.append(order)
 
@@ -292,7 +295,7 @@ class MLStrategy(Strategy):
             
             else:
                 break
-        print("Top Signals Directions: ", [signal.direction for signal in top_signals])
+        # print("Top Signals Directions: ", [signal.direction for signal in top_signals])
 
         return top_signals
 

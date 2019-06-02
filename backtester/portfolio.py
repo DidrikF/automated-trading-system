@@ -73,7 +73,7 @@ class Portfolio(PortfolioBase):
     # ___________ STRATEGY RELATED _________________
 
     def generate_signals(self):
-        signals_event =  self.strategy.generate_signals(self.market_data.cur_date)
+        signals_event =  self.strategy.generate_signals(self.market_data.cur_date, self.market_data)
         if signals_event is not None:
             for signal in signals_event.data:
                 if signal.signal_id in self.seen_signal_ids:
@@ -300,6 +300,17 @@ class Portfolio(PortfolioBase):
 
         return portfolio_value
     
+    def calculate_aum(self):
+        aum = 0
+        for trade in self.broker.blotter.active_trades:
+            try:
+                daily_data = self.market_data.current_for_ticker(trade.ticker)
+            except MarketDataNotAvailableError:
+                return None
+            
+            aum += abs(trade.amount * daily_data["close"])
+
+        return aum
 
     def get_monthly_returns(self):
         port_val = self.portfolio_value.copy(deep=True)
@@ -351,11 +362,17 @@ class Portfolio(PortfolioBase):
 
         return (mean - rf) / std
 
-
     def calculate_correlation_of_monthly_returns(self):
         returns = self.get_monthly_returns()
-
         return returns["portfolio"].corr(returns["snp500"])
+
+    def calculate_std_of_portfolio_returns(self):
+        returns = self.get_monthly_returns()
+        return returns["portfolio"].std()
+
+    def calculate_std_of_snp500_returns(self):
+        returns = self.get_monthly_returns()
+        return returns["snp500"].std()
 
     def calculate_statistical_significance_of_outperformance_single_sample(self, mean0: float=0, alpha: float=0.05):
         """
@@ -381,7 +398,51 @@ class Portfolio(PortfolioBase):
         else:
             return "Filed to reject H0 with t_statistic={}, p-value={}, critical_value={} and alpha={}".format(t_statistic, p_value, critical_value, alpha)
 
+    def calculate_average_aum(self):
+        return self.portfolio_value["aum"].mean()
 
+    def calculate_statistical_significance_of_classification_models_single_sample(self):
+        """
+        probably best to have at the end of training...
+        """
+        """
+        side_observations = sample_binary_predictor(y_pred=test_x_pred, y_true=test_y, n_samples=600, sample_size=5000)
+        side_model_t_test_results = single_sample_t_test(observations, mean0=0.5, alpha=0.05)
+
+        
+        results = {
+            "side_model": side_model_t_test_results,
+            "certainty_model": certainty_model_t_test_results,
+        }
+        """
+
+        return "NOT IMPLEMENTED"
+
+    def calculate_annulized_rate_of_return(self, start_date, end_date): 
+        if (start_date < self.market_data.start) or (end_date > self.market_data.cur_date):
+            raise ValueError("Attempted to calculate return over period where the start date was lower\
+                 than backtest's start date or the end date was higher than the current date.")
+
+        start_value = self.portfolio_value.loc[start_date, "total"]
+        end_value = self.portfolio_value.loc[end_date, "total"]
+        days = int((end_date - start_date).days)
+        n = days / 365
+
+        ar = (end_value/start_value + 1)**(1/n) - 1
+        return ar 
+
+    def calculate_annulized_rate_of_index_return(self, start_date, end_date):
+        if (start_date < self.market_data.start) or (end_date > self.market_data.cur_date):
+            raise ValueError("Attempted to calculate return over period where the start date was lower\
+                 than backtest's start date or the end date was higher than the current date.")
+        snp500 = self.broker.market_data.get_ticker_data("snp500")
+        start_value = snp500.loc[start_date, "close"]
+        end_value = snp500.loc[end_date, "close"]
+        days = int((end_date - start_date).days)
+        n = days / 365
+
+        ar = (end_value/start_value + 1)**(1/n) - 1
+        return ar 
 
     def calculate_broker_fees_per_turnover(self):
         return "NOT IMPLEMENTED"
@@ -394,7 +455,7 @@ class Portfolio(PortfolioBase):
         market_value_of_trades = self.calculate_market_value_of_trades() # NOTE: CHECK IF CORRECT
         self.portfolio_value.loc[self.market_data.cur_date, "market_value"] = market_value_of_trades
         self.portfolio_value.loc[self.market_data.cur_date, "total"] = self.balance + self.margin_account + market_value_of_trades
-
+        self.portfolio_value.loc[self.market_data.cur_date, "aum"] = self.calculate_aum()
 
     def order_history_to_df(self):
         df = pd.DataFrame(columns=["order_id", "date", "ticker", "amount", "direction", "stop_loss", "take_profit", "time_out", "type", "signal_id"]) # SET COLUMNS, so sorting and set index does not fail

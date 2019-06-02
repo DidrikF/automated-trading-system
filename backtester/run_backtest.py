@@ -38,11 +38,12 @@ from simple_strategies import RandomLongShortStrategy
 
 if __name__ == "__main__":
     start_date = pd.to_datetime("2012-03-01")
-    end_date = pd.to_datetime("2012-07-01")
+    end_date = pd.to_datetime("2019-02-01")
     # end_date = pd.to_datetime("2019-02-01")
 
     log_path = "./logs/log_{}".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     os.mkdir(log_path)
+    
     logger = Logger(log_path + "/backtest.log")
 
     print("Instantiating Market Data Handler")
@@ -71,7 +72,6 @@ if __name__ == "__main__":
         market_data_handler=market_data_handler, 
         start=start_date,  # REDUNDANT
         end=end_date, # REDUNDANT
-        log_path=log_path,
         output_path="./backtests",
         initialize_hook=initialize,
         handle_data_hook=handle_data,
@@ -100,17 +100,17 @@ if __name__ == "__main__":
     )
 
     # NOTE: Need to get from aws compute node or train locally with parameters found
-    side_classifier = pickle.load(open("../models/simple_side_classifier.pickle", "rb"))
-    certainty_classifier = pickle.load(open("../models/simple_certainty_classifier.pickle", "rb"))
+    side_classifier = pickle.load(open("../models/side_classifier.pickle", "rb"))
+    certainty_classifier = pickle.load(open("../models/certainty_classifier.pickle", "rb"))
 
     strategy = MLStrategy(
-        rebalance_weekdays=[0,1,2,3,4,5], 
+        rebalance_weekdays=[0,1,2,3,4], 
         side_classifier=side_classifier, 
         certainty_classifier=certainty_classifier,
-        ptSl=[1, -0.8],
+        ptSl=[1, -0.5],
         feature_handler=feature_handler,
         features=features,    
-        initial_margin_requirement=0.5, 
+        initial_margin_requirement=0.50, 
         logger=logger
         # accepted_signal_age: dt.relativedelta=relativedelta(days=7)
     )
@@ -118,10 +118,10 @@ if __name__ == "__main__":
     strategy.set_order_restrictions(
         max_position_size=0.05, # 0.05
         max_positions=30, # 30
-        minimum_balance=10000, # 1% of initial balance?
-        max_percent_to_invest_each_period=0.25, # 0.33
-        max_orders_per_period=7, # 10
-        min_order_size_limit=5000, # Dollar amount
+        minimum_balance=5000, # 0,5% of initial balance?
+        max_percent_to_invest_each_period=0.33, # 0.33
+        max_orders_per_period=10, # 10
+        min_order_size_limit=10000, # Dollar amount
         num_short_positions=0,
         volume_limit=0.1
     )

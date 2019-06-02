@@ -15,8 +15,6 @@ from event import EventQueue, Event
 from data_handler import DataHandler
 from broker import Broker
 from portfolio import Portfolio
-from metrics import calculate_frequency_of_bets, calculate_average_holding_period, calculate_annualized_turnover
-
 
 
 
@@ -237,7 +235,7 @@ class Backtester(object):
         # self.stats["sharpe_ratio"] = None # https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551
         
                 
-                # Cost Related:
+        # Cost Related:
         self.stats["total_slippage"] = self.portfolio.costs["slippage"].sum(),
         self.stats["total_commission"] = self.portfolio.costs["commission"].sum(),
         self.stats["total_charged"] = self.portfolio.costs["charged"].sum(),
@@ -254,29 +252,36 @@ class Backtester(object):
         # Other Metrics
         self.stats["end_value"] = self.portfolio.calculate_portfolio_value(),
         self.stats["total_return"] = self.portfolio.calculate_return_over_period(self.start, self.end)
-
+        self.stats["annualized_rate_of_return"] = self.portfolio.calculate_annulized_rate_of_return(self.start, self.end)
+        self.stats["annualized_rate_of_index_return"] = self.portfolio.calculate_annulized_rate_of_index_return(self.start, self.end)
+        
 
         # NOTE: Add all backtest statistic calculates to here. Probably contain calculations in their own functions (under utils.metrics ?)
         self.stats["normality_test_result"] = self.portfolio.normality_test_on_returns()
         self.stats["sharpe_ratio"] = self.portfolio.calculate_sharpe_ratio()
-    
+        self.stats["std_portfolio_returns"] = self.portfolio.calculate_std_of_portfolio_returns()
+        self.stats["std_snp500_returns"] = self.portfolio.calculate_std_of_snp500_returns()
+        self.stats["correlation_to_underlying"] = self.portfolio.calculate_correlation_of_monthly_returns()
+        self.stats["t_test_on_excess_return"] = self.portfolio.calculate_statistical_significance_of_outperformance_single_sample()
+
+        self.stats["statistical_significance_of_classification_models"] = self.portfolio.calculate_statistical_significance_of_classification_models_single_sample()
+
         self.stats["time_range"] = [self.start, self.end]
         self.stats["ratio_of_longs"] = self.broker.blotter.calculate_ratio_of_longs()
-        self.stats["correlation_to_underlying"] = self.portfolio.calculate_correlation_of_monthly_returns()
-        self.stats["t_test_on_excess_return"] = self.portfolio.calculate_statistical_significance_of_outperformance()
-
         self.stats["pnl"] = self.portfolio.portfolio_value["total"].iloc[-1] - self.portfolio.initial_balance
         self.stats["hit_ratio"] = self.broker.blotter.calculate_hit_ratio()
 
         # NOTE: Not implemented
-        self.stats["average_aum"] = self.broker.blotter.calculate_average_aum()
+        self.stats["average_aum"] = self.portfolio.calculate_average_aum()
         self.stats["capacity"] = self.broker.blotter.calculate_capacity()
         self.stats["maximum_dollar_position_size"] = self.broker.blotter.calculate_maximum_dollar_position_size()
-
+        
         self.stats["frequency_of_bets"] = self.broker.blotter.calculate_frequency_of_bets()
         self.stats["average_holding_period"] = self.broker.blotter.calculate_average_holding_period()
         self.stats["pnl_short_positions"] = self.broker.blotter.calculate_pnl_short_positions()
         self.stats["pnl_long_positions"] = self.broker.blotter.calculate_pnl_long_positions()
+        self.stats["number_of_unique_stocks"] = self.broker.blotter.count_unique_stocks()
+        self.stats["number_of_trades"] = self.broker.blotter.count_trades()
 
         self.stats["average_return_from_hits"] = self.broker.blotter.calculate_average_return_from_hits()
         self.stats["average_return_from_misses"] = self.broker.blotter.calculate_average_return_from_misses()
