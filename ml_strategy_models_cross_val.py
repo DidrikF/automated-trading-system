@@ -290,7 +290,7 @@ if __name__ == "__main__":
             "cv_results": grid_search.cv_results_,
             "best_params": grid_search.best_params_,
             "test_labels": test_y.value_counts(),
-            "pred_labels": test_x_pred.value_counts(),
+            "pred_labels": pd.Series(data=test_x_pred).value_counts(),
         },
         "certainty_model": {
             "accuracy": certainty_accuracy,
@@ -298,7 +298,7 @@ if __name__ == "__main__":
             "recall": certainty_recall,
             "f1": certainty_f1,
             "test_labels": certainty_test_y.value_counts(),
-            "pred_labels": certainty_test_x_pred.value_counts(),
+            "pred_labels": pd.Series(data=certainty_test_x_pred).value_counts(),
         }
     }
     print("Results: ", results)
