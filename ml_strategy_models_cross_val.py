@@ -87,9 +87,9 @@ if __name__ == "__main__":
         # num_samples = len(train_set)
         # many estimators with few features, early stopping and limited depth
         parameter_space = {
-            "n_estimators": [200, 500, 1000], # [50, 100, 200, 500, 1000] 
-            "min_weight_fraction_leaf": [0.10, 0.15, 0.20], # [0.05, 0.10, 0.20] early stopping
-            "max_features": [5, 10], # [3,5,10]
+            "n_estimators": [50, 100, 200], # [50, 100, 200, 500, 1000] 
+            "min_weight_fraction_leaf": [0.20, 0.25, 0.30], # [0.05, 0.10, 0.20] early stopping
+            "max_features": [3, 5], # [3,5,10]
             "class_weight": ["balanced_subsample"],
             "bootstrap": [True], # , False
             "criterion": ["entropy"] # , "gini"

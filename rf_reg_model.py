@@ -17,6 +17,7 @@ from cross_validation import PurgedKFold, cv_score
 from dataset_columns import features, labels, base_cols
 from performance_measurement import zero_benchmarked_r_squared
 
+from model_and_performance_visualization import plot_feature_importances
 
 n_jobs = 64
 
@@ -76,19 +77,35 @@ if training_model:
     )
 
     grid_search.fit(train_x, train_y)
-
+    best_estimator = grid_search.best_estimator_
     # Measure performance
     test_x_pred = grid_search.predict(test_x)
     r_squared = zero_benchmarked_r_squared(test_x_pred, test_y)
-    
+    r2 = r2_score(test_x_pred, test_y)
+    mse = mean_squared_error(test_x_pred, test_y)
+    mae = mean_absolute_error(test_x_pred, test_y)
+
     print("OOS Zero Benchmarked R Squared: ", r_squared)
-    print("OOS R Squared: ", r2_score(test_x_pred, test_y))
-    print("OOS MSE: ", mean_squared_error(test_x_pred, test_y))
-    print("OOS MAE: ", mean_absolute_error(test_x_pred, test_y))
+    print("OOS R Squared: ", r2)
+    print("OOS MSE: ", mse)
+    print("OOS MAE: ", mae)
+
+    plot_feature_importances(best_estimator, train_x.columns)
 
     # Save Best Model
-    pickle.dump(grid_search.best_estimator_, open("./models/rf_erp_regression_model.pickle", 'wb'))
+    pickle.dump(best_estimator, open("./models/rf_erp_regression_model.pickle", 'wb'))
 
+    results = {
+        "r_squared": r_squared,
+        "mse": mse,
+        "mae": mae,
+        "r2": r2,
+        "best_params": grid_search.best_params_,
+        "cv_results": grid_search.cv_results_,
+    }
+    
+    pickle.dump(results, open("./models/rf_erp_classifier_results.pickle", "wb"))
+    
 
 
 """
