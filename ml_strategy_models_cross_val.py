@@ -289,15 +289,21 @@ if __name__ == "__main__":
             "f1": side_f1,
             "cv_results": grid_search.cv_results_,
             "best_params": grid_search.best_params_,
+            "test_labels": test_y.value_counts(),
+            "pred_labels": test_x_pred.value_counts(),
         },
         "certainty_model": {
             "accuracy": certainty_accuracy,
             "precision": certainty_precision,
             "recall": certainty_recall,
             "f1": certainty_f1,
+            "test_labels": certainty_test_y.value_counts(),
+            "pred_labels": certainty_test_x_pred.value_counts(),
         }
     }
+    print("Results: ", results)
     print("Saving Results...")
+
     pickle.dump(results, open("./models/ml_strategy_models_results.pickle", "wb"))
 
     print("DONE!")
