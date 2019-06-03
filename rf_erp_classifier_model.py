@@ -25,7 +25,7 @@ from performance_measurement import sample_binary_predictor, single_sample_t_tes
 from model_and_performance_visualization import plot_feature_importances
 
 # NOTE: Train on own computer to print feature importances
-n_jobs = 4
+n_jobs = 5
 
 # DATASET PREPARATION
 dataset = pd.read_csv("./dataset_development/datasets/completed/ml_dataset.csv", parse_dates=["date", "timeout"], index_col=["date"])
@@ -56,7 +56,7 @@ if training_model:
     rf_classifier = RandomForestClassifier(random_state=100, verbose=True, n_jobs=2)
 
     parameter_space = {
-        "n_estimators": [100, 200, 500], # [100, 200, 500] # looks like 1000 is too much, it overfits
+        "n_estimators": [200, 500], # [100, 200, 500] # looks like 1000 is too much, it overfits
         "min_weight_fraction_leaf": [0.05, 0.10, 0.20], # [0.05, 0.10, 0.20] early stopping
         "max_features": [3, 5, 7], # 1, 5, 10, 15, 20, 30 may even push it??
         "class_weight": ["balanced_subsample"],
