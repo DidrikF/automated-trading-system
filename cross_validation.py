@@ -10,51 +10,11 @@ How to address cross validation in finance:
     in the pursuit of higher out of sample performance.
 """
 
-def get_train_times(t1, test_times):
-    """ NOTE: Reference to Advances in Financial Machine Learning, de Prado 2018
-    This function implements purging of observations from the training set. If the testing set is contigonous,
-    in the sense that no training observations occure between the first and last testing observation, then purging can be accelerated: 
-    The object test_times can ve a pandas serries with a single item, spanning the entire testing set.
-    Given test_times, find the time of the training observations.
-    - t1.index: Time when the observation started.
-    - t1.value: Time when the observation ended.
-    - testTimes: Times of testing observations
-    """
-    train_set = t1.copy(deep=True)
-    for test_start, test_end in test_times.iterrows(): 
-        drop_df0 = train_set[(test_start<=train_set.index) & (train_set.index <= test_end)].index # Training observations starts within test
-        drop_df1 = train_set[(test_start<=train_set) & (test_end<=train_set)].index # Training observation ends within test_test
-        drop_df2 = train_set[(train_set.index<=test_start) & (test_end<=train_set)].index # training observations envelopes test
-        train_set = train_set.drop(drop_df0.union(drop_df1).union(drop_df2))
-    return train_set
-
-
-def get_embargo_times(times, pct_embargo):
-    # NOTE: Reference to Advances in Financial Machine Learning, de Prado 2018s
-    # Get embargo time for each bar
-    step = int(times.shape[0]*pct_embargo)
-    if step == 0:
-        embargo = pd.Series(times, index=times)
-    else:
-        embargo = pd.Series(times[step:], index=times[:-step])
-        embargo = embargo.append(pd.Series(times[-1], index=times[-step:]))
-    return embargo
-
-"""
-# Exmaple useage:
-
-test_times = pd.Series(embargo[dt1], index=dt0) # Include embargo before purge
-train_times = get_train_times(t1, test_times)
-test_times = t1.loc[dt0:dt1].index
-
-"""
-# From the dataset we want the date and the timeout or date_of_touch 
 
 class PurgedKFold(_BaseKFold):
-    """ NOTE: Reference to source of code: Advances in Financial Machine Learning, de Prado 2018
-    Extend KFold class to work with labels that span intervals.
-    The train is purged of observations overlapping test-label intervals.
-    Test set is assumed contiguous (shuffle=False), w/o training samples in between.
+    """
+    Code from: "Advances in Financial Machine Learning" by López de Prado (2018)   
+    Class implementing purged k-fold cross-validation
     """
     def __init__(self, n_splits=3, t1=None, pct_embargo=0.):
         if not isinstance(t1, pd.Series):
@@ -63,7 +23,7 @@ class PurgedKFold(_BaseKFold):
         self.t1 = t1
         self.pct_embargo = pct_embargo
 
-    # X is basically the dataset, y is the desired labels 
+    # X is the dataset, y is the desired labels 
     def split(self, X, y=None, groups=None):
         """
         Splits observations into train and test sets and applies purging and embargoing.
@@ -97,7 +57,6 @@ class PurgedKFold(_BaseKFold):
     
 
 
-
 def cv_score(clf, X, y, sample_weight, scoring="neg_log_loss", t1=None, cv=None, cv_gen=None, pct_embargo=None):
     """
     Cross validation scoring function
@@ -125,11 +84,45 @@ def cv_score(clf, X, y, sample_weight, scoring="neg_log_loss", t1=None, cv=None,
     return np.array(score_)
 
 
-def purged_cv_score(ground_truth, predictions):
+def get_train_times(t1, test_times):
     """
-    May not be needed
+    Code from: "Advances in Financial Machine Learning" by López de Prado (2018)
+    
+    This function implements purging of observations from the training set. If the testing set is contigonous,
+    in the sense that no training observations occure between the first and last testing observation, then purging can be accelerated: 
+    The object test_times can ve a pandas serries with a single item, spanning the entire testing set.
+    Given test_times, find the time of the training observations.
+    - t1.index: Time when the observation started.
+    - t1.value: Time when the observation ended.
+    - testTimes: Times of testing observations
     """
-    pass
+    train_set = t1.copy(deep=True)
+    for test_start, test_end in test_times.iterrows(): 
+        drop_df0 = train_set[(test_start<=train_set.index) & (train_set.index <= test_end)].index # Training observations starts within test
+        drop_df1 = train_set[(test_start<=train_set) & (test_end<=train_set)].index # Training observation ends within test_test
+        drop_df2 = train_set[(train_set.index<=test_start) & (test_end<=train_set)].index # training observations envelopes test
+        train_set = train_set.drop(drop_df0.union(drop_df1).union(drop_df2))
+    return train_set
+
+
+def get_embargo_times(times, pct_embargo):
+    # Code from: "Advances in Financial Machine Learning" by López de Prado (2018)
+    step = int(times.shape[0]*pct_embargo)
+    if step == 0:
+        embargo = pd.Series(times, index=times)
+    else:
+        embargo = pd.Series(times[step:], index=times[:-step])
+        embargo = embargo.append(pd.Series(times[-1], index=times[-step:]))
+    return embargo
+
+"""
+# Exmaple useage:
+
+test_times = pd.Series(embargo[dt1], index=dt0) # Include embargo before purge
+train_times = get_train_times(t1, test_times)
+test_times = t1.loc[dt0:dt1].index
+
+"""
 
 
 if __name__ == "__main__":
@@ -145,7 +138,6 @@ if __name__ == "__main__":
         print(dataset.isnull().sum())
         print(dataset.columns)
     """
-
 
     # train_start = dataset.index.min()
     train_start = pd.to_datetime("2010-01-01")

@@ -10,31 +10,19 @@ from helpers.helpers import get_most_up_to_date_10k_filing, get_calendardate_x_q
 
 
 def add_industry_sf1_features(sf1_art, metadata):
-    # print("add_industry_sf1_features: ", sf1_art.ticker.unique(), sf1_art.index.min(), sf1_art.index.max())
-    
     """
-    NOTE:  sf1_art is forward filled and has a calendardate index (is this true?)
-    NOTE: sf1_art contian data for the same industry (over a specific date rage MAYBE)
-    NOTE: sf1_art has a calendardate index
-    NOTE: Requires sf1_features.py to be executed first, and that its output is given to this function.
-    
     Returns dataframe with features requiring calculations over whole industries:
-        bm_ia, cfp_ia, chatoia, mve_ia, pchcapex_ia, chpmia, herf, ms and ps
-    """
+    bm_ia, cfp_ia, chatoia, mve_ia, pchcapex_ia, chpmia, herf, ms and ps
 
+    NOTE: sf1_art is forward filled and has a calendardate index
+    NOTE: Requires sf1_features.py to be executed first, and that its output is given to this function.
+    """
 
     if isinstance(metadata, pd.DataFrame) == True:
         metadata = metadata.iloc[0]
 
-
-    # sf1_art = forward_fill_gaps(sf1_art, 3) # I NEED TO DO THIS TO BE CONSISTENT WITH sf1_features.py # NOTE: is this true
-
-    # sf1_art_index_snapshot = sf1_art.index
-
     sf1_art = sf1_art.reset_index() # I need this, because there are several companies in sf1_art (duplicate calendardates in index)
     
-    # sf1_art = sf1_art.drop_duplicates(subset=["calendardate"], keep="first")
-
     industry_means = pd.DataFrame()
 
     for index_cur, art_row_cur in sf1_art.iterrows():
@@ -143,10 +131,6 @@ def add_industry_sf1_features(sf1_art, metadata):
     # Reset index
     sf1_art = sf1_art.set_index("calendardate")
 
-    # Do I need to downsample??
-    
-    # sf1_art = sf1_art.loc[sf1_art_index_snapshot]
-
     return sf1_art # This is still forward filled, but its ok, When i merge this with sep_sampled, I only take out the correct rows
 
 
@@ -194,22 +178,9 @@ def get_ms(art_row_cur: pd.Series, industry_means: pd.DataFrame, caldate_cur: pd
 
 
 
-if __name__ == "__main__":
-    
-    # import mp engine, read metadata and sf1 and set datekey as index
+if __name__ == "__main__":    
     sf1_art = pd.read_csv("./datasets/testing/sf1_art.csv", index_col="datekey", parse_dates=["datekey", "calendardate"])
     metadata = pd.read_csv("./datasets/sharadar/SHARADAR_TICKERS_METADATA.csv", index_col="ticker", parse_dates=["firstpricedate"])
-
-    # call mp engine and split on ticker
-
-    # Drop unused columns
-
-    # update all code to use the index
-
-    # update code where reindexing, filling and shifting is a better and simpler solution
-
-    # write function to detect missing data (and maybe fix it, may be simpler and less brittle code if I do so)
-
 
     sf1_art["datekey"] = pd.to_datetime(sf1_art["datekey"])
     sf1_art["calendardate"] = pd.to_datetime(sf1_art["calendardate"])

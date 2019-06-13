@@ -8,9 +8,7 @@ from ..sep_features import add_weekly_and_12m_stock_returns,\
         add_equally_weighted_weekly_market_returns,\
         dividend_adjusting_prices_backwards, dividend_adjusting_prices_forwards
 
-
 sep = None
-
 
 @pytest.fixture(scope='module', autouse=True)
 def setup():
@@ -127,7 +125,7 @@ def test_add_weekly_and_12m_stock_returns():
 def test_add_equally_weighted_weekly_market_returns():
     global sep
 
-    # First calculate weekly returns for each ticker for all dates, done in previous test
+    # First calculate weekly returns for each ticker for all dates (done in previous test)
 
     sep = pandas_mp_engine(callback=add_equally_weighted_weekly_market_returns, atoms=sep, data=None, \
         molecule_key='sep', split_strategy= 'date', \

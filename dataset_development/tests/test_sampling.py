@@ -59,7 +59,7 @@ def test_extend_sep_for_sampling():
     """
     # Tests for AAPL
     # date_1998_12_23 = pd.to_datetime("1998-12-23") 
-    #date_1999_01_04 = pd.to_datetime("1999-01-04") # datekey should be: 1998-12-23
+    # date_1999_01_04 = pd.to_datetime("1999-01-04") # datekey should be: 1998-12-23
     # date_1999_02_05 = pd.to_datetime("1999-02-05") # datekey should be: 1999-12-23
     # date_1999_02_08 = pd.to_datetime("1999-02-08") # datekey should be: 1999-02-08
     # date_1999_02_11 = pd.to_datetime("1999-02-11") # datekey should be: 1999-02-08

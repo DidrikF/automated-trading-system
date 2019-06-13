@@ -25,7 +25,7 @@ sys.path.insert(0, myPath)
 
 from backtester import Backtester
 from portfolio import Portfolio
-from ml_strategy import MLStrategy
+from random_strategy import RandomStrategy 
 from broker import Broker
 from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
 from utils.utils import EquityCommissionModel, EquitySlippageModel
@@ -33,7 +33,6 @@ from utils.errors import MarketDataNotAvailableError
 from utils.logger import Logger
 from ml_strategy_models import features
 # Not needed
-from simple_strategies import RandomLongShortStrategy 
 
 
 if __name__ == "__main__":
@@ -88,10 +87,11 @@ if __name__ == "__main__":
         end=end_date
     )
 
+    # NOTE: Need to get from aws compute node or train locally with parameters found
     side_classifier = pickle.load(open("../ml_strategy_models/side_classifier.pickle", "rb"))
     certainty_classifier = pickle.load(open("../ml_strategy_models/certainty_classifier.pickle", "rb"))
 
-    strategy = MLStrategy(
+    strategy = RandomStrategy(
         rebalance_weekdays=[0,1,2,3,4], 
         side_classifier=side_classifier, 
         certainty_classifier=certainty_classifier,
@@ -100,15 +100,15 @@ if __name__ == "__main__":
         features=features,    
         initial_margin_requirement=0.50, 
         logger=logger,
-        accepted_signal_age=relativedelta(days=4)
+        accepted_signal_age=relativedelta(days=5)
     )
 
     strategy.set_order_restrictions(
-        max_position_size=0.15, # 0.05
-        max_positions=10, # 30
+        max_position_size=0.08, # 0.05
+        max_positions=20, # 30
         minimum_balance=5000, # 0,5% of initial balance?
-        max_percent_to_invest_each_period=1.0, # 0.33
-        max_orders_per_period=10, # 10
+        max_percent_to_invest_each_period=0.33, # 0.33
+        max_orders_per_period=7, # 10
         min_order_size_limit=10000, # Dollar amount
         num_short_positions=0,
         volume_limit=0.1,
@@ -133,14 +133,18 @@ if __name__ == "__main__":
     print("Starting Backtest!")
     performance = backtester.run()
 
+
     backtest_state = backtester.save_state_to_disk_and_return()
 
     
 
+
 """
+
 Backtest Results:
 
-Configuration A: backtest_state_20190607-171902.pickle, log_20190607-164153
-Configuration B: backtest_state_20190607-161904.pickle, log_20190607-155535
-Configuration C: backtest_state_20190607-180705.pickle, log_20190607-174845
+Configuration A: backtest_state_20190607-213416.pickle, log_20190607-205531
+Configuration B: backtest_state_20190607-232443.pickle, log_20190607-230141
+Configuration C: backtest_state_20190607-225023.pickle, log_20190607-223302
+
 """

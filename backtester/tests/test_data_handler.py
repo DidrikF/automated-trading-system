@@ -341,40 +341,6 @@ def test_dividend_adjustment():
 
 
 
-""" Originally from test_data_handler_corporate_actions_real
-I end up with 1502 bankruptcies in the corp_actions dataframe, and this is not far from correct if not completely correct.
-
-
-drop_indexes = []
-for index, row in actions.iterrows():
-    codes = [int(s) for s in str(row["eventcodes"]).split("|")]
-    if 13 in codes:
-        actions.loc[index, "eventcodes"] = 13
-    else:
-        drop_indexes.append(index)
-
-actions = actions.drop(drop_indexes, axis=0)
-actions.to_csv("./test_bundles/actions.csv", index=False)
-
-mask = actions.ticker.duplicated(keep=False)
-actions = actions[mask]
-actions = actions.sort_values(by=["ticker", "date"])
-actions.to_csv("./test_bundles/duplicated_actions.csv", index=False)
-"""
-
-""" Conclusion: There is no significant difference in ticker coverage
-ticker_difference = list(set(sep.ticker.unique()) - set(actions.ticker.unique()))
-ticker_df = pd.DataFrame(data={"ticker": ticker_difference})
-ticker_df.to_csv("./test_bundles/ticker_difference.csv", index=False)
-
-ticker_difference = list(set(actions.ticker.unique()) - set(sep.ticker.unique()))
-ticker_df = pd.DataFrame(data={"ticker": ticker_difference})
-ticker_df.to_csv("./test_bundles/ticker_difference_2.csv", index=False)
-
-sys.exit()
-"""
-
-
 """
 ticker,date,open,high,low,close,volume,dividends,closeunadj
 AAPL	2016-04-14	111.62	112.39	111.33	112.1	25473923	0	112.1

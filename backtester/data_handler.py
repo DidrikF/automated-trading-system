@@ -14,20 +14,6 @@ from event import Event, MarketDataEvent
 from utils.errors import MarketDataNotAvailableError
 from dataset_development.processing.engine import pandas_mp_engine
 
-"""
-Due to memory not being an issue, I think it is most effective have data in memory
-split both by ticker and date.
-data_handler.time_data = {
-"2012-01-04": df(columns: ["ticker", "open", "high", ...], index_col="ticker"),
-"2012-01-05": df(columns: ["ticker", "open", "high", ...], index_col="date"),
-...
-}
-data_handler.ticker_data = {
-"AAPL": df(columns: ["date", "open", "high", ...]),
-"MSFT: df(columns: ["date", "open", "high", ...]),
-...
-}
-"""
 
 class DataHandler(ABC):
 
@@ -36,16 +22,7 @@ class DataHandler(ABC):
 
     def current(self):
         pass
-"""
-All data to have a complete datetime index and a "can_trade" bool column is used to find out if the data was forward filled or not. 
 
-
-May want to add dividend adjusted OHLC data for more accurate exit rule computations
-OHLC are not dividend adjusted
-sep:
-open (int) - high (int) - low (int) - close (int) - close_adjusted (int) - business_day (bool) - can_trade (bool)
-
-"""
 
 class DailyBarsDataHander(DataHandler):
     def __init__(
@@ -72,7 +49,7 @@ class DailyBarsDataHander(DataHandler):
         self.end = end
 
         # VERY IMPORTANT THAT THIS IS MANIPULATED CORRECTLY
-        self.cur_date = start # Maintens the current date of the system (is this a good solution???)
+        self.cur_date = start # Maintens the current date of the system
 
         self.end_of_data_reached = False
 
@@ -263,12 +240,11 @@ class DailyBarsDataHander(DataHandler):
 
 
     # ____________________________________________________________________________________________________________
-    # NEED TO UPDATE THE BELOW: to take into account: business days, can trade
-    # This should make things easier as prices is allways available even though it might not be possible to trade
+
 
     def _next_tick_generator(self):
         """
-        Maybe this should indicate whether it is a business day or not.
+        Generator function yielding market data events.
         """
 
         for date in self.date_index_to_iterate:
@@ -282,6 +258,8 @@ class DailyBarsDataHander(DataHandler):
 
     def can_trade(self, ticker, date=None):
         """
+        Returns true if the ticker can be traded at the provided date (current date).
+        
         Use can_trade column the date being outside min/max date index for the ticker.
         Important to check this for all tickers the strategy/portfolio/broker that should be traded.
         """
@@ -407,7 +385,6 @@ class DailyBarsDataHander(DataHandler):
         return self.rf_rate.loc[self.cur_date]["daily"]
 
 
-# NOTE: Maybe just the portfolio need to know about this...
 class MLFeaturesDataHandler(DataHandler):
     def __init__(
         self, 
@@ -448,30 +425,8 @@ class MLFeaturesDataHandler(DataHandler):
         feature_data = feature_data.loc[date:]
 
         return feature_data
-    """
-    def ingest_data(self):
-        # Ingest feature data. The data can have model predictions with them. It is up to the user of this object
-        # to avoid lookahead bias.
 
-        # NOTE: I want to iterate over all the signals without having to worry about multiindex semantics
-        # NOTE: The features here must be complete with columns like date, ticker, ewmstd, ptsl
-        # timeout?
 
-        data: pd.DataFrame = pd.read_csv(self.path_features, parse_dates=["date", "datekey", "timeout"], low_memory=False)
-        feature_data = {}
-        split_df = data.groupby("date")
-        for date, df in split_df:
-            df = df.sort_values(by=["ticker"])
-            feature_data[date] = df.set_index("ticker").sort_index()
-            if any(feature_data[date].index.duplicated()):
-                print("duplicate data for one or more tickers on date: ", date)
-                # drop duplicates probably
-
-        feature_data = pd.concat(feature_data)
-        feature_data = feature_data.sort_index()
-
-        return feature_data
-    """
     def get_range(self, start, stop) -> Event:
         # make sure to only give new data that was released available the previous day.
         if isinstance(start, str):
@@ -516,7 +471,6 @@ class MLFeaturesDataHandler(DataHandler):
     def get_data(self, ticker, start, end):
         pass
     
-
 
 
 def dividend_adjusting_prices_backwards(sep: pd.DataFrame) -> pd.DataFrame: 
@@ -601,27 +555,4 @@ def reindex_and_ffill(sep: pd.DataFrame) -> pd.DataFrame:
     "EventCode to Title mapping for EVENTS table.",
     "text"
 ],
-"""
-
-"""
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-  File "C:\Anaconda3\envs\master\lib\multiprocessing\spawn.py", line 105, in spawn_main
-    exitcode = _main(fd)
-  File "C:\Anaconda3\envs\master\lib\multiprocessing\spawn.py", line 114, in _main
-    prepare(preparation_data)
-  File "C:\Anaconda3\envs\master\lib\multiprocessing\spawn.py", line 225, in prepare
-    _fixup_main_from_path(data['init_main_from_path'])
-  File "C:\Anaconda3\envs\master\lib\multiprocessing\spawn.py", line 277, in _fixup_main_from_path
-    run_name="__mp_main__")
-  File "C:\Anaconda3\envs\master\lib\runpy.py", line 263, in run_path
-    pkg_name=pkg_name, script_name=fname)
-  File "C:\Anaconda3\envs\master\lib\runpy.py", line 96, in _run_module_code
-    mod_name, mod_spec, pkg_name, script_name)
-  File "C:\Anaconda3\envs\master\lib\runpy.py", line 85, in _run_code
-    exec(code, run_globals)
-  File "c:\pycode\automated-trading-system\backtester\__main__.py", line 25, in <module>
-    from backtester import Backtester
-ImportError: cannot import name 'Backtester'
-
 """

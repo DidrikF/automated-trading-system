@@ -10,3 +10,4 @@ backtester/backtests/
 backtester/logs/
 backtester/datasets_not_used/
 backtester/live_bundles/
+.vscode

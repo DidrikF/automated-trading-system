@@ -11,6 +11,7 @@ from datetime import datetime
 from ..labeling import equity_risk_premium_labeling, add_labels_via_triple_barrier_method
 from ..processing.engine import pandas_mp_engine
 from ..utils.visualization import visualize_triple_barrier_method, candlestick_chart
+from sep_features import dividend_adjusting_prices_backwards
 
 """
 Test datasets:
@@ -76,6 +77,10 @@ def test_equity_risk_premium_labeling():
 def test_add_labels_via_triple_barrier_method():
     global sep, sep_featured, sep_aapl
 
+    sep = pandas_mp_engine(callback=dividend_adjusting_prices_backwards, atoms=sep, data=None, \
+        molecule_key='sep', split_strategy= 'ticker', \
+            num_processes=1, molecules_per_process=1)
+
     sep_triple_barrier = pandas_mp_engine(callback=add_labels_via_triple_barrier_method, atoms=sep_featured, \
         data={'sep': sep}, molecule_key='sep_featured', split_strategy= 'ticker', \
             num_processes=1, molecules_per_process=1, ptSl=[0.8,-0.8], min_ret=None)
@@ -90,5 +95,4 @@ def test_add_labels_via_triple_barrier_method():
     dates = [date0, date1, date2, date3]
 
     visualize_triple_barrier_method(2, 2, dates, "AAPL", sep_triple_barrier, sep_aapl)
-
 

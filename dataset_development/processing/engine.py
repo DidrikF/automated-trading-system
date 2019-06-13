@@ -14,8 +14,6 @@ import math
 import re
 from dateutil.parser import parse
 
-# from ..helpers.helpers import is_date
-
 def is_date(string, fuzzy=False):
     """
     Return whether the string can be parsed to a date.
@@ -298,8 +296,7 @@ sep_base = pd.read_csv(os.path.join(dir_path, "../datasets/sharadar/SEP_BASE.csv
 
 def get_jobs_fast(task, primary_molecules, molecules_dict):
     """
-    Need to write code for different split strategies.
-    Maybe bake split strategy into the cached pickle name.
+    Create jobs for new engine.
     """
     jobs = []
     for job_key, molecule in primary_molecules.items():
@@ -344,6 +341,9 @@ def get_jobs_fast(task, primary_molecules, molecules_dict):
     return jobs
 
 def process_jobs_fast(jobs, task=None, num_processes=8, sort_by=[]):
+    """
+    Use multiprocessing to process jobs.
+    """
     if task is None:
         task = jobs[0]['callback'].__name__
         
@@ -365,6 +365,9 @@ def process_jobs_fast(jobs, task=None, num_processes=8, sort_by=[]):
         return out
 
 def expandCall_fast(kwargs):
+    """
+    Extract callback from job object
+    """
     callback = kwargs['callback']
     job_key = kwargs['job_key']
     del kwargs['callback']
@@ -376,8 +379,7 @@ def expandCall_fast(kwargs):
 
 def split_df_into_molecules(atoms, split_strategy, num_molecules):
     """
-
-    NOTE: If this function is extended to support more split strategies, the "infer_split_strategy" function must be updated
+    Splits atoms into smaller molecules for concurrent processing.
     """
     dfs = {}
     if split_strategy == 'date':
@@ -414,6 +416,9 @@ def split_df_into_molecules(atoms, split_strategy, num_molecules):
 
 
 def combine_and_save_molecules(molecules, path, sort_by=None):
+    """
+    Combine molecules together into a single dataframe and write the result to disk.
+    """
     out_molecules = list(molecules.values())
 
     if isinstance(out_molecules[0], pd.DataFrame):
@@ -433,37 +438,20 @@ def combine_and_save_molecules(molecules, path, sort_by=None):
 
 
 def combine_molecules(molecules):
+    """
+    Combine molecules in an effective manner.
+    """
     if isinstance(molecules, dict):
         molecules = list(molecules.values())
     
     result = pd.concat(molecules, sort=True)
     return result
 
-"""
-I want to update the engine so that less steps are involved and the complexity are reduced.
-I need to find a better way of saving state and resuming.
-I think if I add a few more keys for the molecule_dict and maybe the tasks list I can make the whole process
-easier to understand and code.
-"""
-"""
-def pandas_chaining_mp_engine_2(tasks, primary_atoms, atoms_configs, num_processes, cache_dir, sava_dir, sort_by=None, molecules_per_process=5, resume_on_task=-1):
-    if resume_on_task > -1:
-        task_to_resume_on = tasks[resume_on_task]
-        for argument_key, molecules_dict_key in task_to_resume_on["data"].items():
-
-
-    molecules_dict = {} # this is the state of the engine
-
-    for task in tasks:
-
-"""
 
 def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strategy, num_processes, cache_dir, \
     sort_by=None, molecules_per_process=5, resume=False):
     """
-    primary_atoms : What key in atoms_config to use as first molecules to create jobs from.
-    split_strategy: What strategy is used to initially split data-atoms and primary-atoms. Once we are iterating
-                    the tasks, the task-config sets the split strategy.
+    Multiprocessing engine that is able to process a chain of tasks. Usefull for more complex dataprocessing pipelines.
     """
     split_strategy_changed = False
     primary_molecules = None # Might resume from cache, or set from parsed atoms found in molecules_dict
@@ -498,12 +486,8 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
                     split_strategy = new_first_task["split_strategy"] # Will change how we parse atoms
                     split_strategy_changed = True
                 break
-    """
-    elif type(resume) == int:
-        # Resume from specific task
-        pass
-    """
-    # Ready the data once, and then use a simple dictionary lookup to get the correct df when creating jobs
+
+    # Ready the data one time, and then use a simple dictionary lookup to get the correct df when creating jobs
     molecules_dict = {} # { "AAPL": [df1, df2, ...], ...
 
     for disk_name, atoms_config in atoms_configs.items():
@@ -620,7 +604,9 @@ def pandas_chaining_mp_engine(tasks, primary_atoms, atoms_configs, split_strateg
 
 
 def infer_split_strategy(molecule_dict: dict):
-    # print(list(molecule_dict.keys()))
+    """
+    Detect what split strategy was used to create $molecule_dict.
+    """
     first_key: str = list(molecule_dict.keys())[0]
     if first_key.capitalize() == first_key:
         return "ticker"

@@ -60,11 +60,8 @@ features = ["roaq", "chtx", "rsup", "sue", "cinvest", "nincr", "roavol", "cashpr
 
 @pytest.fixture(scope='module', autouse=True)
 def setup():
-    # Will be executed before the first test in the module
-    global sf1_art_featured, sf1_art, sf1_arq, metadata, sf1_art_aapl, sf1_arq_aapl
 
-    # lacking_sf1_art and lacking_sf1_arq are missing reports for 2000-03-31 - 2000-09-30
-    # and for all of 2007.
+    global sf1_art_featured, sf1_art, sf1_arq, metadata, sf1_art_aapl, sf1_arq_aapl
 
     sf1_art = pd.read_csv("../datasets/testing/lacking_sf1_art.csv", parse_dates=["calendardate", "datekey", "reportperiod"],\
         index_col="calendardate", low_memory=False)
@@ -75,10 +72,9 @@ def setup():
     sf1_art_aapl = sf1_art.loc[sf1_art.ticker=="AAPL"]
     sf1_arq_aapl = sf1_arq.loc[sf1_arq.ticker=="AAPL"]
 
-
     yield
-    
     # Will be executed after the last test in the module
+
     # sf1_art_featured.to_csv("./datasets/testing/sf1_art_featured.csv", index=False)
 
 

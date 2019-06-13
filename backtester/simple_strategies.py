@@ -16,7 +16,6 @@ from utils.types import Strategy
 from utils.utils import Signal
 
 
-
 class BuyAppleStrategy(Strategy):
 
     def __init__(self, desc):
@@ -26,10 +25,8 @@ class BuyAppleStrategy(Strategy):
 
     def generate_signals(self, feature_data_event: Event):
         signals = []
-        
-        # make predictions based on the features in $feature_data_event
+
         signals.append(Signal(signal_id=self.get_signal_id(), ticker="AAPL", direction=1, certainty=1, ewmstd=None, ptSl=None))
-        # signals.append(Signal(signal_id=self.get_signal_id(), ticker="FCX", direction=1, certainty=0.5, , ewmstd=None, ptSl=None))
 
         return Event(event_type="SIGNALS", data=signals, date=feature_data_event.date)
 
@@ -51,16 +48,12 @@ class BuyAppleStrategy(Strategy):
             amount = sign(signal.direction) * signal.certainty * self.max_position_size
             orders.append(Order(order_id=self.get_order_id(), ticker=ticker, amount=amount, date=self.market_data.cur_date, signal=signal))
 
-        
-        # self.order_history.extend(orders) # What does this do here?
-
         return Event(event_type="ORDERS", data=orders)
 
     def get_order_id(self): # now we can only have orders from one portfolio, maybe introduce a portfolio id
         self.order_id_seed += 1
         order_id = self.order_id_seed
         return order_id
-
 
     def get_signal_id(self):
         self.signal_id_seed += 1
@@ -153,9 +146,6 @@ class RandomLongShortStrategy():
         """
         I need a prioritized list of "moves", then I execute as many as I can under the given restrictions
         """
-        # Is this where enforce portfolio restrictiond and make sure I have the balance, margin required?
-
-
         desired_portfolio = {}
 
         return desired_portfolio
@@ -212,90 +202,3 @@ class RandomLongShortStrategy():
         self.order_id_seed += 1
         return self.order_id_seed
 
-
-class TestStrategy(Strategy):
-    def __init__(self):
-        pass
-
-    def generate_signals(self):
-        pass
-
-    def generate_orders_from_signals(self):
-        pass
-
-    def get_order_id(self):
-        pass
-
-    def get_signal_id(self):
-        pass
-
-
-
-"""
-self.portfolio = {
-    "AAPL": { NO
-        "fills": [Fill, Fill],
-        "position": 12400, # net number of stocks (int), sign gives direction
-    },
-    "MSFT": {
-        "fills": [Fill, Fill],
-        "position": 12400, # net number of stocks (int), sign gives direction
-    }
-    ...
-}
-"""
-
-
-"""
-def generate_orders_from_signals(self, signals_event):
-    This is complicated.
-    I need to see the signals in relation to the expectation the portfolio has for its current possitions
-    Then based on the restrictions and new signals need to decide what to buy/sell (if any) and whether 
-    to liquidate some portion of its position. 
-    Here the portfolio also needs to calculate stop-loss, take-profit and set timeout of the orders.
-
-    Orders must respect various limitations... These must be taken into account when generating orders. validate_orders is not really needed
-    if orders are made with the restrictions in mind.
-    signals = signals_event.data
-    orders = []
-    for signal in signals:
-        ticker = signal.ticker
-        amount = sign(signal.direction) * signal.certainty * self.max_position_size
-        orders.append(Order(order_id=self.get_order_id(), ticker=ticker, amount=amount, date=self.market_data.cur_date, signal=signal))
-
-    
-    self.order_history.extend(orders)
-
-    return Event(event_type="ORDERS", data=orders)
-
-
-def simple_order(self, ticker, amount):
-    # Return order for $amount number of shares of $ticker's stock. (Does not create orders event, in which case it 
-    # should be added to order_history)
-    order = Order(order_id=self.get_order_id(), ticker=ticker, amount=amount, date=self.market_data.cur_date, signal=Signal.from_nothing()) 
-    return order
-
-"""
-
-
-"""
-    def calculate_daily_return(self):
-        MAYBE NOT NEEDED, IF I HAVE ACCURATE RECORD OF VALUE I CAN USE THE METHOD BELOW
-        Somewhat complicated, becuase I need to take into account the fill price, not the open for both sells and buys.
-
-        THIS IS WHERE ALL THE COMPLEXITY "SHOULD" LIE
-
-        Portfolio return is a weighted return of the individual assets in the portfolio's return.
-        With this in mind it becomes easy, because you only need to check what amount of the asset
-        you purchased today (fill price)
-
-        note that you may also increase a current position!
-
-        weighting : (number of stocks * price of stocks) / total portfolio value (what time to get the price? start of day? end of day?)
-        return for each stock bought today = (todays close / fill price) - 1 * 
-        return for each stock not bought today = (yesterdays close / todays close) - 1 
-
-        sum(weight * return for stocks)
-
-    
-"""

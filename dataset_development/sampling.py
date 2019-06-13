@@ -85,10 +85,8 @@ def rebase_at_each_filing_sampling(observations, days_of_distance):
     the first datekey in SF1 has been removed. This function also assumes that indexes are reset.
     """
 
-    # It could be that the dataframe is empty or that it is missing, maybe?
-    # print(observations.head())
+    # It could be that the dataframe is empty or that it is missing
     observations_empty = True if (len(observations) == 0) else False
-
     if observations_empty == True:
         print("got empty dataframe 'observations' in rebase_at_each_filing_sampling. Don't know why.")
         return observations

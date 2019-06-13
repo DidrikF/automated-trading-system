@@ -29,13 +29,11 @@ class Signal():
         return cls(-1, "NONE", 1, 0.5, 0.15, pd.to_datetime("2020-01-01"), pd.to_datetime("1995-01-01"))
 
 
-
 class EquityCommissionModel(CommissionModel):
     """
     The commission model are responsible for accepting order/transaction pairs and 
     calculating how much commission should be charged to an algorithm’s account 
     on each transaction.
-    
     Link: https://www.interactivebrokers.co.uk/en/index.php?f=39753&p=stocks2
     """
     def __init__(self):
@@ -79,21 +77,10 @@ class EquitySlippageModel(SlippageModel):
     def __init__(self):
         pass        
 
-
     def calculate(self):
         """
         Returns slippage per share.
         """
-        # https://arxiv.org/pdf/1103.2214.pdf
-        
-        # ewmstd = order.signal.ewmsdt # Can this be used? have some percentage basis point slippage? 
-
-        # When exiting a short, the slippage should be biased towards positive values
-        # When exiting a long, the slippage should be biased towards negative values
-        # Bid ask spread component (depends on volume)
-        # Slippage component
-
-
         return 0
 
 
@@ -119,96 +106,4 @@ def report_progress(cur_date: pd.datetime, start_date: pd.datetime, end_date: pd
     else: 
         sys.stderr.write(msg + '\n')
     return
-
-
-
-
-
-
-
-
-
-# ____ Propably delete the below___
-
-class Transaction():
-    """
-    The transaction being processed. A single order may generate multiple transactions if there isn’t enough 
-    volume in a given bar to fill the full amount requested in the order.
-    
-    An assumption I make is that the whole order is filled or not at all. Multiple transactions will not occure
-    and this class therefore becomes redundant and unnecessary.
-    """
-    pass
-
-
-class Asset():
-    """Class representing a stock."""
-    def __init__(self):
-        pass
-
-    def first_traded(self):
-        pass
-    def security_name(self):
-        pass
-    def security_end_date(self):
-        pass
-    def security_start_date(self):
-        pass
-
-    def to_dict(self):
-        pass
-
-class Blotter(): # Is this the thing that "execute" orders?
-    def __init__(self):
-        self.record = {}
-
-    def batch_order(self):
-        pass
-
-
-    def write(self, order):
-        pass
-  
-    def read(self):
-        pass
-
-
-
-class Ledger():
-    """The ledger tracks all orders and transactions as well as the current state of the portfolio and positions."""
-
-    pass
-
-
-class PostionTracker():
-    """The current state of the positions held."""
-    pass
-
-class PositionStats():
-    """Computed values from the current positions."""
-    pass
-
-
-
-class Account(): # Dont know if this is appropriate for me 
-    pass
-
-
-
-class CachedObject():
-    pass
-
-
-
-
-# CommissionPerShare
-
-# CommissionPerTrade
-
-# CommissionPerDollar
-
-# FixedSlippage
-
-# VolumeShareSlippage
-
 

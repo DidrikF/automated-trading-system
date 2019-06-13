@@ -13,23 +13,9 @@ from utils.utils import Signal
 from order import Order
 from data_handler import MLFeaturesDataHandler
 
-"""
-    NOTE: The strategy must take into account margin requirement when makeing short orders. If not enough on the balance, the order will fail.
-    
-    event.date.weekday() == self.rebalance_weekday -> to control when signals are generated...
-
-    # NOTE: Maybe if orders are cancelled, the portfolio would like to make another trade instead.
 
 
-    # Turnaround vs costs 
-
-    # make sure to have sufficient balance to exploit big opportunities
-
-
-"""
-
-
-class MLStrategy(Strategy):
+class RandomStrategy(Strategy):
     def __init__(self, 
         rebalance_weekdays: list, 
         side_classifier: BaseEstimator, 
@@ -72,6 +58,7 @@ class MLStrategy(Strategy):
         num_short_positions: int,
         volume_limit: float=0.1,
     ):
+        
         self.max_position_size_percentage = max_position_size # Percentage of total portfolio value
         self.max_positions = max_positions # Order generation will converge towards this number of positions, but not exceed it.
         self.minimum_balance = minimum_balance
@@ -83,44 +70,25 @@ class MLStrategy(Strategy):
 
 
     def compute_predictions(self):
-        self.feature_handler.feature_data["side_prediction"] = self.side_classifier.predict(self.feature_handler.feature_data[self.features])
-        self.feature_handler.feature_data["certainty_prediction"] = self.certainty_classifier.predict_proba(self.feature_handler.feature_data[self.features])[:,1]
-        
+        pass
+
 
     def generate_signals(self, cur_date, market_data):
-        """
-        Only generate signals on days where we rebalance. By controlling emition of signals, one controls 
-        invocation of other strategy methods.
-        """
-        if cur_date.weekday() in self.rebalance_weekdays:
-            
+
+        if cur_date.weekday() in self.rebalance_weekdays: # NOTE: Max two weekdays
+            signals = []
             feature_data = self.feature_handler.get_range(cur_date-self.accepted_signal_age, cur_date-relativedelta(days=1))
-            
-            signals = []
+            random_features = self._get_random_features(feature_data, 15) # NOTE: CONTINUE
 
-            feature_data = feature_data.sort_values(by=["certainty_prediction"], ascending=False)
-
-            # NOTE: Just need sufficiently many, so order generation is not limited by to new signals
-            # NOTE: The same features will be returned multiple times and the ones that have been used will be filtered out later
-            feature_data_short  = feature_data.loc[feature_data.side_prediction == -1]
-            feature_data_short = feature_data_short.iloc[:int(self.num_short_positions*3)] 
-
-            feature_data_long = feature_data.loc[feature_data.side_prediction == 1]
-            features_data_long: pd.DataFrame = feature_data_long.iloc[:int(self.max_orders_per_period*3)] # TODO: need to see if I need to expand
-
-            signals = []
-
-            signal_features = features_data_long.append(feature_data_short, sort=True)
-
-            for date, features in signal_features.iterrows():
+            for date, features in random_features.iterrows():
                 can_trade_res = market_data.can_trade(features["ticker"])
                 if (isinstance(can_trade_res, str)) or (can_trade_res != True): continue
 
                 signal = Signal(
                     signal_id=features["signal_id"],
                     ticker=features["ticker"], 
-                    direction=features["side_prediction"], 
-                    certainty=features["certainty_prediction"], 
+                    direction=1, 
+                    certainty=0.51, 
                     ewmstd=features["ewmstd_2y_monthly"], 
                     timeout=features["timeout"],
                     features_date=date
@@ -131,9 +99,18 @@ class MLStrategy(Strategy):
         else:
             return None
 
+    def _get_random_features(self, features, amount):
+        amount = min(amount, len(features))
+        if amount == 0:
+            return features
+    
+
+        random_sample = features.sample(n=amount)
+        return random_sample
+
     def generate_orders_from_signals(self, portfolio, signals_event):
         """
-        All signals are relevent here, because they adhere to both the rebalance date and age restriction.
+        Generate random orders, but subject to the same restrictions as ml_strategy.
         """
         date = signals_event.date
         used_signal_ids = portfolio.broker.blotter.used_signal_ids
@@ -191,7 +168,7 @@ class MLStrategy(Strategy):
             number_of_stocks = min(int(prev_days_volume*self.volume_limit), int(dollar_amount / ticker_price)) # TODO: this may free up funds to use for other positions...
 
             if number_of_stocks == int(prev_days_volume*self.volume_limit):
-                self.logger.logr.warning("ML_STRATEGY: Was restricted to order only {} percent of last days volume, Last days total volume: (vol: {}, price: {}, total: {}) \
+                self.logger.logr.warning("ML_STRATEGY: Was restricted to order only {} percent of last days volume (vol: {}, price: {}, total: {}) \
                 for ticker {} at date {} given signal {}.".format(self.volume_limit*100, prev_days_volume, ticker_price, prev_days_volume*ticker_price, signal.ticker, date, signal.signal_id))
 
             order_dollar_amount = number_of_stocks * ticker_price
@@ -245,7 +222,6 @@ class MLStrategy(Strategy):
             
             else:
                 break
-        # print("Top Signals Directions: ", [signal.direction for signal in top_signals])
 
         return top_signals
 
@@ -255,7 +231,6 @@ class MLStrategy(Strategy):
         Returns a list of the percentage of the available balance to allocate to each trade/signal.
         The available funds are allocated according to a weighted average calculation on certainty above 0.5
         """
-        
         certainties = np.array([signal.certainty - 0.5 for signal in signals])
         
         negs = sum(n <= 0 for n in certainties)
@@ -265,6 +240,7 @@ class MLStrategy(Strategy):
         allocations = [certainty / certainties.sum() for certainty in certainties]
 
         return allocations
+
 
     def handle_event(self, portfolio, event: Event):
         if event.type == "TRADES":
@@ -276,23 +252,5 @@ class MLStrategy(Strategy):
     def get_order_id(self):
         self.order_id_seed += 1
         return self.order_id_seed
-
-
-
-
-class MockSideClassifier(BaseEstimator):
-    def __init__(self):
-        pass
-
-    def predict_proba(self, features):
-        return [[0.55, 0.45]]
-    
-
-class MockCertaintyClassifier(BaseEstimator):
-    def __init__(self):
-        pass
-
-    def predict_proba(self, features):
-        return [[0.55, 0.45]]
 
 

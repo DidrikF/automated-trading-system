@@ -38,7 +38,6 @@ class Portfolio(PortfolioBase):
         self.balance = balance
         self.margin_account = 0
         
-        # Maybe this is best enforced by the broker, but the portfolio must be aware of it to properly generate orders and deposit money to the margin account
         self.initial_margin_requirement = initial_margin_requirement
         self.maintenance_margin_requirement = maintenance_margin_requirement
 
@@ -314,9 +313,7 @@ class Portfolio(PortfolioBase):
 
     def get_monthly_returns(self):
         port_val = self.portfolio_value.copy(deep=True)
-        # print("IS NAN: ", port_val["total"].isna().sum())
         snp500 = self.broker.market_data.get_ticker_data("snp500")
-        # port_val.fillna(method="ffill")
 
         date_index = port_val.index
 
@@ -336,6 +333,7 @@ class Portfolio(PortfolioBase):
         returns = returns.resample('M').apply(custom_resample)
         returns = returns.dropna(axis=0)
         return returns
+    
 
     def normality_test_on_returns(self, alpha: float=0.05):
         from scipy.stats import shapiro
@@ -362,6 +360,22 @@ class Portfolio(PortfolioBase):
 
         return (mean - rf) / std
 
+    def calculate_adjusted_sharpe_ratio(self):
+        from scipy.stats import skew, kurtosis
+
+        returns = self.get_monthly_returns()
+        sharpe_ratio = self.calculate_sharpe_ratio()
+        
+        sk = skew(returns["portfolio"])
+        kur = kurtosis(returns["portfolio"], )
+        print("skew: ", sk)
+        print("Kurtosis: ", kur)
+        
+        asr = sharpe_ratio + (sk/6)*(sharpe_ratio**2) - (kur/24)*(sharpe_ratio**3)
+        print("sr: ", sharpe_ratio)
+        print("asr: ", asr)
+        return asr
+
     def calculate_correlation_of_monthly_returns(self):
         returns = self.get_monthly_returns()
         return returns["portfolio"].corr(returns["snp500"])
@@ -387,7 +401,7 @@ class Portfolio(PortfolioBase):
 
         t_statistic = (mean_obs - mean0) / (sample_std / math.sqrt(len(observations)))
 
-        #  test if t_statistic > t(alpha, n-1)
+        # test if t_statistic > t(alpha, n-1)
         # ppf(q, df, loc=0, scale=1)	Percent point function (inverse of cdf — percentiles).
         critical_value = t.ppf(1 - alpha, df=len(observations)-1)
         p_value = (1.0 - t.cdf(t_statistic, df=len(observations)-1))
@@ -401,23 +415,6 @@ class Portfolio(PortfolioBase):
     def calculate_average_aum(self):
         return self.portfolio_value["aum"].mean()
 
-    def calculate_statistical_significance_of_classification_models_single_sample(self):
-        """
-        probably best to have at the end of training...
-        """
-        """
-        side_observations = sample_binary_predictor(y_pred=test_x_pred, y_true=test_y, n_samples=600, sample_size=5000)
-        side_model_t_test_results = single_sample_t_test(observations, mean0=0.5, alpha=0.05)
-
-        
-        results = {
-            "side_model": side_model_t_test_results,
-            "certainty_model": certainty_model_t_test_results,
-        }
-        """
-
-        return "NOT IMPLEMENTED"
-
     def calculate_annulized_rate_of_return(self, start_date, end_date): 
         if (start_date < self.market_data.start) or (end_date > self.market_data.cur_date):
             raise ValueError("Attempted to calculate return over period where the start date was lower\
@@ -428,7 +425,7 @@ class Portfolio(PortfolioBase):
         days = int((end_date - start_date).days)
         n = days / 365
 
-        ar = (end_value/start_value + 1)**(1/n) - 1
+        ar = (end_value/start_value)**(1/n) - 1
         return ar 
 
     def calculate_annulized_rate_of_index_return(self, start_date, end_date):
@@ -441,7 +438,7 @@ class Portfolio(PortfolioBase):
         days = int((end_date - start_date).days)
         n = days / 365
 
-        ar = (end_value/start_value + 1)**(1/n) - 1
+        ar = (end_value/start_value)**(1/n) - 1
         return ar 
 
     def calculate_broker_fees_per_turnover(self):
@@ -487,51 +484,3 @@ class Portfolio(PortfolioBase):
 
         df = df.sort_values(by=["signal_id"])
         return df
-
-
-
-    """
-    def set_order_validators(self):
-        
-        # Set list of validators that must be passed for an order to be valid.
-        
-        pass
-
-    def set_do_not_order_list(self):
-        pass
-
-    def set_long_only(self):
-        pass
-
-    def set_max_leverage(self): # Dont think I will have leverage
-        pass
-
-    def set_max_order_count(self):
-        pass
-
-    def set_max_order_size(self):
-        # Set a limit on the number of shares and/or dollar value of any single order placed for sid. 
-        # Limits are treated as absolute values and are enforced at the time that the algo attempts to place an order for sid.
-        # If an algorithm attempts to place an order that would result in exceeding one of these limits, 
-        # raise a TradingControlException.
-        
-
-    def validate_orders(self):
-        # This is better to have here, the broker does not need to know about the portfolios restrictions
-        pass
-
-
-    def calculate_dollar_slippage_for_fill(self, fill):
-        # fill.slippage: price difference between open and fill (can be negative and positive)
-        # fill.amount: number of stocks bought or sold
-
-        # positive slippage when buying is a cost, negative slippage when buying is profit
-        # dollar slippage per stock * number of stocks bought/sold (+/-) = slippage cost/reward (desired sign)
-        # -10 * -10 = 100 (-)
-        # -10 * 10 = -100 (+)
-        # 10 * 10 = 100 (-)
-        # 10 * -10 = (+)
-        # Conclusion: Sign must be inverted when multiplying slippage and amount
-        dollar_slippage = (fill.slippage * fill.amount) * -1
-        return dollar_slippage
-    """

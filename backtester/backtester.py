@@ -31,16 +31,7 @@ class Backtester(object):
         analyze_hook: Callable=None,
         print_state: bool=False,
     ):
-        """
-        data_handler: DataHandler for price data.
-        feature_data: DataHandler for feature data informing the strategy.
-        start: start date of backtest.
-        end: end date of backtest.
-        output_path: path where perf object is stored.
-        initialize_hook: Called before the backtest starts. Can be used to setup any needed state
-        handle_data_hook: Called every tick of the backtest. Can be used to calculate and track data to add to perf data frame.
-        analyze_hook: Called at the end of the backtest. Can be used to output performance statistics.
-        """
+
         self.market_data = market_data_handler
         self.start = start
         self.end = end
@@ -65,15 +56,7 @@ class Backtester(object):
 
     def set_broker(self, broker_cls, **kwargs):
         """
-        Set broker instance that will execute orders. Orders come from a portfolio object and contain information like: ticker, 
-        amount, side, stop-loss and take-profit. 
-        The broker fills only orders with amount under 10% of the previous day's volume. If the order exceeds this limit, the order will be broken up.
-        This is to ensure that slippage does not become a major factor.
-
-        When filling an order the broker calculates commission and slippage (costs) and charges the portfolio accordingly.
-        Orders are filled at the opening price (plus slippage).
-        Multiple consecutive orders are filled so fast that any random fluctuation the market may have exibited over the few seconds (or even milliseconds)
-        needed to complete the trades are averaged out to an insignificant effect and ignored in the backtest.
+        Set broker instance that will execute orders and manage trades.
         """
         if not issubclass(broker_cls, Broker):
             raise TypeError("Must be subclass of Broker")
@@ -83,9 +66,7 @@ class Backtester(object):
 
     def set_portfolio(self, portfolio_cls, **kwargs):
         """
-        Set the portfolio instance to use during the backtest. The portfolio object is responsible for
-        taking in signals from the strategy and use these recommendations in the context of the portfolio's
-        active positions and constraints to generate orders.
+        Set the portfolio instance to use during the backtest.
         """
         if not issubclass(portfolio_cls, Portfolio):
             raise TypeError("Must be subclass of Portfolio")
@@ -98,7 +79,9 @@ class Backtester(object):
 
 
     def run(self):
-
+        """
+        Runs the backtest.
+        """
         if self.initialize is not None:
             self.initialize(self) # self.context, self.time_context, self.perf
 
@@ -168,16 +151,11 @@ class Backtester(object):
                     if self.print: print("Handle margin account update")
                     self.portfolio.handle_margin_account_update(margin_account_update_event) 
 
-                # NOTE: Process bankruptices and delistings at the open? 
-                # I guess I dont want the proceeds of these events until the next day
-                # the events happen sometime during the day
-                # At the same time, I don't want to trade in bankrupt companies...
-                # If a trade is made in a company that is delestied or bankrupt the same day, I just have to deal with this I guess...
-                # Conclusion: Process bankruptcies at the end of the day
+                # Process bankruptcies at the end of the day
                 if self.print: print("handle corp actions")
                 self.broker.handle_corp_actions(self.portfolio)
                 
-                # NOTE: Dividends are payed at the end of the day
+                # Dividends are payed at the end of the day
                 if self.print: print("handle dividends")
                 self.broker.handle_dividends(self.portfolio)
 
@@ -215,26 +193,18 @@ class Backtester(object):
         """Get initial setting of the backtest."""
         print("Start: ", self.start)
         print("End: ", self.end)
-        print("etc.")
     
 
     def capture_daily_state(self):
         """
         Calculate various backtest statistics. These calculations are split into their 
-        own function, but the work is sentralized here.
+        own function, but the work is centralized here.
         """
-        # portfolio_value = self.portfolio.calculate_portfolio_value()
-        # self.perf.at[self.market_data.cur_date, "portfolio_value"] = portfolio_value        
-
-
         self.portfolio.capture_state()
         self.broker.capture_state()
         
 
     def calculate_statistics(self):
-        # self.stats["sharpe_ratio"] = None # https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551
-        
-                
         # Cost Related:
         self.stats["total_slippage"] = self.portfolio.costs["slippage"].sum(),
         self.stats["total_commission"] = self.portfolio.costs["commission"].sum(),
@@ -256,22 +226,20 @@ class Backtester(object):
         self.stats["annualized_rate_of_index_return"] = self.portfolio.calculate_annulized_rate_of_index_return(self.start, self.end)
         
 
-        # NOTE: Add all backtest statistic calculates to here. Probably contain calculations in their own functions (under utils.metrics ?)
-        self.stats["normality_test_result"] = self.portfolio.normality_test_on_returns()
+        # NOTE: Add all backtest statistic calculates to here        self.stats["normality_test_result"] = self.portfolio.normality_test_on_returns()
         self.stats["sharpe_ratio"] = self.portfolio.calculate_sharpe_ratio()
+        self.stats["adjusted_sharpe_ratio"] = self.portfolio.calculate_adjusted_sharpe_ratio()
         self.stats["std_portfolio_returns"] = self.portfolio.calculate_std_of_portfolio_returns()
         self.stats["std_snp500_returns"] = self.portfolio.calculate_std_of_snp500_returns()
         self.stats["correlation_to_underlying"] = self.portfolio.calculate_correlation_of_monthly_returns()
         self.stats["t_test_on_excess_return"] = self.portfolio.calculate_statistical_significance_of_outperformance_single_sample()
-
-        self.stats["statistical_significance_of_classification_models"] = self.portfolio.calculate_statistical_significance_of_classification_models_single_sample()
 
         self.stats["time_range"] = [self.start, self.end]
         self.stats["ratio_of_longs"] = self.broker.blotter.calculate_ratio_of_longs()
         self.stats["pnl"] = self.portfolio.portfolio_value["total"].iloc[-1] - self.portfolio.initial_balance
         self.stats["hit_ratio"] = self.broker.blotter.calculate_hit_ratio()
 
-        # NOTE: Not implemented
+
         self.stats["average_aum"] = self.portfolio.calculate_average_aum()
         self.stats["capacity"] = self.broker.blotter.calculate_capacity()
         self.stats["maximum_dollar_position_size"] = self.broker.blotter.calculate_maximum_dollar_position_size()
@@ -291,13 +259,6 @@ class Backtester(object):
         self.stats["broker_fees_per_stock"] = self.broker.blotter.calculate_broker_fees_per_stock()
         self.stats["annualized_turnover"] = self.broker.blotter.calculate_annualized_turnover()
         self.stats["closed_trades_by_cause"] = self.broker.blotter.count_closed_trades_by_cause()
-        """
-        Ratio of longs, average holding period, frequency of bets, correlation to underlying market (s&p500), 
-        pnl from long and short trades, annualized rate of return, hit ratio (ratio of profitable trades),
-         return on execution costs, broker fees per turnover etc.
-        """
-        # self.perf.at[self.market_data.cur_date, "max_trades_per_month"] = None
-        # self.perf.at[self.market_data.cur_date, "min_trades_per_month"] = None      
 
         
 
@@ -306,20 +267,7 @@ class Backtester(object):
         This will save a snapshot of all relevant state of the backtest and save it 
         to disk as a pickle.  
         The output is used to generate a dashboard for the backtest.
-        From backtester:
-        - perf
-        - stats
-        
-        From Portfolio:
-        - portfolio signlas -> all signals generated -> with reference to feature data, so it can be retreved
-        - portfolio order history -> all orders generated and send to the broker -> can be used with the blotter to see what orders was not filled
-
-        From broker:
-        - cancelled_orders
-        - Blotter history
-        - All trades (as df and Trade[])
         """
-
 
         backtest_state = {
             "timestamp": time.time(),
@@ -336,6 +284,7 @@ class Backtester(object):
                 "portfolio_value": self.portfolio.portfolio_value,
                 "order_history": self.portfolio.order_history_to_df(),
                 "signals": self.portfolio.signals_to_df(),
+                "monthly_returns": self.portfolio.get_monthly_returns(), # use to make histogram and return per time
             },
             "broker": {
                 "blotter_history": self.broker.blotter_history_to_df(),

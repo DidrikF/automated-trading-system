@@ -5,8 +5,13 @@ from datetime import datetime
 
 
 def add_sep_features(sep_sampled, sep, sf1_art):
-    # sep_sampled and sep contains data for one ticker
-    # sep contains basic and market wide features added in sep_preparation.py
+    """
+    This calculates price, volume and dividend related features for the project's dataset. This function operates on
+    a single company at a time.
+
+    sep_sampled and sep contains data for one ticker
+    sep contains basic and market wide features added in sep_preparation.py
+    """
 
     sep_empty = True if (len(sep) == 0) else False
 
@@ -22,8 +27,6 @@ def add_sep_features(sep_sampled, sep, sf1_art):
     
     sep_filled = sep_filled.fillna(method="ffill")
 
-    # sep_filled["adj_close"] = sep_filled["adj_close"].fillna(method="ffill")
-    # sep_filled["close"] = sep_filled["close"].fillna(method="ffill")
 
     sep_filled_1m_ahead = sep_filled.shift(periods=-30)
     sep_filled_2m_ahead = sep_filled.shift(periods=-60)
@@ -232,7 +235,10 @@ def add_sep_features(sep_sampled, sep, sf1_art):
 
 
 def add_indmom(sep: pd.DataFrame) -> pd.DataFrame:
-    # sep contains tickers in one industry
+    """
+    Calculates indmom.
+    sep contains tickers in one industry
+    """
     dates = list(sep.index.unique())
     
     for date in dates:
@@ -315,7 +321,6 @@ def add_equally_weighted_weekly_market_returns(sep):
         sep.loc[sep.index==date, "mom1w_ewa_market"] = avg_weekly_market_momentum
 
     return sep
-
 
 
 

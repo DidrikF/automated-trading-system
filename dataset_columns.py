@@ -1,4 +1,7 @@
-
+"""
+Reference for dataset column names.
+By commenting a feature out, the feature will be omitted from training when running one of the model training scripts.
+"""
 
 features = [
     "age",

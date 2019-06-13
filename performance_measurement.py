@@ -6,20 +6,17 @@ import pandas as pd
 
 def zero_benchmarked_r_squared(predictions, labels):
     """
-    The denominator in the r-quared calculation is generally teh sum of squared excess returns without demeaning. 
-    (NOTE: what does this mean)
-    In many out of sample forecasting problems, predictions are compared against the historical mean reaturn.
+    In many out of sample forecasting problems, predictions are compared against the historical mean return.
     However, the historical mean return is so noisy compared to individual stock returns that it artificially 
-    lowers the bar for "good" forecasting performance. This problem is avoided by setting the mean excess retur
+    lowers the bar for "good" forecasting performance. This problem is avoided by setting the mean excess return
     to zero when calculating R-squared.
     """
-
     return 1 - ((square(predictions - labels).sum()) / (square(labels)).sum())
-
+    
 
 def sample_binary_predictor(y_pred: pd.Series, y_true: pd.Series, n_samples: int, sample_size: int, replace: bool=True):
     """
-    The test set has over 300 000 samples
+    Returns samples of predictor accuracy.
     """
     correct = y_true.eq(y_pred) # a series of bool, but you can treat the bools as numbers
     observations = []
@@ -33,8 +30,8 @@ def sample_binary_predictor(y_pred: pd.Series, y_true: pd.Series, n_samples: int
 def single_sample_t_test(observations: np.array, mean0, alpha):
     """
     This is an implementation of single-sided and single sample test of the mean of a normal distribution
-    with unknown variance.
-    In the context of this project, observations are some form of monthly returns or monthly return difference.
+    with unknown variance. In the context of this project, observations are some form of monthly returns or monthly return difference.
+    
     NOTE: Requires that observations are pre-computed.
     """
 
@@ -53,9 +50,3 @@ def single_sample_t_test(observations: np.array, mean0, alpha):
 
     else:
         return "Filed to reject H0 (mean of observation are not greater) with t_statistic={}, p-value={}, critical_value={} and alpha={}".format(t_statistic, p_value, critical_value, alpha)
-
-
-def two_sample_t_test_with_unknown_variance(observations, benchmark):
-    """ Probably wont implement """
-    pass
-

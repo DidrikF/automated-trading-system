@@ -67,7 +67,6 @@ if __name__ == "__main__":
     print(test_set["primary_label_tbm"].value_counts())
 
 
-    # You can generate a plot for precition and recall, see chapter 3 in hands-on machine learning
     training_model = True
     if training_model:
         side_classifier = RandomForestClassifier(
@@ -81,7 +80,7 @@ if __name__ == "__main__":
         )
         
         print("Training Side Classifier...")
-        side_classifier.fit(train_x, train_y) # Validation is part of the test set in this case....
+        side_classifier.fit(train_x, train_y)
         print("DONE TRAINING SIDE CLASSIFIER!")
 
         # Save
@@ -112,9 +111,6 @@ if __name__ == "__main__":
     else:
         sep_adjusted = pd.read_csv("./dataset_development/datasets/sharadar/SEP_PURGED_ADJUSTED.csv", parse_dates=["date"], index_col="date")
 
-    # What data to train on and make predictions for when training the model
-    # I think i do K-fold cross validation on the test set and then make predictions on all of the test set
-    # Then use the predictions on the test set to set side when labeling the for the second ml model. 
 
     side_predictions = side_classifier.predict(train_x)
     train_set["side_prediction"] = pd.Series(side_predictions)
@@ -225,228 +221,3 @@ if __name__ == "__main__":
         }
     }
     pickle.dump(results, open("./models/ml_strategy_models_results.pickle", "wb"))
-
-"""
-Output of basic model training: Training with -1 lower barrier and -1, 1 labeling
-
-(master -> origin) λ python ml_strategy_models.py
-Reading inn Dataset
-Labels After dropping zero labels
- 1.0    465261
--1.0    436908
-Name: primary_label_tbm, dtype: int64
-Training Side Classifier...
-Saving Side Model...
-Reading SEP
-ml_strategy_models.py:290: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-  train_set["side_prediction"] = pd.Series(side_predictions)
-Meta Labeling of train set
-Number of jobs:  7579
-2019-05-11 13:02:44.430865 100.0% 7579/7579 - meta_labeling_via_triple_barrier_method done after 7.26 minutes. Remaining 0.0 minutes..
-Training Certainty Classifier...
-Saving Certainty Model...
-Side Classifier Accuracy:  0.5419696661705016 # NOTE: More data seemed to help somewhat...
-ml_strategy_models.py:351: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-  test_set["side_prediction"] = test_side_predictions
-Running triple barrier search on test set with side set by side classifier... (Meta labeling on test set)
-Number of jobs:  7261
-2019-05-11 13:12:06.662944 100.0% 7261/7261 - meta_labeling_via_triple_barrier_method done after 7.64 minutes. Remaining 0.0 minutes..
-Certainty Classifier Accuracy:  0.5495498449210835 # NOTE: Higher accuracy on second model!
-
-"""
-
-
-"""
-Training with -0.5 lower barrier and 0,1 labeling
-
-(master -> origin) λ python ml_strategy_models.py
-Reading inn Dataset
-Labels After dropping zero labels
- 1.0    465261
--1.0    436908
-Name: primary_label_tbm, dtype: int64
-Train set label distribution:
- 1.0    217895
--1.0    208538
-Name: primary_label_tbm, dtype: int64
-Test set label distribution:
- 1.0    237373
--1.0    220136
-Name: primary_label_tbm, dtype: int64
-Training Side Classifier...
-Saving Side Model...
-Reading SEP
-ml_strategy_models.py:294: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-  train_set["side_prediction"] = pd.Series(side_predictions)
-Meta Labeling of train set
-Number of jobs:  7579
-2019-05-12 17:40:04.698720 100.0% 7579/7579 - meta_labeling_via_triple_barrier_method done after 6.3 minutes. Remaining 0.0 minutes...
-Training Certainty Classifier...
-Saving Certainty Model...
-Side Classifier Accuracy:  0.5422516278368295
-ml_strategy_models.py:356: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-  test_set["side_prediction"] = test_side_predictions
-Running triple barrier search on test set with side set by side classifier... (Meta labeling on test set)
-Number of jobs:  7261
-2019-05-12 17:48:19.853732 100.0% 7261/7261 - meta_labeling_via_triple_barrier_method done after 6.78 minutes. Remaining 0.0 minutes..
-Certainty Classifier Accuracy:  0.489347750536055
-
-"""
-
-"""
-{'side_model': {
-    'accuracy': 0.5405986704631229, 
-    'precision': 0.548164014385144, 
-    'recall': 0.625687441419263, 
-    'cv_results': {'mean_fit_time': array([2.5686957]), 
-    'std_fit_time': array([2.39578189]),
-     'mean_score_time': array([0.25544715]),
-      'std_score_time': array([0.00885381]), 
-      'param_n_estimators': masked_array(data=[20],
-             mask=[False],
-       fill_value='?',
-            dtype=object), 'param_min_weight_fraction_leaf': masked_array(data=[0.1],
-             mask=[False],
-       fill_value='?',
-            dtype=object), 'param_max_features': masked_array(data=[20],
-             mask=[False],
-       fill_value='?',
-            dtype=object), 'param_criterion': masked_array(data=['entropy'],
-             mask=[False],
-       fill_value='?',
-            dtype=object), 'param_class_weight': masked_array(data=['balanced_subsample'],
-             mask=[False],
-       fill_value='?',
-            dtype=object), 'param_bootstrap': masked_array(data=[True],
-             mask=[False],
-       fill_value='?',
-            dtype=object), 'params':
-             [{'n_estimators': 20, 
-             'min_weight_fraction_leaf': 0.1, 
-             'max_features': 20, 'criterion': 
-             'entropy', 'class_weight': 
-             'balanced_subsample', 'bootstrap': True}],
-              'split0_test_score': array([0.49030169]), 
-              'split1_test_score': array([0.48618842]),
-               'split2_test_score': array([0.49347173]),
-                'mean_test_score': array([0.48998728]),
-                 'std_test_score': array([0.0029817]), 
-                 'rank_test_score': array([1], dtype=int32),
-                  'split0_train_score': array([0.95175938]),
-                   'split1_train_score': array([0.92796616]),
-                   'split2_train_score': array([0.74132879]), 
-                   'mean_train_score': array([0.87368478]),
-                    'std_train_score': array([0.09409254])},
-                     'best_params': {'n_estimators': 20,
-                      'min_weight_fraction_leaf': 0.1, 
-                      'max_features': 20, 'criterion': 
-                      'entropy', 'class_weight': 
-                      'balanced_subsample', 
-                      'bootstrap': True}}, 
-
-
-                'certainty_model': {
-                        'accuracy': 0.5352420532339338,
-                       'precision': 0.5452637819170709,
-                        'recall': 0.6484847128340571}}
-
-"""
-
-"""
-
-split0_test_score: [0.4968272]
-split1_test_score: [0.4878566]
-split2_test_score: [0.48547426]
-mean_test_score: [0.4900527]
-std_test_score: [0.00488804]
-rank_test_score: [1]
-split0_train_score: [0.90030569]
-split1_train_score: [0.90175316]
-split2_train_score: [0.71619287]
-mean_train_score: [0.83941724]
-std_train_score: [0.08713479]
-Saving Side Model...
-Reading SEP
-ml_strategy_models.py:155: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-  train_set["side_prediction"] = pd.Series(side_predictions)
-Meta Labeling of train set
-Number of jobs:  8061
-2019-05-16 16:38:38.616784 100.0% 8061/8061 - meta_labeling_via_triple_barrier_method done after 1.41 minutes. Remaining 0.0 minutes..
-Training Certainty Classifier...
-Saving Certainty Model...
-Side Classifier Metrics:
-OOS Accuracy:  0.5404296368400039
-OOS Precision:  0.5473141915767823
-OOS Recall:  0.6340440188361772
-ml_strategy_models.py:222: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-  test_set["side_prediction"] = test_side_predictions
-Running triple barrier search on test set with side set by side classifier... (Meta labeling on test set)
-Number of jobs:  6602
-2019-05-16 16:40:41.148306 100.0% 6602/6602 - meta_labeling_via_triple_barrier_method done after 0.85 minutes. Remaining 0.0 minutes..
-OOS Accuracy:  0.5327298638696459
-OOS Precision:  0.5445449447789941
-OOS Recall:  0.625282748426687
-
-
-"""
-
-
-"""
-params: [{'n_estimators': 300, 'min_weight_fraction_leaf': 0.2, 'max_features': 5, 'criterion': 'entropy', 'class_weight': 'balanced_subsample', 'bootstrap': True}]
-split0_test_score: [0.4968381]
-split1_test_score: [0.48691348]
-split2_test_score: [0.48558329]
-mean_test_score: [0.4897783]
-std_test_score: [0.00502149]
-rank_test_score: [1]
-split0_train_score: [0.90035031]
-split1_train_score: [0.90281725]
-split2_train_score: [0.70116126]
-mean_train_score: [0.83477627]
-std_train_score: [0.09448545]
-Saving Side Model...
-Reading SEP
-ml_strategy_models.py:155: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-  train_set["side_prediction"] = pd.Series(side_predictions)
-Meta Labeling of train set
-Number of jobs:  8061
-2019-05-16 16:51:22.422277 100.0% 8061/8061 - meta_labeling_via_triple_barrier_method done after 1.37 minutes. Remaining 0.0 minutes..
-Training Certainty Classifier...
-Saving Certainty Model...
-Side Classifier Metrics:
-OOS Accuracy:  0.5403392912828194
-OOS Precision:  0.5482842453469371
-OOS Recall:  0.6214131649972333
-ml_strategy_models.py:222: SettingWithCopyWarning:
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-"""

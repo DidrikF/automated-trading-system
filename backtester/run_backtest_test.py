@@ -40,8 +40,6 @@ if __name__ == "__main__":
     start_date = pd.to_datetime("2010-01-01")
     end_date = pd.to_datetime("2010-06-01")
 
-    # NOTE: add from_bundle classmethod?
-    # NOTE: cut off the datahandler to only load data for the relevant period (2010->)
     """
     market_data_handler = DailyBarsDataHander( 
         path_prices="../dataset_development/datasets/sharadar/SEP_PURGED.csv", # "../../dataset_development/datasets/testing/sep.csv",
@@ -73,8 +71,6 @@ if __name__ == "__main__":
 
 
     def analyze(bt):
-        # print(bt.perf.head())
-        # plot_data(bt.perf.index, bt.perf["portfolio_value"], xlabel="Time", ylabel="Value ($)", title="Portfolio Value")
         pass
 
 
@@ -143,11 +139,6 @@ if __name__ == "__main__":
     backtester.set_portfolio(Portfolio, balance=10000, strategy=strategy)
     
     performance = backtester.run()
-
-    """
-    for portfolio in backtester.portfolio.portfolio_history:
-        print(portfolio)
-    """
 
     backtest_state = backtester.save_state_to_disk_and_return()
 

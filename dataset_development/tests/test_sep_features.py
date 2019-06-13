@@ -7,18 +7,6 @@ from ..helpers.helpers import get_x_past_months_of_data
 from ..sep_features import add_sep_features
 from ..processing.engine import pandas_mp_engine
 
-"""
-Each step is performed for each industry separately
-
-Step-by-Step Dataset Construction:
-1. Extend the SEP dataset with information usefull for sampling (most recent 10-K filing date, Industry classifications)
-2. Use different sampling techniques to get monthly observations
-    1. At first use timebars (sampling at a fixed time interval), but try to respect the different fiscal years
-3. Calculate the various price and volume based features
-4. Add inn SF1 and DAILY data
-5. Compute features based on SF1
-6. Select the features you want and combine into one ML ready dataset
-"""
 
 sep_prepared = None
 sep_sampled = None

@@ -22,8 +22,8 @@ def print_exception_info(e):
 
 def get_x_past_months_of_data(df, date, months):
     """
-    This function requires df has a DateTimeIndex.
     The function returns the entries in the df from $days before $date to $date.
+    This function requires df has a DateTimeIndex.
     """
     date_in_past = date - relativedelta(months=months)
     return df.loc[(df.index <= date) & (df.index >= date_in_past)]
@@ -76,12 +76,11 @@ def get_calendardate_x_quarters_later(date: pd.datetime, quarters: int):
 
 def get_most_up_to_date_10k_filing(sf1_art, caldate_cur: pd.datetime, datekey_cur: pd.datetime, years):
     """
-    NOTE: This function requires sf1_art to have a DateTimeIndex, only contain data for one ticker and is sorted on datekey.
-    NOTE: sf1_art has a numerical index and calendardate column
-    
     Returns the the most recent 10-K filing with calendardate (normalized report period) $years number of years 
     earliar than date.
 
+    NOTE: This function requires sf1_art to have a DateTimeIndex, only contain data for one ticker and is sorted on datekey.
+    NOTE: sf1_art has a numerical index and calendardate column
     """
     desired_calendardate = get_calendardate_x_quarters_ago(caldate_cur, 4*years)
     candidates = sf1_art.loc[sf1_art.calendardate==desired_calendardate]
@@ -100,11 +99,10 @@ def get_most_up_to_date_10k_filing(sf1_art, caldate_cur: pd.datetime, datekey_cu
 
 def get_most_up_to_date_10q_filing(sf1_arq: pd.DataFrame, caldate_cur: pd.datetime, datekey_cur: pd.datetime, quarters: int):
     """
-    NOTE: This function requires sf1_arq to have a DateTimeIndex, only contain data for one ticker and is sorted on datekey.
-    NOTE: sf1_arq has a calendardate index
-
     Returns the most recnet 10-Q filing with calendardate (normalized report period) $quarters number 
     of quarters earlier than $date.
+    NOTE: This function requires sf1_arq to have a DateTimeIndex, only contain data for one ticker and is sorted on datekey.
+    NOTE: sf1_arq has a calendardate index
     """
 
     desired_calendardate = get_calendardate_x_quarters_ago(caldate_cur, quarters)
@@ -114,7 +112,6 @@ def get_most_up_to_date_10q_filing(sf1_arq: pd.DataFrame, caldate_cur: pd.dateti
     if len(candidates) == 0:
         # raise KeyError("No 10K filing for ticker {} and report period {}".format(sf1_arq.iloc[0]["ticker"], desired_calendardate))
         return pd.Series(index=sf1_arq.columns)
-
 
     candidates = candidates.sort_values(by="datekey", ascending=True)
 
@@ -147,8 +144,8 @@ def get_calendardate_index(start: pd.datetime, end: pd.datetime):
 
 def forward_fill_gaps(sf1, quarters):
     """
-    NOTE: this function require calendardate index.
     Fill in missing data in $quarters number of quarters into the future.
+    NOTE: this function require calendardate index.
     """
     sf1 = sf1.fillna(value="IAMNAN")
     sf1["calendardate_temp1"] = sf1.index # Don't know another awy to get the index value after selection
@@ -169,6 +166,9 @@ def forward_fill_gaps(sf1, quarters):
 
 
 def fill_in_missing_dates_in_calendardate_index(sf1):
+    """
+    Fill inn missing dates into the calendardate index of the sf1 dataframe.
+    """
     sf1["calendardate_temp2"] = sf1.index # Don't know another awy to get the index value after selection
     desired_index = get_calendardate_index(sf1.iloc[0]["calendardate_temp2"], sf1.iloc[-1]["calendardate_temp2"])
 
@@ -182,7 +182,6 @@ def fill_in_missing_dates_in_calendardate_index(sf1):
     sf1 = sf1.sort_values(by=["calendardate", "datekey"], ascending=True)
 
     return sf1
-
 
 
 
@@ -221,62 +220,5 @@ def select_row_closes_to_date(candidates, desired_date):
     best_row = candidates.loc[candidates["datekey"] == best_date].iloc[0]
 
     return best_row
-
-
-
-#_____ From the very beginning of the project (can probably be removed)______
-
-def column_intersection(df1: pd.DataFrame, df2: pd.DataFrame, mapping: tuple) -> set:
-    """
-    Get the intersection of two columns from two different data frames.
-    """
-    df1_elements = set()
-    df2_elements = set()
-    col1 = mapping[0]
-    col2 = mapping[1]
-
-    df1_elements.add(df1[col1].tolist())
-    df2_elements.add(df2[col2].tolist())
-    intersection = df1_elements.intersection(df2_elements)
-    return intersection
-
-
-def add_derived_column(df: pd.DataFrame, column: str, calculate_value: callable) -> pd.DataFrame:
-    """
-    calculate_value(row, df) -> scalar
-    Adds a new column to df1 and fills it with arbitrarily calculated values.
-    """
-    df[column] = None
-
-    for row_index, row in enumerate(df.iterrows()):
-        if row_index == 5:
-            return df
-        val = calculate_value(row, df)
-        df.at[row_index, column] = val
-
-    return df
-
-
-
-def df_filter_rows(df: pd.DataFrame, filter_func: callable) -> pd.DataFrame:
-    """
-    filter_func(row: pd.Series, df: pd.Dataframe) -> bool
-    Iterates over the rows in df and removes it, if filter_func returns False.
-    """
-    rows_to_drop = []
-    for index, row in enumerate(df.iterrows()):
-        row_passed = filter_func(row, df)
-        if not row_passed:
-            rows_to_drop.append(index)
-        
-    df.drop(rows_to_drop)
-
-    return df
-
-
-
-def df_filter_cols(df: pd.DataFrame, filter_func: callable) -> pd.DataFrame:
-    pass
-
 
 

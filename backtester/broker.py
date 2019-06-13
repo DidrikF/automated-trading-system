@@ -66,19 +66,9 @@ class Trade():
     def return_if_close_price_is(self, close_price: float):
         """
         Returns the trades total return if the close price is as provided.
-        NOTE: Why not just return total return including dividends, when comparing to exit rules, these are allready derived from price
-        series that included dividends.
+
         """
-        # NOTE: I guess I can disguard the direction when writing the formulas like this.
-        if self.direction == 1:
-            return (((close_price + self.dividends_per_share) / self.fill_price) - 1) * self.direction
-
-        elif self.direction == -1:
-            return (((close_price + self.dividends_per_share) / self.fill_price) - 1) * self.direction
-
-            # 9 / 10  - 1  * -1 = 0.9 -1 * -1 = -0.1 * -1 = 0.1
-            # 1 / 10 * (-1)  = -0.1
-            # 9 + 1 / 10 - 1 *-1 = 1 - 1 * (-1) = 0
+        return (((close_price + self.dividends_per_share) / self.fill_price) - 1) * self.direction
 
     def get_proceeds(self):
         if not self.CLOSED:
@@ -111,7 +101,7 @@ class Trade():
         if self.CLOSED == False:
             raise ValueError("Trade must be closed to calculate PnL")
 
-        return self.total_ret * self.fill_price * self.amount
+        return self.total_ret * self.fill_price
 
     def get_total_slippage(self):
         return self.slippage * abs(self.amount)
@@ -303,7 +293,7 @@ class Blotter():
 
 class Broker():
     """
-    Execute orders from a portfolio/strategy and maintain active trades.
+    Class that execute orders from a portfolio/strategy and maintain active trades.
     """
     def __init__(
         self, 
@@ -326,12 +316,7 @@ class Broker():
         self.initial_margin_requirement = initial_margin_requirement
         self.maintenance_margin_requirement = maintenance_margin_requirement
         self.tax_rate = tax_rate
-        
-        # The broker gets orders, if it gets filled a Trade object is created and added to the Blotter
-        # if the order is cancelled/fails then a CancelledOrder object is created and appended to cancelled_orders
-        # self.cancelled_orders = [] # This is more relevant for the portfolio maybe?
-        
-        # The broker needs to have a record of active position, because he needs to check this for exit rules
+                
         self.blotter = Blotter()
 
         self.blotter_history = [] # Blotter.active_trades at each date...
@@ -396,8 +381,8 @@ class Broker():
             
             # Charge portfolio etc. and if successfull, "complete" the order by appending to active_orders
             
+            
             # NOTE: Need to roll back if failing in two step procedures
-
             try:
                 portfolio.charge(cost)
             except BalanceTooLowError as e:
@@ -715,7 +700,7 @@ class Broker():
         self._slippage_model = slippage_model
 
 
-    # __________ METHOD TO CAPTURE STATE AND RECORD FINAL STATE ________________
+    # __________ METHODS TO CAPTURE STATE AND RECORD FINAL STATE ________________
 
     def capture_state(self):
         """
@@ -836,68 +821,3 @@ class Broker():
 
         df = df.sort_values(by=["order_id"])
         return df
-
-
-
-
-
-
-
-
-
-
-    # ___________ NOT USED ATM ____________________
-    def get_order(self, order_id):
-        """
-        Lookup an order based on the order id.
-        """
-        # Search each 
-
-    def get_open_orders(self):
-        """
-        Retrieve all of the current open orders.
-        """
-
-    def cancel_order(self):
-        """
-        Cancel an open order by ID.
-        
-        Currently orders are either completed "immediatly" or digarded. So this will never be used.
-        """
-
-    def set_cancel_policy(self):
-        """
-        Sets the order cancellation policy for the simulation.
-        If an order has not been filled after some number of ticks the order is abandoned (for example)
-        
-        should this be handled by the portfolio, and the broker just has basic functionality, and the portfolio must do the heavy lifting?
-        """
-
-
-    def NeverCancel(self):
-        """
-        Orders are never automatically canceled.
-        Call this function to make the broker continue forever to fill order, unless it gets canceled by the outside (for example)
-        """
-
-
-
-""" # Dont think this is needed
-class OrderCancellationPolicy(): 
-    pass
-"""
-
-
-"""
-def calculate_initial_margin_requirement(self, order):
-    # cur_price = self.get_most_updated_close_for_ticker(order.ticker) # the price should allways be available at this point...
-    cur_price = self.market_data.current_for_ticker(order.ticker)["open"] # Trades are always initiated at the open
-    if cur_price is None:
-        raise MarketDataNotAvailableError("Failed to calculate initial margin requirement, because data not available for ticker {} on {}".format(order.ticker, self.market_data.cur_date))
-
-    if order.direction != -1:
-        raise ValueError("Cannot calculate initial margin requirement for order with positive direction.")
-
-    short_position_value = cur_price * abs(order.amount)
-    return short_position_value * (1 + self.initial_margin_requirement)
-"""

@@ -11,22 +11,16 @@ from processing.engine import pandas_mp_engine
 
 
 def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.DataFrame):
-    # print("add_sf1_features: ", sf1_art.ticker.unique(), sf1_art.index.min(), sf1_art.index.max())
-    # print("add_sf1_features: ", sf1_arq.ticker.unique(), sf1_arq.index.min(), sf1_arq.index.max())
-
     """
     This function takes in SF1_ART and SF1_ARQ datasets from Sharadar and computed various features based on the
     10K/10Q filing data within.
     NOTE: The function requries that sf1_arq and sf1_art have a calendardate index. 
     """
-    # sf1_art = sf1_art.sort_values(by=["calendardate", "datekey"])
-    # sf1_arq = sf1_arq.sort_values(by=["calendardate", "datekey"])
 
     metadata_empty = True if (len(metadata) == 0) else False
 
     if metadata_empty == True:
         return sf1_art
-
 
     if isinstance(metadata, pd.DataFrame):
         metadata = metadata.iloc[0]
@@ -35,57 +29,6 @@ def add_sf1_features(sf1_art: pd.DataFrame, sf1_arq: pd.DataFrame, metadata: pd.
 
     first_calendardate = None
     calendardate_1y_after_first_calendardate = None
-
-    """
-    Approximately 4300 stocks are missing 1 or more consecutive quarter updates.
-    Of these 4300 stocks, 1800 of them are missing more the 1 year worth of consecutive quarters.
-    Quarterly reports are only available for approximately 12000 stocks, 
-    """
-    """
-    Over 1800 stocks have a gap of more than one year of data. I consider it not appropriate 
-    to forward fill this much. 
-    I think the best (and simplest) solution is to amend the data as much as possible by forward filling up to
-    3 missing quarters of SF1_ART. This ensures that when calculating features based on one year of data
-    two of the same reports are not used.
-
-    When it comes to filling in SF1_ARQ it comes with the disadvantage that seasonality properties are 
-    distorted. 
-
-    I think I will accept up to three quarters being forward filled. 
-
-    What about gaps greater 3 quarters? It does not make sense to fabricate data into the future after the company
-    was delisted. Also it does not make sense to calculate features for rows that where forward filled 
-
-    Solutions to the problems outlined above:
-    1. As long as the most recent (current) 10q included in a calculation is not forward filled, it is ok.
-    2. Rows that are calculated using foreward filled data is marked according to how many fabricated rows 
-       where used
-    3. Keep track of the original calendardate index so that when feature calculation is done, the
-       dataset can get downsampled again. This will ensure that:
-        - all "observations used in trading" is based on a "just released" statement.
-        - after being delisted, forward filled statements are not used.
-    
-    Strategy:
-    1. Take in unaltered sf1_art and sf1_arq for a ticker.
-    2. If no data in sf1_arq -> just skip calculating any features using quarterly data (I like this more, give more flexibility 
-        when putting together ML ready datasets later)
-    3. Capture current index (calendardates) of sf1_art and sf1_arq (needed to downsample later)
-    4. Forward fill up to three consecutive missing rows (in terms of calendardate)
-    5. Drop the still unfilled rows
-    6. Extract most recent and 1 year old sf1_art rows (representing the report periods one year appart, but use most recent update (highest datekey))
-    7. If the one year old sf1_art row is not available, almost none of the features can be calculated.
-       - SKIP CALCULATIONS (AND DROP ROW?)
-    7. Extract most recent 8 (9???) rows from sf1_arq (representing the 8 preceding report periods, but use the most recent update (highest datekey))
-    8. If a quarter is missing, it is not a deal breaker. Do checks on the level of each individual feature and
-       calculate as much as possible.
-    8. Capture metadata on the rows (reports) used which later can be used to select features or drop some timeframes.
-        1. datekey of each sf1_art and arq row
-        2. which rows where filled and not original
-        3. How many missing timeframes/row/??? where used in the construction of the features for the row.
-
-    9. Downsample to the original index (dropping the forward filled rows)
-    10. Return result.
-    """
 
     # SF1_ART PREPARATION_____________________________________________________________
     # All new filings added by the forward_fill_gaps function will be dates other than the once contained in the current index.

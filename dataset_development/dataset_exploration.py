@@ -208,134 +208,6 @@ if __name__ == "__main__":
 
 
 
-
-
-
-"""
-dataset shape:  (1296547, 111)
-
-Total number of nans: 18413417
-Total number of values: 116480000
-
-15-16 % is nans!
-
-Count of nans in all feature columns:
-ticker                      0
-calendardate                0
-datekey                     0
-roaq                   261368 : Fill
-chtx                   463953 : Drop
-rsup                   256912 : Fill
-sue                    257080 : Fill
-cinvest                271076 : Fill 
-nincr                  234028 : Fill
-roavol                 309735 : Fill
-cashpr                 392202 : Fill
-cash                   145779 : Definitely Fill
-bm                     144270 : Definitely Fill
-currat                 381946 : Fill
-depr                   197338
-ep                     155925
-lev                    144278
-quick                  381956
-rd_sale                183760
-roic                   353647
-salecash               157995
-saleinv                644457
-salerec                329036
-sp                     155696
-tb                     150457
-sin                    138407
-tang                   138808
-debtc_sale             422667 : Drop
-eqt_marketcap          144356
-dep_ppne               197338
-tangibles_marketcap    144356
-agr                    140499
-cashdebt               155955
-chcsho                 145498
-chinv                  146387
-egr                    140154
-gma                    151784
-invest                 140479
-lgr                    140691
-operprof               151575
-pchcurrat              386805 : Fill
-pchdepr                295039
-pchgm_pchsale          261878
-pchquick               386847
-pchsale_pchinvt        686932 : Drop
-pchsale_pchrect        403557
-pchsale_pchxsga        288060
-pchsaleinv             695748
-rd                     841075 : Drop
-roeq                   151717
-sgr                    258156
-grcapx                 275454
-chtl_lagat             140523
-chlt_laginvcap         140575
-chlct_lagat            385857
-chint_lagat            227662
-chinvt_lagsale         251215
-chint_lagsgna          258016
-chltc_laginvcap        385797
-chint_laglt            227893
-chdebtnc_lagat         385819
-chinvt_lagcor          438497 : Drop
-chppne_laglt           140818
-chpay_lagact           380435
-chint_laginvcap        227672
-chinvt_lagact          380516
-pchppne                187057
-pchlt                  140691
-pchint                 225331
-chdebtnc_ppne          397868
-chdebtc_sale           425878 : Drop
-age                         0
-ipo                    138407
-ps                     126832
-bm_ia                   13655
-cfp_ia                 109803
-chatoia                228545
-mve_ia                  13398
-pchcapex_ia            275454
-chpmia                 262065
-herf                   998763 : Drop
-ms                        127
-industry                    0
-indmom                  26039
-mom1m                   17141
-mom6m                   86388
-mom12m                 162535
-mom24m                 294142
-chmom                  162535
-mve                      3549
-beta                   294746
-betasq                 294746
-idiovol                294746
-ill                    176138
-dy                     163005
-turn                    47230
-dolvol                  36287
-maxret                  16506
-retvol                  16507
-std_dolvol              16507
-std_turn                19670
-zerotrade               26426
-return_1m               14706
-return_2m               26933
-return_3m               41058
-timeout                     0
-ewmstd_2y_monthly       38744
-return_tbm                  0
-primary_label_tbm           0
-take_profit_barrier     38744
-stop_loss_barrier       38744
-
-dtype: int64
-
-"""
-
 """
 
 Nan Status After fixing Nans:
@@ -344,7 +216,7 @@ Percentage dropped:  29.263322702679773 # Dropped due to requiring 24 months of 
 
 30% of 917147 = 275144
 
-4528197 / (94*917147) = 5,25 % data must be filled ! NOT BAD!
+4528197 / (94*917147) = 5,25 % data must be filled
 
 Dropped columns:  set()
 ticker                      0

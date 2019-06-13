@@ -17,14 +17,21 @@ import dash_html_components as html
 
 from data_handler import DailyBarsDataHander, MLFeaturesDataHandler
 
-"""
-Reference:
 
-trades/blotter_history = pd.DataFrame(columns=["order_id", "ticker", "direction", "amount", "stop_loss", "take_profit", "timeout", "date", "fill_price",\
-            "commission", "slippage", "interest_expenses", "dividends_per_share", "CLOSED", "close_price", "close_date", "close_cause", \
-                "ret", "total_ret", "total_dividends"])
-canelled_orders = pd.DataFrame(columns=["order_id", "ticker", "date", "error", "amount", "direction", "stop_loss", "take_profit", "timeout", "type"])
-trade_objects = Trade[]
+"""
+Backtests and logs:
+
+ML-driven Strategy Results:
+Configuration A: backtest_state_20190607-171902.pickle, log_20190607-164153
+Configuration B: backtest_state_20190607-161904.pickle, log_20190607-155535
+Configuration C: backtest_state_20190607-180705.pickle, log_20190607-174845
+
+Randomly trading Strategy Results:
+Configuration A: backtest_state_20190607-213416.pickle, log_20190607-205531
+Configuration B: backtest_state_20190607-232443.pickle, log_20190607-230141
+Configuration C: backtest_state_20190607-225023.pickle, log_20190607-223302
+
+NOTE: See line 47 and 69 to set what backtest and logfile to load. By default, the most recent backtest and log is loaded. 
 """
 
 
@@ -36,6 +43,10 @@ if __name__ == "__main__":
 
     # Load data:
     pickle_path = latest_file # "./backtests/backtest_state_20190408-001506.pickle"
+    
+    # NOTE: Use this to choose what backtest to load up in the dashboard
+    # pickle_path = "./backtests/backtest_state_20190607-161904.pickle" 
+    
     pickle_in = open(pickle_path,"rb") 
     backtest = pickle.load(pickle_in) 
 
@@ -49,21 +60,16 @@ if __name__ == "__main__":
     backtest["broker"]["all_trades"]["timeout"] = pd.to_datetime(backtest["broker"]["all_trades"]["timeout"])
 
     # ML model results
-    ml_model_results = pickle.load(open("../models/ml_strategy_models_results.pickle", "rb"))
-    print(ml_model_results)
+    ml_model_results = pickle.load(open("../ml_strategy_models/ml_strategy_models_results.pickle", "rb"))
 
-    # list_of_files = glob.glob('./logs/*') # * means all if need specific format then *.csv
-    # latest_log_file = max(list_of_files, key=os.path.getctime)
-    # with open(latest_log_file, "r") as f:
-    #     log_lines = f.readlines()
-    # you may also want to remove whitespace characters like `\n` at the end of each line
-    # log_lines = [html.P(line.strip()) for line in log_lines]
     all_log_dirs = ["./logs/" + d for d in os.listdir('./logs') if os.path.isdir("./logs/" + d)]
     latest_log_dir = max(all_log_dirs, key=os.path.getmtime)
     print("Loading log dir: ", latest_log_dir)
     
-    log_lines = []
+    # NOTE: Use this to choose what log directory to load up in the dashboard
+    # latest_log_dir = ""
 
+    log_lines = []
     files = [f for f in glob.glob(latest_log_dir + "/*.log", recursive=True)]
     print("Loading log files: ", files)
     for file in files:
@@ -72,7 +78,6 @@ if __name__ == "__main__":
         formatted_log_lines = [html.P(line.strip()) for line in lines]
         
         log_lines.extend(formatted_log_lines)
-
 
 
     start_date = pd.to_datetime(backtest["settings"]["start"])
@@ -112,27 +117,11 @@ if __name__ == "__main__":
 
     figure_height = 350
 
-        # CONFIG
+    # CONFIG
     # All in markdown
 
     # SUMMARY STATISTICS
-    """
-    costs_slippage_figure = go.Figure(
-        data=[go.Bar(
-            x=backtest["portfolio"]["costs"].index,
-            y=backtest["portfolio"]["costs"]["slippage"],
-        )],
-        layout=go.Layout(
-            # plot_bgcolor=colors['background'],
-            # paper_bgcolor=colors['background'],
-            # font={'color': colors['text']},
-            title="Slippage Suffered",
-            xaxis=dict(title="Date"),
-            yaxis=dict(title="Dollar"),
-            height=figure_height
-        )
-    )
-    """
+
     snp500 = market_data.get_ticker_data("snp500")
     snp500["return"] = (snp500["close"] / snp500.iloc[0]["close"]) - 1
     portfolio_value = backtest["portfolio"]["portfolio_value"]
@@ -183,9 +172,6 @@ if __name__ == "__main__":
             name="Payments to Cover Short Dividends"
         )],
         layout=go.Layout(
-            # plot_bgcolor=colors['background'],
-            # paper_bgcolor=colors['background'],
-            # font={'color': colors['text']},
             title="Costs Charged",
             xaxis=dict(title="Date"),
             yaxis=dict(title="Dollar"),
@@ -203,9 +189,6 @@ if __name__ == "__main__":
             name="Interest Received"
         )],
         layout=go.Layout(
-            # plot_bgcolor=colors['background'],
-            # paper_bgcolor=colors['background'],
-            # font={'color': colors['text']},
             title="Money Received",
             xaxis=dict(title="Date"),
             yaxis=dict(title="Dollar"),
@@ -229,9 +212,6 @@ if __name__ == "__main__":
             )
         ],
         layout=go.Layout(
-            # plot_bgcolor=colors['background'],
-            # paper_bgcolor=colors['background'],
-            # font={'color': colors['text']},
             title="Commissions Charged",
             xaxis=dict(title="Date"),
             yaxis=dict(title="Dollar"),
@@ -258,9 +238,6 @@ if __name__ == "__main__":
             name="Total Portfolio Value / Equity Curve"
         )],
         layout=go.Layout(
-            # plot_bgcolor=colors['background'],
-            # paper_bgcolor=colors['background'],
-            # font={'color': colors['text']},
             title="Porfolio Value over Time",
             xaxis=dict(title="Date"),
             yaxis=dict(title="Dollar"),
@@ -268,17 +245,64 @@ if __name__ == "__main__":
         )
     )
 
+
+    snp500_portfolio_monthly_return = go.Figure(
+        data=[go.Scatter(
+            x=backtest["portfolio"]["monthly_returns"].index,
+            y=backtest["portfolio"]["monthly_returns"]["snp500"],
+            name="S&P500 Monthly Return"
+        ),go.Scatter(
+            x=backtest["portfolio"]["monthly_returns"].index,
+            y=backtest["portfolio"]["monthly_returns"]["portfolio"],
+            name="Portfolio Monthly Return"
+        )],
+        layout=go.Layout(
+            title="S&P500 and Portfolio Monthly Returns",
+            xaxis=dict(title="Date"),
+            yaxis=dict(title="Monthly Return"),
+            height=figure_height
+        )
+    )
+
+    snp500_portfolio_return_histogram = go.Figure(
+        data=[
+            go.Histogram(
+                x=backtest["portfolio"]["monthly_returns"]["portfolio"],
+                opacity=0.75,
+                name="Portfolio Monthly Returns",
+                xbins=dict(
+                    start=backtest["portfolio"]["monthly_returns"]["portfolio"].min(),
+                    end=backtest["portfolio"]["monthly_returns"]["portfolio"].max(),
+                    size=0.01
+                ),
+            ),
+            go.Histogram(
+                x=backtest["portfolio"]["monthly_returns"]["snp500"],
+                opacity=0.75,
+                name="S&P500 Monthly Returns",
+                xbins=dict(
+                    start=backtest["portfolio"]["monthly_returns"]["snp500"].min(),
+                    end=backtest["portfolio"]["monthly_returns"]["snp500"].max(),
+                    size=0.01
+                ),
+            )
+        ], 
+        layout=go.Layout(
+            barmode='overlay',
+            title="Distribution of Monthly Returns",
+            xaxis=dict(title="Return"),
+            yaxis=dict(title="Count"),
+            height=figure_height
+        )
+    ) 
+    
     # Return of portfolio and return of benchmark graph
-
-
-
 
     # INSPECT PORTFOLIO WEEK BY WEEK
     date_range = pd.date_range(start_date-relativedelta(days=7), end_date+relativedelta(days=7), freq="W-MON")
 
 
     # TRADE INSPECTION
-
     # -  Trade ID in Input field?
 
     # STRATEGY AND ML STATISTICS
@@ -301,24 +325,8 @@ if __name__ == "__main__":
         )
     )
 
-    # RAW DATA INSPECTION
-    """
-    dcc.DatePickerSingle(
-        id='date-picker-single',
-        date=dt(1997, 5, 10)
-    )
-
-    dcc.DatePickerRange(
-        id='date-picker-range',
-        start_date=dt(1997, 5, 3),
-        end_date_placeholder_text='Select a date!'
-    )
-    """
-
 
     """ APP LAYOUT """
-
-
     app_layout = [
         html.H1(
             children='ML Driven Automated Trading System - Backtest Results',
@@ -350,6 +358,7 @@ if __name__ == "__main__":
             html.P("Normality of Returns Test Results: {}  ".format(backtest["stats"]["normality_test_result"])),
             html.P("Sharpe Ratio: {}  ".format(backtest["stats"]["sharpe_ratio"])),
             html.P("T-test on Excess Return: {}  ".format(backtest["stats"]["t_test_on_excess_return"])),
+            html.P("Skew and Kurtosis Adjusted Sharpe Ratio: {}  ".format(backtest["stats"]["adjusted_sharpe_ratio"])),
             html.P("Correlation to Underlying (S&P500): {}  ".format(backtest["stats"]["correlation_to_underlying"])),   
             
 
@@ -410,8 +419,6 @@ if __name__ == "__main__":
                 html.P("Certainty Model Precision: {}  ".format(ml_model_results["certainty_model"]["precision"])),
                 html.P("Certainty Model Recall: {}  ".format(ml_model_results["certainty_model"]["recall"])),
                 html.P("Certainty Model F1: {}  ".format(ml_model_results["certainty_model"]["f1"])),
-                html.P("Statistical Significance of Models: {}  ".format(backtest["stats"]["statistical_significance_of_classification_models"])),
-
                 
             ])
         ], style={
@@ -420,16 +427,12 @@ if __name__ == "__main__":
 
         # - Summary Graphs
         dcc.Graph(id="portfolio-value", figure=portfolio_value_figure),
-
         dcc.Graph(id="snp500-portfolio-return-graph", figure=snp500_portfolio_return),
+        dcc.Graph(id="snp500-portfolio-monthly-return-graph", figure=snp500_portfolio_monthly_return),
+        dcc.Graph(id="snp500-portfolio-return-histogram", figure=snp500_portfolio_return_histogram),
         dcc.Graph(id="costs-graph", figure=costs_figure),
         dcc.Graph(id="received-graph", figure=received_figure),
         dcc.Graph(id="charged-proceeds-graph", figure=charged_proceeds_figure),
-
-        
-
-        # dcc.Graph(id="costs-total-charged", figure=costs_total_charged_figure),
-        # etc..
 
 
         # INSPECT WEEK
@@ -670,8 +673,6 @@ if __name__ == "__main__":
 
     # SUMMARY STATISTICS
 
-
-
     @app.callback(Output("date-picker", "date"), [Input("week-slider", "value")])
     def update_date_picker(week_nr):
         date = date_range[week_nr]
@@ -718,14 +719,6 @@ if __name__ == "__main__":
             name="Value of Short Trade",
             marker=go.bar.Marker(color="rgb(237, 79, 35)")
         )
-        """
-        balance_margin_account_trace = go.Bar(
-            x=["Balance", "Margin Account"],
-            y=[balance, margin_account],
-            name="Accounts",
-            marker=go.bar.Marker(color="rgb(46, 108, 232)")
-        )
-        """
 
         data = [short_trace, long_trace] # balance_margin_account_trace
         
@@ -765,14 +758,6 @@ if __name__ == "__main__":
             name="Short Position",
             marker=go.bar.Marker(color="rgb(237, 79, 35)")
         )
-        """ Is this interesting? To have the net position in each Stock? 
-        net_trace = go.Bar(
-            x=active_trades["ticker"],
-            y=active_trades["net_position"],
-            name="Net Position",
-            marker=go.bar.Marker(color="rgb(46, 108, 232)")
-        )
-        """
 
         data = [short_trace, long_trace]
         
@@ -1079,15 +1064,6 @@ if __name__ == "__main__":
         return ticker_sep.to_dict("rows")
 
 
-
-    # BACKTEST FINAL STATE TABLES
-
-
-
-
-    """ CALLBACKS """
-
-
     app.run_server(debug=True)
 
 
@@ -1165,7 +1141,7 @@ def visualize_triple_barrier_method(rows, cols, dates, ticker, sep_triple_barrie
                 },
             }
         ]
-            
+
         annotations = [
             dict(
                 xref='x{}'.format(i),
@@ -1200,144 +1176,3 @@ def visualize_triple_barrier_method(rows, cols, dates, ticker, sep_triple_barrie
     figure['layout'].update(annotations=all_annotations)
 
     py.offline.plot(figure, auto_open=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Showing trades as two scatter plots:
-# Make two dfs, one with long and one with short trades (orders that was filled)
-"""
-Just a thought:
-        Can trades be presented in a graph using a scatter plot and assign
-        marker config to display direction and size of trade, and have text config
-        to give information about the trade in the graph?
-short_trace = go.Scatter(x=[], y=[], mode="markers", marker=dict(
-    size=12,
-    color="rgb(100, 50, 50)",
-    symbol="arrow_down", # this is the key, have one Scatter for long trades and one scatter for short ones
-))
-
-long_trace = go.Scatter(x=[], y=[], mode="markers", marker=dict(
-    size=12,
-    color="rgb(100, 50, 50)",
-    symbol="arrow_up", # this is the key, have one Scatter for long trades and one scatter for short ones
-))
-
-data = [short_trace, long_trace]
-
-"""
-
-
-
-
-
-
-
-"""
-1. Visualization and performance reporting
-    - This work will prepare many visualizations for the report
-    - This work will also substitute testing work
-    - It will be awesome to look at.
-
-    - I want to illustrate all aspects of the system, LIVE.
-    - This require some clever linking do Dash, but once this is done it will be easy to extend
-    - I can also implement a loop slowdown parameter, so make it more visible to
-    the user of the system what is going on.
-
-    Whether I want it to be live depends on how long the backtest takes to run.
-    As long as I can browse through the history of the simulation, I should be good.
-
-
-    ######   I need to make the data available (and saved) at least partly before I code out the dash!!!!
-
-    MASTER SLIDER, where all data is selected relative to the master slider!!!!
-    
-    Wanted on the screen: 
-        # - Portfolio Composition (Pie chart / bar chart with slider) - stocks (bar chart prob better)
-        - Portfolio Composition (Pie chart / bar chart with slider) - industry
-            - Combine both in nested bar chart?
-        
-        # - Balance (as just a number) If not running simulation live, these must be charts
-        - Total commission # working i think
-        - Total slippage # not working (-2 each day in slippage...)
-        - Sharpe ratio (make it simple to begin with?) NEED RISK FREE RATE IN SEP
-        
-
-        - Trades per month chart
-            - Max trades per month
-            - Lowest number of trades per month
-
-
-        - Line chart of portfolio return (on different periods)
-            - Max loss on single day / month
-            - Max gain on single day / month
-
-
-        # - Line chart of portfolio value
-        - Line chart of portfolio variance
-
-        - Line chart of sharpe ratio
-        # - Candlestick chart, where you can select stock
-        - Table of executed orders -> with associated signal, fill, commission, 
-          slippage, open, execution price, and stock information (one mega master table),
-          portfolio balance
-
-        - Table of top 10 signals for each day
-        - Table of non executed orders
-
-        - Histogram of trade return with distribution layered on top (Distplots IS AWESOME!)
-        - Other distributions?
-
-        Strategy related:
-        - Heatmap of feature importance
-        - Make it possible to access the ML features and acociate them with signals?
-
-    
-
-
-
-Table columns for ATS Master table
-
-    Direction of Time -->
-    General Info:
-    Date, 
-    ticker, 
-    order_id, 
-
-    Signal:
-    signal direction,
-    signal certainty,
-    barrier high,
-    barrier low, 
-    barrier vertical,
-
-    Order:
-    order amount (implies direction), 
-    stop loss, 
-    take profit, 
-    timeout, 
-
-    Fill:
-    Fill price
-    commission
-    slippage
-
-    After trade status:
-    Balance,
-    Portfolio Value,
-    (return? need to find out if this is practical)
-
-
-    I need sorting functionality for tables 
-
-
-"""
