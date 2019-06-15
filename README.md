@@ -7,12 +7,12 @@ The aim of this project is to develop an automated trading system (ATS) that use
 5. Build a backtester to measure the historical performance of the automated trading system.
 
 ## Project structure
-- backtester -> Includes source code for the backtester and trading strategeis.
-- dataset_development -> Includes source code involved in the development of the projects dataset. Most notably are the genereate_features.py and finalize_dataset.py files, which does most of the heavy lifting.
--   datasets
-- ml_strategy_models -> Includes the pickled random forest model objects used to make prediction in the ML-dirven ATS
-- models -> Includes regression and classification models developed for the project
-- tests
+- /backtester -> Includes source code for the backtester and trading strategeis.
+- /dataset_development -> Includes source code involved in the development of the projects dataset. Most notably are the genereate_features.py and finalize_dataset.py files, which does most of the heavy lifting.
+-   /datasets
+- /ml_strategy_models -> Includes the pickled random forest model objects used to make prediction in the ML-dirven ATS
+- /models -> Includes regression and classification models developed for the project
+- model training and testing files are located in the projects root folder
 
 ## Usage
 Running backtest using ML-driven automated trading system:
@@ -46,7 +46,7 @@ The sheer size of the datasets being handed and the fact that feature calculatio
 
 A total of 86 predictor variables from the academic literature was produced.
 
-## 2. Regressions on Monthly 
+## 2. Regressions on Monthly Equity Risk Premiums
 
 Regressions are performed on monthly equity risk premiums using the following algorithms:
 - Multiple linear regression
@@ -62,7 +62,7 @@ ATS classification models are built using random forest algorithms and use the t
 ## 4. ML-Drivne Automated Trading System
 
 The major components of the ATS are:
-- A dataset of over 340,000 samples spanning over 8000 companies and 7 years (2012-03-01 to 2019-02-01), each with 86 features. 
+- A dataset (test set) of over 340,000 samples spanning 8000 companies and 7 years of history (2012-03-01 to 2019-02-01), each with 86 predictor variables. 
 - A classification model predicting the sign of the return at the first barrier touch (see Triple Barrier Method, section 3.1.4.2). The output of this model is used to set the side of trades. This model is henceforth called the primary model. 
 - A classification model predicting whether following the primary model’s advice will yield a positive or negative return. This classification model is henceforth called “the secondary model” or “the certainty model.” Further, the probability of positive return is from here on referred to as the level of certainty the secondary model has in a trade’s ability to generate positive returns. 
 - An algorithm generating trading signals from ML model predictions
